@@ -38,7 +38,7 @@ jobs:
             sentinel/detection/go.sum
             sentinel/plugins/go.sum
             sentinel/pkg/event/go.sum
-      - uses: golangci/golangci-lint-action@v6
+      - uses: golangci/golangci-lint-action@v9
         with:
           version: v1.61.0
           working-directory: sentinel/api
