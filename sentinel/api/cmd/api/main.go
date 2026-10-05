@@ -9,7 +9,10 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgxpool"
+
 	"github.com/luca-staudt/Sentinel/sentinel/api/internal/config"
+	"github.com/luca-staudt/Sentinel/sentinel/api/internal/db"
 	"github.com/luca-staudt/Sentinel/sentinel/api/internal/logging"
 	"github.com/luca-staudt/Sentinel/sentinel/api/internal/server"
 )
@@ -24,7 +27,20 @@ func main() {
 	log := logging.New(cfg.LogLevel)
 	log.Info("sentinel api starting", "env", cfg.Env, "port", cfg.Port)
 
-	srv := server.New(log, cfg.Port)
+	ctx := context.Background()
+	var pool *pgxpool.Pool
+	if cfg.DatabaseURL != "" {
+		p, err := db.OpenPool(ctx, cfg.DatabaseURL)
+		if err != nil {
+			log.Error("database connection failed", "error", err)
+			os.Exit(1)
+		}
+		defer p.Close()
+		pool = p
+		log.Info("database connected")
+	}
+
+	srv := server.New(log, cfg, pool)
 
 	errCh := make(chan error, 1)
 	go func() {

@@ -2,7 +2,7 @@
 
 Go HTTP service for Sentinel’s control plane: REST under `/api/v1`, future WebSockets, authentication, ingestion, and audit (phased delivery).
 
-**Phase 2 scope:** configuration from environment variables, structured JSON logging, liveness/readiness probes, `/api/v1` version stub, graceful shutdown. No database, auth, or business routes yet.
+**Phase 3 scope:** Phase 2 foundation plus PostgreSQL readiness checks when `DATABASE_URL` is set.
 
 ## Run locally
 
@@ -20,12 +20,12 @@ go run ./cmd/api
 
 Environment variables are documented in the repository root `.env.example`.
 
-## Endpoints (Phase 2)
+## Endpoints
 
 | Method | Path | Description |
 |--------|------|-------------|
 | GET | `/healthz` | Liveness |
-| GET | `/readyz` | Readiness (database check stubbed until Phase 3) |
+| GET | `/readyz` | Readiness — pings PostgreSQL when `DATABASE_URL` is configured |
 | GET | `/api/v1` | API version metadata |
 
 ## Secure defaults
