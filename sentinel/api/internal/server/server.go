@@ -7,7 +7,10 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgxpool"
+
 	"github.com/luca-staudt/Sentinel/sentinel/api/internal/apperrors"
+	"github.com/luca-staudt/Sentinel/sentinel/api/internal/config"
 	"github.com/luca-staudt/Sentinel/sentinel/api/internal/handlers"
 	"github.com/luca-staudt/Sentinel/sentinel/api/internal/middleware"
 )
@@ -19,11 +22,16 @@ type Server struct {
 }
 
 // New constructs the API HTTP server with routes and middleware.
-func New(log *slog.Logger, port int) *Server {
+func New(log *slog.Logger, cfg config.Config, pool *pgxpool.Pool) *Server {
 	mux := http.NewServeMux()
 
+	readiness := handlers.Readiness{
+		RequireDatabase: cfg.DatabaseURL != "",
+		Pool:            pool,
+	}
+
 	mux.HandleFunc("GET /healthz", handlers.Health)
-	mux.HandleFunc("GET /readyz", handlers.Ready)
+	mux.HandleFunc("GET /readyz", readiness.Ready)
 	mux.HandleFunc("GET /api/v1", handlers.Version)
 
 	// Placeholder for future /api/v1/* routes; unknown paths return standard error JSON.
@@ -34,7 +42,7 @@ func New(log *slog.Logger, port int) *Server {
 	handler := middleware.RequestID(mux)
 	handler = loggingMiddleware(log, handler)
 
-	addr := fmt.Sprintf(":%d", port)
+	addr := fmt.Sprintf(":%d", cfg.Port)
 	return &Server{
 		log: log,
 		http: &http.Server{

@@ -9,16 +9,18 @@ import (
 
 // Config holds API server settings loaded from the environment.
 type Config struct {
-	Env      string
-	Port     int
-	LogLevel string
+	Env         string
+	Port        int
+	LogLevel    string
+	DatabaseURL string
 }
 
 // Load reads configuration from environment variables with secure defaults.
 func Load() (Config, error) {
 	cfg := Config{
-		Env:      strings.TrimSpace(getEnv("APP_ENV", "development")),
-		LogLevel: strings.TrimSpace(getEnv("LOG_LEVEL", "info")),
+		Env:         strings.TrimSpace(getEnv("APP_ENV", "development")),
+		LogLevel:    strings.TrimSpace(getEnv("LOG_LEVEL", "info")),
+		DatabaseURL: strings.TrimSpace(os.Getenv("DATABASE_URL")),
 	}
 
 	portStr := strings.TrimSpace(getEnv("API_PORT", "8080"))

@@ -29,11 +29,12 @@ func TestHealth(t *testing.T) {
 	}
 }
 
-func TestReady(t *testing.T) {
+func TestReadyWithoutDatabase(t *testing.T) {
+	r := Readiness{RequireDatabase: false}
 	req := httptest.NewRequest(http.MethodGet, "/readyz", nil)
 	rec := httptest.NewRecorder()
 
-	Ready(rec, req)
+	r.Ready(rec, req)
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
@@ -45,5 +46,21 @@ func TestReady(t *testing.T) {
 	}
 	if body["status"] != "ready" {
 		t.Fatalf("status = %v, want ready", body["status"])
+	}
+	checks, _ := body["checks"].(map[string]any)
+	if checks["database"] != "not_configured" {
+		t.Fatalf("database check = %v", checks["database"])
+	}
+}
+
+func TestReadyRequiresDatabaseButUnreachable(t *testing.T) {
+	r := Readiness{RequireDatabase: true, Pool: nil}
+	req := httptest.NewRequest(http.MethodGet, "/readyz", nil)
+	rec := httptest.NewRecorder()
+
+	r.Ready(rec, req)
+
+	if rec.Code != http.StatusServiceUnavailable {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusServiceUnavailable)
 	}
 }
