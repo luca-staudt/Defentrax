@@ -1,0 +1,65 @@
+# Reusable SBOM generation via Syft (source SPDX) + optional Trivy image SBOM.
+name: Reusable — SBOM
+
+on:
+  workflow_call:
+    inputs:
+      image-ref:
+        description: "Optional local image for Trivy SBOM (e.g. sentinel-api:ci)"
+        required: false
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  sbom:
+    name: SBOM
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Generate source SBOM (Syft / SPDX)
+        uses: anchore/sbom-action@v0
+        with:
+          path: .
+          format: spdx-json
+          artifact-name: sentinel-source-sbom.spdx.json
+          output-file: sentinel-source-sbom.spdx.json
+          upload-artifact: true
+
+      - name: Set up Docker Buildx
+        if: ${{ inputs.image-ref != '' }}
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build API image for image SBOM
+        if: ${{ inputs.image-ref != '' }}
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: sentinel/api/Dockerfile
+          push: false
+          load: true
+          tags: ${{ inputs.image-ref }}
+          cache-from: type=gha,scope=sentinel-api
+          cache-to: type=gha,mode=max,scope=sentinel-api
+
+      - name: Generate image SBOM (Trivy / SPDX)
+        if: ${{ inputs.image-ref != '' }}
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: image
+          image-ref: ${{ inputs.image-ref }}
+          format: spdx-json
+          output: sentinel-api-image-sbom.spdx.json
+          exit-code: "0"
+
+      - name: Upload image SBOM
+        if: ${{ inputs.image-ref != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: sentinel-api-image-sbom
+          path: sentinel-api-image-sbom.spdx.json
+          retention-days: 30

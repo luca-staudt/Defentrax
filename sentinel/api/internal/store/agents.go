@@ -32,11 +32,11 @@ type AgentRecord struct {
 }
 
 type AgentTokenRecord struct {
-	ID         uuid.UUID
-	AgentID    uuid.UUID
-	TokenHash  string
+	ID          uuid.UUID
+	AgentID     uuid.UUID
+	TokenHash   string
 	TokenPrefix string
-	RevokedAt  *time.Time
+	RevokedAt   *time.Time
 }
 
 type EnrollmentTokenRecord struct {

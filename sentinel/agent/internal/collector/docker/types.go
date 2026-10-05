@@ -5,15 +5,15 @@ import "time"
 // EngineEvent is the JSON shape returned by the Docker Engine /events API
 // (and by `docker events --format '{{json .}}'`).
 type EngineEvent struct {
-	Status   string      `json:"status"`
-	ID       string      `json:"id"`
-	From     string      `json:"from"`
-	Type     string      `json:"Type"`
-	Action   string      `json:"Action"`
-	Actor    EventActor  `json:"Actor"`
-	Scope    string      `json:"scope"`
-	Time     int64       `json:"time"`
-	TimeNano int64       `json:"timeNano"`
+	Status   string     `json:"status"`
+	ID       string     `json:"id"`
+	From     string     `json:"from"`
+	Type     string     `json:"Type"`
+	Action   string     `json:"Action"`
+	Actor    EventActor `json:"Actor"`
+	Scope    string     `json:"scope"`
+	Time     int64      `json:"time"`
+	TimeNano int64      `json:"timeNano"`
 }
 
 // EventActor carries identity and attributes for the event subject.
@@ -24,12 +24,12 @@ type EventActor struct {
 
 // ContainerInspect is the subset of container inspect JSON needed for risk flags.
 type ContainerInspect struct {
-	ID      string          `json:"Id"`
-	Name    string          `json:"Name"`
-	Created string          `json:"Created"`
-	Config  *ContainerConfig `json:"Config"`
-	HostConfig *HostConfig  `json:"HostConfig"`
-	Mounts  []Mount         `json:"Mounts"`
+	ID         string           `json:"Id"`
+	Name       string           `json:"Name"`
+	Created    string           `json:"Created"`
+	Config     *ContainerConfig `json:"Config"`
+	HostConfig *HostConfig      `json:"HostConfig"`
+	Mounts     []Mount          `json:"Mounts"`
 }
 
 // ContainerConfig holds image and basic config fields.

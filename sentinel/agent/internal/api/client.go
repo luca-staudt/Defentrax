@@ -24,8 +24,9 @@ type Client struct {
 func NewClient(baseURL string, tlsInsecure bool, token string) *Client {
 	tr := http.DefaultTransport.(*http.Transport).Clone()
 	tr.TLSClientConfig = &tls.Config{
-		MinVersion:         tls.VersionTLS12,
-		InsecureSkipVerify: tlsInsecure, //nolint:gosec // explicit dev-only flag
+		MinVersion: tls.VersionTLS12,
+		//nolint:gosec // G402: caller-controlled; only for explicit local/dev TLS bypass
+		InsecureSkipVerify: tlsInsecure, // #nosec G402 -- explicit opt-in via config, not default
 	}
 	return &Client{
 		baseURL: baseURL,

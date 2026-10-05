@@ -14,27 +14,27 @@ import (
 
 // Alert row from alerts table (Phase 8).
 type Alert struct {
-	ID               uuid.UUID
-	ServerID         uuid.UUID
-	RuleID           uuid.UUID
-	AssignedTo       *uuid.UUID
-	Title            string
-	Description      string
-	Status           string
-	Severity         string
-	DedupKey         string
-	SourceIP         string
-	EventCount       int
-	FirstSeenAt      time.Time
-	LastSeenAt       time.Time
-	ResolutionNotes  string
-	OpenedAt         time.Time
-	AcknowledgedAt   *time.Time
-	InvestigatingAt  *time.Time
-	ResolvedAt       *time.Time
-	Metadata         json.RawMessage
-	CreatedAt        time.Time
-	UpdatedAt        time.Time
+	ID              uuid.UUID
+	ServerID        uuid.UUID
+	RuleID          uuid.UUID
+	AssignedTo      *uuid.UUID
+	Title           string
+	Description     string
+	Status          string
+	Severity        string
+	DedupKey        string
+	SourceIP        string
+	EventCount      int
+	FirstSeenAt     time.Time
+	LastSeenAt      time.Time
+	ResolutionNotes string
+	OpenedAt        time.Time
+	AcknowledgedAt  *time.Time
+	InvestigatingAt *time.Time
+	ResolvedAt      *time.Time
+	Metadata        json.RawMessage
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
 }
 
 type AlertTimelineEvent struct {

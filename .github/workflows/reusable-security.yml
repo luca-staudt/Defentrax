@@ -1,0 +1,64 @@
+# Reusable security scans. No repository secrets required.
+# Configured tools: govulncheck, gosec, Trivy filesystem.
+# Image scans run in reusable-docker.yml after build. No Code Scanning / Dependabot here.
+name: Reusable — Security
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  security:
+    name: Security scans
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.22.x"
+          cache-dependency-path: |
+            sentinel/api/go.sum
+            sentinel/agent/go.sum
+            sentinel/database/go.sum
+            sentinel/detection/go.sum
+            sentinel/plugins/go.sum
+            sentinel/pkg/event/go.sum
+
+      - name: Install govulncheck + gosec
+        run: |
+          set -euo pipefail
+          go install golang.org/x/vuln/cmd/govulncheck@v1.1.4
+          go install github.com/securego/gosec/v2/cmd/gosec@v2.22.1
+
+      - name: govulncheck
+        run: |
+          set -euo pipefail
+          for mod in api agent database detection plugins pkg/event; do
+            echo "==> govulncheck sentinel/${mod}"
+            (cd "sentinel/${mod}" && govulncheck ./...)
+          done
+
+      # Fail the job on HIGH severity only; MEDIUM/LOW are reported in Phase 19 hardening.
+      - name: gosec HIGH (api, agent, database, detection, plugins)
+        run: |
+          set -euo pipefail
+          for mod in api agent database detection plugins; do
+            echo "==> gosec -severity=high sentinel/${mod}"
+            (cd "sentinel/${mod}" && gosec -quiet -severity=high ./...)
+          done
+
+      - name: Trivy filesystem
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          severity: CRITICAL,HIGH
+          exit-code: "1"
+          ignore-unfixed: true
+          format: table
+          scanners: vuln,misconfig,secret

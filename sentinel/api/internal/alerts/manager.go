@@ -173,12 +173,12 @@ func (m *Manager) publishCreated(id, serverID uuid.UUID, severity, title string)
 		return
 	}
 	m.Hub.Publish(realtime.AlertEvent{
-		Type:     "alert.created",
-		AlertID:  id,
-		ServerID: serverID,
-		Status:   StatusOpen,
-		Severity: severity,
-		Title:    title,
+		Type:       "alert.created",
+		AlertID:    id,
+		ServerID:   serverID,
+		Status:     StatusOpen,
+		Severity:   severity,
+		Title:      title,
 		EventCount: 1,
 	})
 }

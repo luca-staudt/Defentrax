@@ -14,8 +14,8 @@ import (
 
 	"github.com/pquerna/otp/totp"
 
-	authtotp "github.com/luca-staudt/Sentinel/sentinel/api/internal/auth/totp"
 	"github.com/luca-staudt/Sentinel/sentinel/api/internal/auth/ratelimit"
+	authtotp "github.com/luca-staudt/Sentinel/sentinel/api/internal/auth/totp"
 	"github.com/luca-staudt/Sentinel/sentinel/api/internal/crypto/password"
 	"github.com/luca-staudt/Sentinel/sentinel/api/internal/server"
 	"github.com/luca-staudt/Sentinel/sentinel/api/internal/store"

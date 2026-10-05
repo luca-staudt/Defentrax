@@ -18,11 +18,14 @@ Environment:
 ## Makefile shortcuts
 
 ```bash
+make fmt-check          # gofmt gate (CI Formatting)
 make build              # api + agent
 make test               # unit tests (all modules + pkg)
 make test-all           # unit + integration
 make test-ci            # unit + OpenAPI validate (CI-friendly)
 make api-test-integration
+make frontend-lint      # ESLint (after npm ci)
+make frontend-build     # Next.js production build
 ```
 
-See `sentinel/docs/testing.md` for the security-focused test matrix.
+See `sentinel/docs/testing.md` for the security-focused test matrix and `sentinel/docs/ci.md` for GitHub Actions.

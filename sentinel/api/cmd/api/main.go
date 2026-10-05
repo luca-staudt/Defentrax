@@ -230,5 +230,3 @@ func runNotificationRetrier(log *slog.Logger, d *notify.Dispatcher) {
 		}
 	}
 }
-
-

@@ -13,6 +13,9 @@ Sentinel tests are split into a **fast unit suite** (default in CI) and **Postgr
 | `make openapi-validate` | OpenAPI lint + route coverage test | No |
 | `./sentinel/scripts/run-unit-tests.sh` | `make test` + `openapi-validate` | No |
 | `./sentinel/scripts/run-integration-tests.sh` | Migrations smoke + `api-test-integration` | Yes |
+| `make fmt-check` | `gofmt -l` gate (CI Formatting) | No |
+
+GitHub Actions maps these targets in [ci.md](ci.md). PR/Main integration jobs use a Postgres **service container** and set `REQUIRE_INTEGRATION_DB=1`.
 
 Set `TEST_DATABASE_URL` (or `DATABASE_URL` for migration scripts) to point at a disposable database. Default local DSN:
 

@@ -23,9 +23,9 @@ const (
 
 // EnrollResult holds enrollment data returned once to the client.
 type EnrollResult struct {
-	Secret       string   `json:"secret"`
-	ProvisioningURI string `json:"provisioning_uri"`
-	RecoveryCodes []string `json:"recovery_codes"`
+	Secret          string   `json:"secret"`
+	ProvisioningURI string   `json:"provisioning_uri"`
+	RecoveryCodes   []string `json:"recovery_codes"`
 }
 
 // GenerateEnrollment creates a new TOTP key and recovery codes (plaintext recovery codes shown once).

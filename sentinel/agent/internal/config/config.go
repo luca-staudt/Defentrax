@@ -11,31 +11,32 @@ import (
 
 // Config holds agent runtime settings (env + optional file overrides via SENTINEL_AGENT_*).
 type Config struct {
-	APIBaseURL       string
-	TLSSkipVerify    bool
-	CredentialPath   string
-	EnrollmentToken  string
-	AgentName        string
-	AgentVersion     string
-	HeartbeatEvery   time.Duration
-	CollectEvery     time.Duration
-	AuthLogPath      string
-	UseJournald      bool
-	DockerEnabled    bool
-	DockerSocket     string
+	APIBaseURL      string
+	TLSSkipVerify   bool
+	CredentialPath  string
+	EnrollmentToken string
+	AgentName       string
+	AgentVersion    string
+	HeartbeatEvery  time.Duration
+	CollectEvery    time.Duration
+	AuthLogPath     string
+	UseJournald     bool
+	DockerEnabled   bool
+	DockerSocket    string
 }
 
-const defaultCredentialPath = "/var/lib/sentinel/agent/credentials.json"
+// Default on-disk path for agent enrollment credentials (not a secret value).
+const defaultCredentialPath = "/var/lib/sentinel/agent/credentials.json" // #nosec G101 -- filesystem path, not a credential
 
 // Load reads configuration from environment variables.
 func Load() (Config, error) {
 	cfg := Config{
-		APIBaseURL:     strings.TrimSuffix(strings.TrimSpace(os.Getenv("SENTINEL_API_URL")), "/"),
-		CredentialPath: strings.TrimSpace(os.Getenv("SENTINEL_AGENT_CREDENTIAL_PATH")),
+		APIBaseURL:      strings.TrimSuffix(strings.TrimSpace(os.Getenv("SENTINEL_API_URL")), "/"),
+		CredentialPath:  strings.TrimSpace(os.Getenv("SENTINEL_AGENT_CREDENTIAL_PATH")),
 		EnrollmentToken: strings.TrimSpace(os.Getenv("SENTINEL_ENROLLMENT_TOKEN")),
-		AgentName:      strings.TrimSpace(os.Getenv("SENTINEL_AGENT_NAME")),
-		AgentVersion:   strings.TrimSpace(os.Getenv("SENTINEL_AGENT_VERSION")),
-		AuthLogPath:    strings.TrimSpace(os.Getenv("SENTINEL_AUTH_LOG_PATH")),
+		AgentName:       strings.TrimSpace(os.Getenv("SENTINEL_AGENT_NAME")),
+		AgentVersion:    strings.TrimSpace(os.Getenv("SENTINEL_AGENT_VERSION")),
+		AuthLogPath:     strings.TrimSpace(os.Getenv("SENTINEL_AUTH_LOG_PATH")),
 	}
 	if cfg.CredentialPath == "" {
 		cfg.CredentialPath = defaultCredentialPath

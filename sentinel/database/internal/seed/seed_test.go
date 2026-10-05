@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/jackc/pgx/v5/pgxpool"
+	_ "github.com/jackc/pgx/v5/stdlib"
 
 	"github.com/luca-staudt/Sentinel/sentinel/database/internal/migrate"
 	"github.com/luca-staudt/Sentinel/sentinel/database/internal/seed"

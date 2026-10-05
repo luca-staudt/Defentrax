@@ -9,22 +9,22 @@ import (
 
 // AlertEvent is a minimal alert notification for dashboards (Phase 9 will consume via WebSocket).
 type AlertEvent struct {
-	Type      string    `json:"type"`
-	AlertID   uuid.UUID `json:"alert_id"`
-	ServerID  uuid.UUID `json:"server_id,omitempty"`
-	Status    string    `json:"status,omitempty"`
-	Severity  string    `json:"severity,omitempty"`
-	Title     string    `json:"title,omitempty"`
-	EventCount int      `json:"event_count,omitempty"`
-	At        time.Time `json:"at"`
+	Type       string    `json:"type"`
+	AlertID    uuid.UUID `json:"alert_id"`
+	ServerID   uuid.UUID `json:"server_id,omitempty"`
+	Status     string    `json:"status,omitempty"`
+	Severity   string    `json:"severity,omitempty"`
+	Title      string    `json:"title,omitempty"`
+	EventCount int       `json:"event_count,omitempty"`
+	At         time.Time `json:"at"`
 }
 
 // Hub buffers recent alert events and supports optional subscribers (stub for live WS).
 type Hub struct {
-	mu       sync.RWMutex
-	recent   []AlertEvent
+	mu        sync.RWMutex
+	recent    []AlertEvent
 	maxRecent int
-	subs     map[chan AlertEvent]struct{}
+	subs      map[chan AlertEvent]struct{}
 }
 
 func NewHub(maxRecent int) *Hub {

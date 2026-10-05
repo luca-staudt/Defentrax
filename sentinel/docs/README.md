@@ -39,3 +39,7 @@ Further architecture and phase planning will be added here as phases land (see r
 ## Testing
 
 - [testing.md](testing.md) — unit/integration matrix (Phase 14)
+
+## CI/CD
+
+- [ci.md](ci.md) — GitHub Actions workflows, Make target map, release checklist (Phase 18)

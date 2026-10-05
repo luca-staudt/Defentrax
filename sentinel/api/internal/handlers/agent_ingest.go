@@ -17,9 +17,9 @@ import (
 )
 
 type ingestEventsResponse struct {
-	Accepted   int                    `json:"accepted"`
-	Duplicates int                    `json:"duplicates"`
-	Rejected   []event.RejectedEvent  `json:"rejected,omitempty"`
+	Accepted   int                   `json:"accepted"`
+	Duplicates int                   `json:"duplicates"`
+	Rejected   []event.RejectedEvent `json:"rejected,omitempty"`
 }
 
 func (h *AgentHandler) IngestEvents(w http.ResponseWriter, r *http.Request) {

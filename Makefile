@@ -1,4 +1,4 @@
-.PHONY: build test test-all test-ci lint api-build api-test api-lint api-test-integration agent-build agent-test detection-test plugins-test pkg-test db-migrate-up db-migrate-down db-migrate-status db-seed-dev db-test test-migrations run-api bootstrap-admin openapi-validate compose-up compose-down compose-config k8s-dry-run helm-lint
+.PHONY: build test test-all test-ci fmt-check lint frontend-lint frontend-build api-build api-test api-lint api-test-integration agent-build agent-test detection-test plugins-test pkg-test db-migrate-up db-migrate-down db-migrate-status db-seed-dev db-test test-migrations run-api bootstrap-admin openapi-validate compose-up compose-down compose-config k8s-dry-run helm-lint
 
 API_DIR := sentinel/api
 AGENT_DIR := sentinel/agent
@@ -6,6 +6,7 @@ DETECTION_DIR := sentinel/detection
 PLUGINS_DIR := sentinel/plugins
 DB_DIR := sentinel/database
 PKG_DIR := sentinel/pkg/event
+FRONTEND_DIR := sentinel/frontend
 
 build: api-build agent-build
 
@@ -15,7 +16,21 @@ test-all: test api-test-integration
 
 test-ci: test openapi-validate
 
+# Fail if any Go file differs from gofmt (CI Formatting job).
+fmt-check:
+	@unformatted=$$(find sentinel -name '*.go' -not -path '*/vendor/*' -print0 | xargs -0 gofmt -l); \
+	if [ -n "$$unformatted" ]; then \
+	  echo "gofmt needed on:"; echo "$$unformatted"; exit 1; \
+	fi
+	@echo "fmt-check: OK"
+
 lint: api-lint
+
+frontend-lint:
+	cd $(FRONTEND_DIR) && npm run lint
+
+frontend-build:
+	cd $(FRONTEND_DIR) && npx next build
 
 api-build:
 	cd $(API_DIR) && go build ./...

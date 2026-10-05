@@ -1,0 +1,127 @@
+# Release prep — tag builds, SBOM artifacts, documented checklist.
+# Triggers on SemVer tags (v*) or manual workflow_dispatch.
+# Does NOT push images to a registry (no secrets / credentials in this workflow).
+# See sentinel/docs/ci.md § Release for the full operator checklist.
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag label for image/SBOM naming (e.g. v0.1.0)"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  resolve-version:
+    name: Resolve version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.out.outputs.version }}
+    steps:
+      - id: out
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "version=${{ inputs.tag }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "version=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+          fi
+
+  full-tests:
+    name: Full tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16.6-alpine
+        env:
+          POSTGRES_USER: sentinel_test
+          POSTGRES_PASSWORD: sentinel_test
+          POSTGRES_DB: sentinel_migration_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U sentinel_test -d sentinel_migration_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      TEST_DATABASE_URL: postgres://sentinel_test:sentinel_test@localhost:5432/sentinel_migration_test?sslmode=disable
+      DATABASE_URL: postgres://sentinel_test:sentinel_test@localhost:5432/sentinel_migration_test?sslmode=disable
+      REQUIRE_INTEGRATION_DB: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22.x"
+          cache-dependency-path: |
+            sentinel/api/go.sum
+            sentinel/agent/go.sum
+            sentinel/database/go.sum
+            sentinel/detection/go.sum
+            sentinel/plugins/go.sum
+            sentinel/pkg/event/go.sum
+      - run: make fmt-check
+      - run: make test
+      - run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - run: ./sentinel/scripts/run-integration-tests.sh
+      - run: make build
+      - run: make openapi-validate
+
+  security:
+    name: Security scan
+    needs: [resolve-version]
+    uses: ./.github/workflows/reusable-security.yml
+    permissions:
+      contents: read
+
+  docker-images:
+    name: Docker images
+    needs: [resolve-version, full-tests]
+    uses: ./.github/workflows/reusable-docker.yml
+    with:
+      images: api,agent,frontend,migrate
+      tag: ${{ needs.resolve-version.outputs.version }}
+      export-api-image: true
+      scan-api-image: true
+    permissions:
+      contents: read
+
+  sbom:
+    name: SBOM
+    needs: [resolve-version, full-tests]
+    uses: ./.github/workflows/reusable-sbom.yml
+    with:
+      image-ref: sentinel-api:${{ needs.resolve-version.outputs.version }}
+    permissions:
+      contents: read
+
+  release-notes:
+    name: Release checklist
+    needs: [resolve-version, full-tests, security, docker-images, sbom]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Summarize release prep
+        run: |
+          ver="${{ needs.resolve-version.outputs.version }}"
+          {
+            echo "## Release prep — \`${ver}\`"
+            echo ""
+            echo "Automated gates completed:"
+            echo "- Full unit + integration tests"
+            echo "- Security scans (govulncheck, gosec, Trivy fs)"
+            echo "- Docker images built locally (api, agent, frontend, migrate) — **not pushed**"
+            echo "- SBOM artifacts uploaded (Syft source + Trivy API image)"
+            echo ""
+            echo "Operator follow-ups (manual — see \`sentinel/docs/ci.md\`):"
+            echo "1. Download SBOM + API image artifacts from this run"
+            echo "2. Tag/push immutable images to your registry"
+            echo "3. Verify Helm chart \`appVersion\` / image tags"
+            echo "4. Publish GitHub Release notes + checksums (Phase 21)"
+            echo "5. Confirm LICENSE decision before public distribution"
+          } >> "$GITHUB_STEP_SUMMARY"

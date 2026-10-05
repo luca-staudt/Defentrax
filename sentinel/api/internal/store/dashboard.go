@@ -8,13 +8,13 @@ import (
 )
 
 type DashboardStats struct {
-	ServersTotal      int            `json:"servers_total"`
-	AgentsActive      int            `json:"agents_active"`
-	EventsLast24h     int            `json:"events_last_24h"`
-	AlertsOpen        int            `json:"alerts_open"`
-	AlertsByStatus    map[string]int `json:"alerts_by_status"`
-	AlertsBySeverity  map[string]int `json:"alerts_by_severity"`
-	EventsBySeverity  map[string]int `json:"events_by_severity_24h"`
+	ServersTotal     int            `json:"servers_total"`
+	AgentsActive     int            `json:"agents_active"`
+	EventsLast24h    int            `json:"events_last_24h"`
+	AlertsOpen       int            `json:"alerts_open"`
+	AlertsByStatus   map[string]int `json:"alerts_by_status"`
+	AlertsBySeverity map[string]int `json:"alerts_by_severity"`
+	EventsBySeverity map[string]int `json:"events_by_severity_24h"`
 }
 
 func DashboardStatsQuery(ctx context.Context, pool *pgxpool.Pool) (DashboardStats, error) {

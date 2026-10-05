@@ -38,9 +38,9 @@ type loginRequest struct {
 }
 
 type loginResponse struct {
-	User            *store.UserPublic `json:"user,omitempty"`
-	RequiresTOTP    bool              `json:"requires_totp"`
-	LoginChallenge  string            `json:"login_challenge,omitempty"`
+	User           *store.UserPublic `json:"user,omitempty"`
+	RequiresTOTP   bool              `json:"requires_totp"`
+	LoginChallenge string            `json:"login_challenge,omitempty"`
 }
 
 type totpVerifyRequest struct {

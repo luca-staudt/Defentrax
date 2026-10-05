@@ -48,9 +48,9 @@ func TestParseLifecycleAndImageEvents(t *testing.T) {
 	inspects := map[string]*ContainerInspect{
 		"a1b2c3d4e5f6789012345678abcdef01": loadInspect(t, "inspect_normal.json"),
 		"f00dcafe00112233445566778899aabb": loadInspect(t, "inspect_privileged.json"),
-		"baddcafebaddcafebaddcafebaddcafe":  loadInspect(t, "inspect_docker_socket.json"),
-		"c0ffeec0ffeec0ffeec0ffeec0ffee01":  loadInspect(t, "inspect_host_network.json"),
-		"d00dd00dd00dd00dd00dd00dd00dd00d":  loadInspect(t, "inspect_sensitive_mount.json"),
+		"baddcafebaddcafebaddcafebaddcafe": loadInspect(t, "inspect_docker_socket.json"),
+		"c0ffeec0ffeec0ffeec0ffeec0ffee01": loadInspect(t, "inspect_host_network.json"),
+		"d00dd00dd00dd00dd00dd00dd00dd00d": loadInspect(t, "inspect_sensitive_mount.json"),
 	}
 	now := time.Date(2026, 4, 10, 22, 0, 0, 0, time.UTC)
 	events, err := ParseLines(lines, "node-a", now, inspects)

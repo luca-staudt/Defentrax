@@ -56,10 +56,10 @@ type Config struct {
 // Load reads configuration from environment variables with secure defaults.
 func Load() (Config, error) {
 	cfg := Config{
-		Env:         strings.TrimSpace(getEnv("APP_ENV", "development")),
-		LogLevel:    strings.TrimSpace(getEnv("LOG_LEVEL", "info")),
-		DatabaseURL: strings.TrimSpace(os.Getenv("DATABASE_URL")),
-		SessionCookieName: strings.TrimSpace(getEnv("SESSION_COOKIE_NAME", "sentinel_session")),
+		Env:                strings.TrimSpace(getEnv("APP_ENV", "development")),
+		LogLevel:           strings.TrimSpace(getEnv("LOG_LEVEL", "info")),
+		DatabaseURL:        strings.TrimSpace(os.Getenv("DATABASE_URL")),
+		SessionCookieName:  strings.TrimSpace(getEnv("SESSION_COOKIE_NAME", "sentinel_session")),
 		RedisURL:           strings.TrimSpace(os.Getenv("REDIS_URL")),
 		CORSAllowedOrigins: strings.TrimSpace(os.Getenv("CORS_ALLOWED_ORIGINS")),
 	}

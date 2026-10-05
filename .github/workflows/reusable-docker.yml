@@ -1,0 +1,119 @@
+# Reusable Docker image builds (no push, no registry secrets).
+name: Reusable — Docker build
+
+on:
+  workflow_call:
+    inputs:
+      images:
+        description: "Comma-separated set: api,agent,frontend,migrate (default api)"
+        required: false
+        type: string
+        default: "api"
+      tag:
+        description: "Image tag suffix"
+        required: false
+        type: string
+        default: "ci"
+      export-api-image:
+        description: "If true, save sentinel-api image via docker save artifact"
+        required: false
+        type: boolean
+        default: false
+      scan-api-image:
+        description: "If true and api is built, run Trivy image scan on sentinel-api"
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  container-build:
+    name: Container build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build API image
+        if: contains(inputs.images, 'api')
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: sentinel/api/Dockerfile
+          push: false
+          load: true
+          tags: sentinel-api:${{ inputs.tag }}
+          cache-from: type=gha,scope=sentinel-api
+          cache-to: type=gha,mode=max,scope=sentinel-api
+
+      - name: Build agent image
+        if: contains(inputs.images, 'agent')
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: sentinel/agent/Dockerfile
+          push: false
+          load: true
+          tags: sentinel-agent:${{ inputs.tag }}
+          cache-from: type=gha,scope=sentinel-agent
+          cache-to: type=gha,mode=max,scope=sentinel-agent
+
+      - name: Build frontend image
+        if: contains(inputs.images, 'frontend')
+        uses: docker/build-push-action@v6
+        with:
+          context: sentinel/frontend
+          file: sentinel/frontend/Dockerfile
+          push: false
+          load: true
+          tags: sentinel-frontend:${{ inputs.tag }}
+          cache-from: type=gha,scope=sentinel-frontend
+          cache-to: type=gha,mode=max,scope=sentinel-frontend
+
+      - name: Build migrate image
+        if: contains(inputs.images, 'migrate')
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: sentinel/database/Dockerfile
+          push: false
+          load: true
+          tags: sentinel-migrate:${{ inputs.tag }}
+          cache-from: type=gha,scope=sentinel-migrate
+          cache-to: type=gha,mode=max,scope=sentinel-migrate
+
+      - name: Trivy scan API image
+        if: ${{ inputs.scan-api-image && contains(inputs.images, 'api') }}
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: image
+          image-ref: sentinel-api:${{ inputs.tag }}
+          severity: CRITICAL,HIGH
+          exit-code: "1"
+          ignore-unfixed: true
+          format: table
+
+      - name: Export API image artifact
+        if: ${{ inputs.export-api-image && contains(inputs.images, 'api') }}
+        run: docker save "sentinel-api:${{ inputs.tag }}" | gzip > sentinel-api-image.tar.gz
+
+      - name: Upload API image artifact
+        if: ${{ inputs.export-api-image && contains(inputs.images, 'api') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: sentinel-api-image
+          path: sentinel-api-image.tar.gz
+          retention-days: 7
+
+      - name: Write image digest summary
+        run: |
+          {
+            echo "## Container images (local load only — not pushed)"
+            echo ""
+            docker images --format 'table {{.Repository}}\t{{.Tag}}\t{{.ID}}\t{{.Size}}' | grep -E 'REPOSITORY|sentinel-' || true
+          } >> "$GITHUB_STEP_SUMMARY"

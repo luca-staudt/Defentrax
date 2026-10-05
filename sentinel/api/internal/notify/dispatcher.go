@@ -15,15 +15,15 @@ import (
 
 // Dispatcher matches notification rules and delivers alerts with retry/backoff.
 type Dispatcher struct {
-	Log            *slog.Logger
-	Pool           *pgxpool.Pool
-	SecretsKey     []byte
-	Webhooks       *WebhookSender
-	Email          *EmailSender
-	MaxAttempts    int
-	BaseBackoff    time.Duration
-	MaxBackoff     time.Duration
-	Async          bool // when true, Notify returns immediately and work runs in a goroutine
+	Log         *slog.Logger
+	Pool        *pgxpool.Pool
+	SecretsKey  []byte
+	Webhooks    *WebhookSender
+	Email       *EmailSender
+	MaxAttempts int
+	BaseBackoff time.Duration
+	MaxBackoff  time.Duration
+	Async       bool // when true, Notify returns immediately and work runs in a goroutine
 
 	mu     sync.Mutex
 	wg     sync.WaitGroup

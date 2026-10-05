@@ -51,8 +51,8 @@ func EngineEventToCanonical(eng EngineEvent, raw []byte, host string, now time.T
 	image := firstNonEmpty(attrs["image"], eng.From)
 
 	fields := map[string]any{
-		"event_type": eventType,
-		"docker_type": typ,
+		"event_type":    eventType,
+		"docker_type":   typ,
 		"docker_action": action,
 	}
 	if containerID != "" {

@@ -86,9 +86,9 @@ type DataSource interface {
 
 // SupportStatus documents what the host actually runs today vs later.
 type SupportStatus struct {
-	Kind      Kind
-	Runtime   string // "loaded" | "interface_only"
-	Notes     string
+	Kind    Kind
+	Runtime string // "loaded" | "interface_only"
+	Notes   string
 }
 
 // V1Support returns the honest v1 support matrix.

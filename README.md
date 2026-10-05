@@ -87,12 +87,21 @@ make test
 make run-api
 ```
 
-Testing (unit vs PostgreSQL integration): `sentinel/docs/testing.md`
+Testing (unit vs PostgreSQL integration): `sentinel/docs/testing.md`  
+CI/CD (GitHub Actions ↔ Make): [`sentinel/docs/ci.md`](sentinel/docs/ci.md)
 
 ```bash
+make fmt-check               # gofmt gate (CI Formatting job)
 make test                    # CI-safe unit suite
 make api-test-integration    # requires TEST_DATABASE_URL / local Postgres
 ./sentinel/scripts/run-unit-tests.sh
+```
+
+Optional lint (install [golangci-lint](https://golangci-lint.run/) first):
+
+```bash
+make lint
+make frontend-lint           # after npm ci in sentinel/frontend
 ```
 
 Optional dev RBAC seed (development only — never in production):
@@ -113,12 +122,6 @@ curl -s http://localhost:8080/api/v1
 
 Migration integration script: `./sentinel/scripts/test-migrations.sh`
 
-Optional lint (install [golangci-lint](https://golangci-lint.run/) first):
-
-```bash
-make lint
-```
-
 ## Security
 
 - **No secrets in git** — use `.env` locally (never commit it). See `.env.example`.
@@ -132,6 +135,7 @@ make lint
 - In-repo: [`sentinel/docs/`](sentinel/docs/)
 - Install (Compose / K8s): [`sentinel/docs/installation.md`](sentinel/docs/installation.md)
 - Deploy / images / K8s / Helm: [`sentinel/docs/deployment.md`](sentinel/docs/deployment.md) · [`sentinel/deployments/kubernetes/`](sentinel/deployments/kubernetes/) · [`sentinel/deployments/helm/sentinel/`](sentinel/deployments/helm/sentinel/)
+- CI/CD: [`sentinel/docs/ci.md`](sentinel/docs/ci.md) · [`.github/workflows/`](.github/workflows/)
 - API (OpenAPI): [`sentinel/docs/api.md`](sentinel/docs/api.md) · [`sentinel/api/openapi/openapi.yaml`](sentinel/api/openapi/openapi.yaml)
 - Plugins: [`sentinel/docs/plugins.md`](sentinel/docs/plugins.md)
 - API module: [`sentinel/api/README.md`](sentinel/api/README.md)

@@ -35,11 +35,11 @@ func secretsKey() []byte {
 }
 
 type mockHTTP struct {
-	mu       sync.Mutex
-	calls    int
+	mu        sync.Mutex
+	calls     int
 	failUntil int
-	urls     []string
-	bodies   []string
+	urls      []string
+	bodies    []string
 }
 
 func (m *mockHTTP) Do(req *http.Request) (*http.Response, error) {

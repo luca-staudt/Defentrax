@@ -1,0 +1,161 @@
+# Main branch — full tests, Docker images, SBOM. No registry push / no secrets.
+name: Main
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: main-${{ github.workflow }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  format:
+    name: Formatting
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22.x"
+      - run: make fmt-check
+
+  lint:
+    name: Linting
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22.x"
+          cache-dependency-path: |
+            sentinel/api/go.sum
+            sentinel/agent/go.sum
+            sentinel/database/go.sum
+            sentinel/detection/go.sum
+            sentinel/plugins/go.sum
+            sentinel/pkg/event/go.sum
+      - uses: golangci/golangci-lint-action@v6
+        with:
+          version: v1.61.0
+          working-directory: sentinel/api
+          args: ./...
+          install-mode: goinstall
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: sentinel/frontend/package-lock.json
+      - name: Frontend lint
+        working-directory: sentinel/frontend
+        run: npm ci && npm run lint
+      - run: make openapi-validate
+
+  unit-tests:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22.x"
+          cache-dependency-path: |
+            sentinel/api/go.sum
+            sentinel/agent/go.sum
+            sentinel/database/go.sum
+            sentinel/detection/go.sum
+            sentinel/plugins/go.sum
+            sentinel/pkg/event/go.sum
+      - run: make test
+
+  integration-tests:
+    name: Integration tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16.6-alpine
+        env:
+          POSTGRES_USER: sentinel_test
+          POSTGRES_PASSWORD: sentinel_test
+          POSTGRES_DB: sentinel_migration_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U sentinel_test -d sentinel_migration_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      TEST_DATABASE_URL: postgres://sentinel_test:sentinel_test@localhost:5432/sentinel_migration_test?sslmode=disable
+      DATABASE_URL: postgres://sentinel_test:sentinel_test@localhost:5432/sentinel_migration_test?sslmode=disable
+      REQUIRE_INTEGRATION_DB: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22.x"
+          cache-dependency-path: |
+            sentinel/api/go.sum
+            sentinel/agent/go.sum
+            sentinel/database/go.sum
+            sentinel/detection/go.sum
+            sentinel/plugins/go.sum
+            sentinel/pkg/event/go.sum
+      - run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - run: ./sentinel/scripts/run-integration-tests.sh
+
+  security:
+    name: Security scan
+    uses: ./.github/workflows/reusable-security.yml
+    permissions:
+      contents: read
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22.x"
+          cache-dependency-path: |
+            sentinel/api/go.sum
+            sentinel/agent/go.sum
+            sentinel/database/go.sum
+            sentinel/detection/go.sum
+            sentinel/plugins/go.sum
+            sentinel/pkg/event/go.sum
+      - run: make build
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: sentinel/frontend/package-lock.json
+      - name: Frontend production build
+        working-directory: sentinel/frontend
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
+          NEXT_PUBLIC_WS_URL: ws://localhost:8080
+        run: npm ci && npx next build
+
+  container-build:
+    name: Docker images
+    uses: ./.github/workflows/reusable-docker.yml
+    with:
+      images: api,agent,frontend,migrate
+      tag: main
+      scan-api-image: true
+    permissions:
+      contents: read
+
+  sbom:
+    name: SBOM
+    needs: [unit-tests, integration-tests]
+    uses: ./.github/workflows/reusable-sbom.yml
+    with:
+      image-ref: sentinel-api:main
+    permissions:
+      contents: read

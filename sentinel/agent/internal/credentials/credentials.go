@@ -14,10 +14,10 @@ const fileMode = 0o600
 
 // StoredCredentials is persisted on disk after enrollment.
 type StoredCredentials struct {
-	AgentID    uuid.UUID `json:"agent_id"`
-	ServerID   uuid.UUID `json:"server_id"`
-	AgentToken string    `json:"agent_token"`
-	TokenPrefix string   `json:"token_prefix"`
+	AgentID     uuid.UUID `json:"agent_id"`
+	ServerID    uuid.UUID `json:"server_id"`
+	AgentToken  string    `json:"agent_token"`
+	TokenPrefix string    `json:"token_prefix"`
 }
 
 // Load reads credentials from path.
