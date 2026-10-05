@@ -22,8 +22,14 @@ type EventInsertRow struct {
 	Fields      []byte
 }
 
-// InsertEventsBatch inserts many events for one agent in a single statement. Returns ingest_ids that were newly inserted.
-func InsertEventsBatch(ctx context.Context, pool *pgxpool.Pool, agentID, serverID uuid.UUID, rows []EventInsertRow) ([]string, error) {
+// InsertedEvent is a newly persisted event row.
+type InsertedEvent struct {
+	ID       uuid.UUID
+	IngestID string
+}
+
+// InsertEventsBatch inserts many events for one agent in a single statement. Returns newly inserted events.
+func InsertEventsBatch(ctx context.Context, pool *pgxpool.Pool, agentID, serverID uuid.UUID, rows []EventInsertRow) ([]InsertedEvent, error) {
 	if len(rows) == 0 {
 		return nil, nil
 	}
@@ -67,20 +73,20 @@ FROM unnest(
 	$12::text[]
 ) AS i(ingest_id, occurred_at, source, category, severity, host, message, raw, fields, fingerprint)
 ON CONFLICT (agent_id, ingest_id) DO NOTHING
-RETURNING ingest_id
+RETURNING id, ingest_id
 `
 	dbRows, err := pool.Query(ctx, q, agentID, serverID, ingestIDs, occurredAt, sources, categories, severities, hosts, messages, raws, fields, fingerprints)
 	if err != nil {
 		return nil, err
 	}
 	defer dbRows.Close()
-	var inserted []string
+	var inserted []InsertedEvent
 	for dbRows.Next() {
-		var id string
-		if err := dbRows.Scan(&id); err != nil {
+		var ev InsertedEvent
+		if err := dbRows.Scan(&ev.ID, &ev.IngestID); err != nil {
 			return nil, err
 		}
-		inserted = append(inserted, id)
+		inserted = append(inserted, ev)
 	}
 	return inserted, dbRows.Err()
 }

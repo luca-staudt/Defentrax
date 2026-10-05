@@ -100,6 +100,16 @@ func (h *AgentHandler) IngestEvents(w http.ResponseWriter, r *http.Request) {
 		}
 		accepted = len(inserted)
 		duplicates = len(toInsert) - accepted
+		if h.OnDetect != nil {
+			byIngest := make(map[string]store.EventInsertRow, len(toInsert))
+			for _, row := range toInsert {
+				byIngest[row.IngestID] = row
+			}
+			for _, ins := range inserted {
+				row := byIngest[ins.IngestID]
+				h.OnDetect(ins.ID, a.ServerID, a.ID, row.OccurredAt, row.Source, row.Category, row.Severity, row.Host, row.Message, row.Fields)
+			}
+		}
 	}
 
 	writeJSON(w, http.StatusAccepted, ingestEventsResponse{

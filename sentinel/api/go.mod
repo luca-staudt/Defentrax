@@ -4,9 +4,12 @@ go 1.22
 
 replace github.com/luca-staudt/Sentinel/sentinel/pkg/event => ../pkg/event
 
+replace github.com/luca-staudt/Sentinel/sentinel/detection => ../detection
+
 require (
 	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v5 v5.7.4
+	github.com/luca-staudt/Sentinel/sentinel/detection v0.0.0
 	github.com/luca-staudt/Sentinel/sentinel/pkg/event v0.0.0
 	github.com/pquerna/otp v1.4.0
 	github.com/redis/go-redis/v9 v9.7.0
@@ -24,4 +27,5 @@ require (
 	golang.org/x/sync v0.10.0 // indirect
 	golang.org/x/sys v0.28.0 // indirect
 	golang.org/x/text v0.21.0 // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

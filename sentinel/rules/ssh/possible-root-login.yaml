@@ -1,0 +1,15 @@
+id: ssh.possible-root-login
+name: Possible direct root SSH session
+description: A successful SSH login for the root account may be unusual on hardened hosts and worth reviewing.
+severity: medium
+version: 1
+condition:
+  source: authlog
+  category: auth
+  fields:
+    result: success
+    user: root
+    program: sshd
+action:
+  title: Possible root SSH login from {{src_ip}}
+  description: Successful SSH authentication for root from {{src_ip}} on {{host}}. Confirm whether direct root login is expected for this server.

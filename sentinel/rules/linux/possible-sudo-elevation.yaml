@@ -1,0 +1,12 @@
+id: linux.possible-sudo-elevation
+name: Possible privileged sudo command
+description: A user invoked sudo to run a command with elevated privileges; review for expected administrative activity.
+severity: low
+version: 1
+condition:
+  source: authlog
+  category: auth
+  event_type: sudo
+action:
+  title: Possible sudo activity by {{user}} on {{host}}
+  description: Sudo elevation event for user {{user}} on {{host}}. Verify the command and session match expected operator activity.

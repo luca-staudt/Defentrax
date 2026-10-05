@@ -8,6 +8,8 @@ Go HTTP service for Sentinel’s control plane: REST under `/api/v1`, future Web
 
 **Phase 6 scope:** Batch event ingestion (`POST /api/v1/agent/events`), validation/normalization, idempotency, per-agent rate limits, batch DB insert.
 
+**Phase 7 scope:** Detection engine integration — load YAML rules from `sentinel/rules`, async evaluation after ingest, Rules API (`list`/`get`/`enable`), minimal OPEN alert stubs.
+
 ## Run locally
 
 From the repository root (requires `DATABASE_URL`, `SESSION_SECRET`, and migrations applied):
@@ -54,6 +56,9 @@ Alternatively, set the same `SENTINEL_BOOTSTRAP_*` variables before starting the
 | POST | `/api/v1/agent/enroll` | enrollment token (body) | Register agent; returns one-time `sagt_…` |
 | POST | `/api/v1/agent/heartbeat` | agent bearer | Update `last_heartbeat_at` / status |
 | POST | `/api/v1/agent/events` | agent bearer | Ingest validated events (batch ≤100) |
+| GET | `/api/v1/rules` | `rules:read` | List detection rules |
+| GET | `/api/v1/rules/{id}` | `rules:read` | Get one rule |
+| PATCH | `/api/v1/rules/{id}` | `rules:write` | Enable/disable a rule (`{"enabled":true\|false}`) |
 
 ## Tests
 

@@ -1,0 +1,18 @@
+id: apache.possible-server-error-spike
+name: Possible Apache 5xx response cluster
+description: Multiple HTTP 5xx responses from the same client within a short window may indicate a failing backend or probing activity.
+severity: medium
+version: 1
+condition:
+  source: apache
+  category: network
+  fields:
+    status_class: "5xx"
+threshold:
+  count: 8
+  window_seconds: 120
+group_by:
+  - src_ip
+action:
+  title: Possible Apache 5xx cluster from {{src_ip}}
+  description: Eight or more HTTP 5xx responses associated with {{src_ip}} on {{host}} within two minutes. Review application health and access patterns.

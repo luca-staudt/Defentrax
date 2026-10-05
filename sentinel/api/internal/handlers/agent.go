@@ -19,11 +19,15 @@ import (
 	"github.com/luca-staudt/Sentinel/sentinel/pkg/event"
 )
 
+// DetectionEnqueue queues a persisted event for asynchronous rule evaluation.
+type DetectionEnqueue func(eventID, serverID, agentID uuid.UUID, occurredAt time.Time, source, category, severity, host, message string, fields []byte)
+
 // AgentHandler serves agent enrollment, heartbeat, and event ingestion.
 type AgentHandler struct {
 	Pool          *pgxpool.Pool
 	Config        config.Config
 	IngestLimiter ratelimit.Limiter
+	OnDetect      DetectionEnqueue
 }
 
 type enrollRequest struct {

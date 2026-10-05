@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 
@@ -15,8 +16,10 @@ import (
 	"github.com/luca-staudt/Sentinel/sentinel/api/internal/bootstrap"
 	"github.com/luca-staudt/Sentinel/sentinel/api/internal/config"
 	"github.com/luca-staudt/Sentinel/sentinel/api/internal/db"
+	"github.com/luca-staudt/Sentinel/sentinel/api/internal/detectionrun"
 	"github.com/luca-staudt/Sentinel/sentinel/api/internal/logging"
 	"github.com/luca-staudt/Sentinel/sentinel/api/internal/server"
+	"github.com/luca-staudt/Sentinel/sentinel/detection"
 )
 
 func main() {
@@ -66,7 +69,36 @@ func main() {
 		log.Info("rate limiting uses in-memory store (set REDIS_URL for multi-instance)")
 	}
 
-	srv := server.New(log, cfg, pool, loginLimiter, ingestLimiter)
+	windowCounter, closeWindow, err := detection.NewWindowCounterFromRedisURL(cfg.RedisURL)
+	if err != nil {
+		log.Error("detection window counter init failed", "error", err)
+		os.Exit(1)
+	}
+	defer func() { _ = closeWindow() }()
+
+	var detectSvc *detectionrun.Service
+	opts := server.Options{}
+	if pool != nil {
+		engine := detection.NewEngine(windowCounter)
+		rulesPath := rulesDir()
+		if err := detectionrun.Bootstrap(ctx, log, pool, engine, rulesPath); err != nil {
+			log.Error("detection bootstrap failed", "error", err, "rules_path", rulesPath)
+			os.Exit(1)
+		}
+		rules := engine.Rules()
+		runner := detectionrun.New(log, pool, engine, 1024)
+		defer runner.Close()
+		detectSvc = &detectionrun.Service{
+			Log:    log,
+			Pool:   pool,
+			Engine: engine,
+			Rules:  rules,
+			Runner: runner,
+		}
+		opts.Detection = detectSvc
+	}
+
+	srv := server.NewWithOptions(log, cfg, pool, loginLimiter, ingestLimiter, opts)
 
 	errCh := make(chan error, 1)
 	go func() {
@@ -93,4 +125,22 @@ func main() {
 		os.Exit(1)
 	}
 	log.Info("sentinel api stopped")
+}
+
+func rulesDir() string {
+	if v := os.Getenv("SENTINEL_RULES_PATH"); v != "" {
+		return v
+	}
+	// Default: repo-relative path when running from sentinel/api or repo root.
+	candidates := []string{
+		filepath.Join("..", "rules"),
+		filepath.Join("sentinel", "rules"),
+		"rules",
+	}
+	for _, c := range candidates {
+		if st, err := os.Stat(c); err == nil && st.IsDir() {
+			return c
+		}
+	}
+	return filepath.Join("..", "rules")
 }

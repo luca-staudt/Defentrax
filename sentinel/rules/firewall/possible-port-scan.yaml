@@ -1,0 +1,18 @@
+id: firewall.possible-port-scan
+name: Possible firewall deny burst
+description: A burst of denied connections from one source may indicate port scanning or misconfigured clients.
+severity: medium
+version: 1
+condition:
+  source: firewall
+  category: network
+  fields:
+    action: deny
+threshold:
+  count: 20
+  window_seconds: 60
+group_by:
+  - src_ip
+action:
+  title: Possible deny burst from {{src_ip}}
+  description: Twenty or more firewall deny events from {{src_ip}} on {{host}} within one minute. Consider reviewing firewall logs and network exposure.

@@ -1,0 +1,18 @@
+id: nginx.possible-repeated-unauthorized
+name: Possible repeated unauthorized HTTP requests
+description: Multiple HTTP 401 responses from the same client in a short window may indicate probing or misconfigured credentials.
+severity: medium
+version: 1
+condition:
+  source: nginx
+  category: network
+  fields:
+    status: "401"
+threshold:
+  count: 10
+  window_seconds: 120
+group_by:
+  - src_ip
+action:
+  title: Possible repeated HTTP 401s from {{src_ip}}
+  description: Ten or more HTTP 401 responses for requests from {{src_ip}} within two minutes on {{host}}. This may indicate scanning or authentication misconfiguration.

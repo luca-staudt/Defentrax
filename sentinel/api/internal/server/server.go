@@ -13,6 +13,7 @@ import (
 	"github.com/luca-staudt/Sentinel/sentinel/api/internal/apperrors"
 	"github.com/luca-staudt/Sentinel/sentinel/api/internal/auth/ratelimit"
 	"github.com/luca-staudt/Sentinel/sentinel/api/internal/config"
+	"github.com/luca-staudt/Sentinel/sentinel/api/internal/detectionrun"
 	"github.com/luca-staudt/Sentinel/sentinel/api/internal/handlers"
 	"github.com/luca-staudt/Sentinel/sentinel/api/internal/middleware"
 )
@@ -23,8 +24,18 @@ type Server struct {
 	http *http.Server
 }
 
+// Options configures optional detection wiring.
+type Options struct {
+	Detection *detectionrun.Service
+}
+
 // New constructs the API HTTP server with routes and middleware.
 func New(log *slog.Logger, cfg config.Config, pool *pgxpool.Pool, loginLimiter, ingestLimiter ratelimit.Limiter) *Server {
+	return NewWithOptions(log, cfg, pool, loginLimiter, ingestLimiter, Options{})
+}
+
+// NewWithOptions constructs the API HTTP server with optional detection integration.
+func NewWithOptions(log *slog.Logger, cfg config.Config, pool *pgxpool.Pool, loginLimiter, ingestLimiter ratelimit.Limiter, opts Options) *Server {
 	rootMux := http.NewServeMux()
 
 	readiness := handlers.Readiness{
@@ -42,6 +53,32 @@ func New(log *slog.Logger, cfg config.Config, pool *pgxpool.Pool, loginLimiter, 
 	keysH := &handlers.APIKeysHandler{Pool: pool}
 	serversH := &handlers.ServersHandler{Pool: pool}
 	agentH := &handlers.AgentHandler{Pool: pool, Config: cfg, IngestLimiter: ingestLimiter}
+	rulesH := &handlers.RulesHandler{Pool: pool}
+	if opts.Detection != nil && opts.Detection.Runner != nil {
+		runner := opts.Detection.Runner
+		agentH.OnDetect = func(eventID, serverID, agentID uuid.UUID, occurredAt time.Time, source, category, severity, host, message string, fields []byte) {
+			runner.Enqueue(detectionrun.PendingEvent{
+				ID:         eventID,
+				ServerID:   serverID,
+				AgentID:    agentID,
+				OccurredAt: occurredAt,
+				Source:     source,
+				Category:   category,
+				Severity:   severity,
+				Host:       host,
+				Message:    message,
+				Fields:     fields,
+			})
+		}
+		svc := opts.Detection
+		rulesH.OnRuleChange = func() {
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			if err := svc.ReloadEnabled(ctx); err != nil {
+				log.Error("reload rule enable flags failed", "error", err)
+			}
+		}
+	}
 	agentAuth := middleware.AuthenticateAgent(pool)
 
 	// Public auth endpoints (no session required).
@@ -94,6 +131,26 @@ func New(log *slog.Logger, cfg config.Config, pool *pgxpool.Pool, loginLimiter, 
 			return
 		}
 		keysH.Revoke(w, r, id)
+	})))
+
+	apiMux.Handle("GET /api/v1/rules", protectPerm(pool, cfg, "rules", "read", http.HandlerFunc(rulesH.List)))
+	apiMux.Handle("GET /api/v1/rules/{id}", protectPerm(pool, cfg, "rules", "read", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		id, err := uuid.Parse(r.PathValue("id"))
+		if err != nil {
+			requestID := middleware.RequestIDFromContext(r.Context())
+			apperrors.WriteJSON(w, http.StatusBadRequest, "invalid_id", "invalid rule id", requestID)
+			return
+		}
+		rulesH.Get(w, r, id)
+	})))
+	apiMux.Handle("PATCH /api/v1/rules/{id}", protectPerm(pool, cfg, "rules", "write", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		id, err := uuid.Parse(r.PathValue("id"))
+		if err != nil {
+			requestID := middleware.RequestIDFromContext(r.Context())
+			apperrors.WriteJSON(w, http.StatusBadRequest, "invalid_id", "invalid rule id", requestID)
+			return
+		}
+		rulesH.Patch(w, r, id)
 	})))
 
 	apiMux.HandleFunc("/api/v1/", apiV1NotFound)
