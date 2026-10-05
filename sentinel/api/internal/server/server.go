@@ -71,11 +71,12 @@ func NewWithOptions(log *slog.Logger, cfg config.Config, pool *pgxpool.Pool, log
 	eventsH := &handlers.EventsHandler{Pool: pool}
 	dashboardH := &handlers.DashboardHandler{Pool: pool}
 	realtimeH := &handlers.RealtimeHandler{Pool: pool, Config: cfg, Hub: opts.AlertHub}
-	notifH := &handlers.NotificationsHandler{Pool: pool, SecretsKey: opts.SecretsKey}
+	notifH := &handlers.NotificationsHandler{Pool: pool, SecretsKey: opts.SecretsKey, Dispatcher: opts.Notifier}
 	if len(notifH.SecretsKey) == 0 {
 		notifH.SecretsKey = cfg.SecretsEncryptionKey
 	}
 	pluginsH := &handlers.PluginsHandler{Pool: pool, Runtime: opts.Plugins}
+	auditH := &handlers.AuditHandler{Pool: pool}
 	if opts.Detection != nil && opts.Detection.Runner != nil {
 		runner := opts.Detection.Runner
 		agentH.OnDetect = func(eventID, serverID, agentID uuid.UUID, occurredAt time.Time, source, category, severity, host, message string, fields []byte) {
@@ -237,6 +238,15 @@ func NewWithOptions(log *slog.Logger, cfg config.Config, pool *pgxpool.Pool, log
 		}
 		notifH.DeleteChannel(w, r, id)
 	})))
+	apiMux.Handle("POST /api/v1/notification-channels/{id}/test", protectPerm(pool, cfg, "notifications", "write", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		id, err := uuid.Parse(r.PathValue("id"))
+		if err != nil {
+			requestID := middleware.RequestIDFromContext(r.Context())
+			apperrors.WriteJSON(w, http.StatusBadRequest, "invalid_id", "invalid channel id", requestID)
+			return
+		}
+		notifH.TestChannel(w, r, id)
+	})))
 
 	apiMux.Handle("GET /api/v1/notification-rules", protectPerm(pool, cfg, "notifications", "read", http.HandlerFunc(notifH.ListRules)))
 	apiMux.Handle("POST /api/v1/notification-rules", protectPerm(pool, cfg, "notifications", "write", http.HandlerFunc(notifH.CreateRule)))
@@ -276,6 +286,17 @@ func NewWithOptions(log *slog.Logger, cfg config.Config, pool *pgxpool.Pool, log
 			return
 		}
 		rulesH.Patch(w, r, id)
+	})))
+
+	apiMux.Handle("GET /api/v1/audit-logs", protectPerm(pool, cfg, "audit_logs", "read", http.HandlerFunc(auditH.List)))
+	apiMux.Handle("GET /api/v1/audit-logs/{id}", protectPerm(pool, cfg, "audit_logs", "read", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		id, err := uuid.Parse(r.PathValue("id"))
+		if err != nil {
+			requestID := middleware.RequestIDFromContext(r.Context())
+			apperrors.WriteJSON(w, http.StatusBadRequest, "invalid_id", "invalid audit log id", requestID)
+			return
+		}
+		auditH.Get(w, r, id)
 	})))
 
 	apiMux.Handle("GET /api/v1/plugins", protectPerm(pool, cfg, "plugins", "read", http.HandlerFunc(pluginsH.List)))

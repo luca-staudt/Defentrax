@@ -17,6 +17,7 @@ const nav = [
     label: "Notifications",
     perm: ["notifications", "read"] as const,
   },
+  { href: "/audit", label: "Audit logs", perm: ["audit_logs", "read"] as const },
 ];
 
 export function Sidebar() {

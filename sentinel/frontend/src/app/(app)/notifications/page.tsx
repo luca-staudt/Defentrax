@@ -53,6 +53,14 @@ export default function NotificationsPage() {
   const [ruleSaving, setRuleSaving] = useState(false);
   const [ruleError, setRuleError] = useState<string | null>(null);
 
+  /** Per-channel test feedback: success toast + failure log snippet */
+  const [testBusyId, setTestBusyId] = useState<string | null>(null);
+  const [testFeedback, setTestFeedback] = useState<{
+    channelId: string;
+    ok: boolean;
+    message: string;
+  } | null>(null);
+
   const load = useCallback(async () => {
     try {
       const [ch, ru] = await Promise.all([
@@ -150,6 +158,37 @@ export default function NotificationsPage() {
       setChError(
         err instanceof ApiRequestError ? err.message : "Delete failed",
       );
+    }
+  }
+
+  async function testChannel(ch: NotificationChannel) {
+    if (!canWrite) return;
+    setTestBusyId(ch.id);
+    setTestFeedback(null);
+    try {
+      const res = await apiFetch<{
+        ok: boolean;
+        message: string;
+      }>(`/notification-channels/${ch.id}/test`, { method: "POST" });
+      setTestFeedback({
+        channelId: ch.id,
+        ok: true,
+        message: res.message || "Test notification sent",
+      });
+    } catch (err) {
+      const msg =
+        err instanceof ApiRequestError
+          ? err.message
+          : err instanceof Error
+            ? err.message
+            : "Test failed";
+      setTestFeedback({
+        channelId: ch.id,
+        ok: false,
+        message: msg,
+      });
+    } finally {
+      setTestBusyId(null);
     }
   }
 
@@ -369,39 +408,70 @@ export default function NotificationsPage() {
           />
         ) : (
           <ul className="divide-y divide-zinc-800 rounded-xl border border-zinc-800">
-            {channels.map((ch) => (
-              <li
-                key={ch.id}
-                className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-sm"
-              >
-                <div>
-                  <p className="text-zinc-100">{ch.name}</p>
-                  <p className="text-xs text-zinc-500">
-                    {ch.channel_type}
-                    {ch.has_secrets ? " · secrets set" : ""} ·{" "}
-                    {ch.enabled ? "enabled" : "disabled"}
-                  </p>
-                </div>
-                {canWrite ? (
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      className="rounded-lg border border-zinc-700 px-3 py-1.5 text-xs text-zinc-300 hover:border-brand-500/50"
-                      onClick={() => void toggleChannel(ch)}
-                    >
-                      {ch.enabled ? "Disable" : "Enable"}
-                    </button>
-                    <button
-                      type="button"
-                      className={btnDanger}
-                      onClick={() => void deleteChannel(ch.id)}
-                    >
-                      Delete
-                    </button>
+            {channels.map((ch) => {
+              const fb =
+                testFeedback?.channelId === ch.id ? testFeedback : null;
+              return (
+                <li
+                  key={ch.id}
+                  className="flex flex-col gap-2 px-4 py-3 text-sm"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <p className="text-zinc-100">{ch.name}</p>
+                      <p className="text-xs text-zinc-500">
+                        {ch.channel_type}
+                        {ch.has_secrets ? " · secrets set" : ""} ·{" "}
+                        {ch.enabled ? "enabled" : "disabled"}
+                      </p>
+                    </div>
+                    {canWrite ? (
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          className="rounded-lg border border-zinc-700 px-3 py-1.5 text-xs text-zinc-300 hover:border-brand-500/50 disabled:opacity-50"
+                          disabled={testBusyId === ch.id}
+                          onClick={() => void testChannel(ch)}
+                        >
+                          {testBusyId === ch.id ? "Testing…" : "Test"}
+                        </button>
+                        <button
+                          type="button"
+                          className="rounded-lg border border-zinc-700 px-3 py-1.5 text-xs text-zinc-300 hover:border-brand-500/50"
+                          onClick={() => void toggleChannel(ch)}
+                        >
+                          {ch.enabled ? "Disable" : "Enable"}
+                        </button>
+                        <button
+                          type="button"
+                          className={btnDanger}
+                          onClick={() => void deleteChannel(ch.id)}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    ) : null}
                   </div>
-                ) : null}
-              </li>
-            ))}
+                  {fb ? (
+                    <div
+                      className={`rounded-lg border px-3 py-2 text-xs ${
+                        fb.ok
+                          ? "border-emerald-800/60 bg-emerald-950/40 text-emerald-300"
+                          : "border-red-800/60 bg-red-950/40 text-red-300"
+                      }`}
+                      role="status"
+                    >
+                      <p className="font-medium">
+                        {fb.ok ? "Test succeeded" : "Test failed"}
+                      </p>
+                      <pre className="mt-1 max-h-32 overflow-auto whitespace-pre-wrap break-all font-mono text-[11px] opacity-90">
+                        {fb.message}
+                      </pre>
+                    </div>
+                  ) : null}
+                </li>
+              );
+            })}
           </ul>
         )}
       </section>

@@ -53,13 +53,13 @@ Errors use a stable envelope:
 | Events | `/api/v1/events` | Operator list/get |
 | Alerts | `/api/v1/alerts`, `/api/v1/ws/alerts` | Lifecycle + WebSocket |
 | Rules | `/api/v1/rules` | List/get/enable |
-| Notifications | `/api/v1/notification-channels`, `…/notification-rules` | Secrets never returned |
+| Notifications | `/api/v1/notification-channels`, `…/test`, `…/notification-rules` | Secrets never returned; channel test send |
 | Dashboard | `/api/v1/dashboard/stats` | Aggregate metrics |
 | Plugins | `/api/v1/plugins`, configs | See [plugins.md](plugins.md) |
+| Audit | `/api/v1/audit-logs` | List/get; requires `audit_logs:read` |
 
 ## Honest gaps (not documented as endpoints)
 
-- **Audit** — rows are written to `audit_logs` on sensitive actions; there is **no** `GET /api/v1/audit` yet. Tag `Audit` in OpenAPI exists only to call this out.
 - **Agents list** — use `GET /api/v1/servers/{id}` (`agents` array), not `/api/v1/agents`.
 - **Metrics** — use `GET /api/v1/dashboard/stats`, not `/api/v1/metrics`.
 
