@@ -1,9 +1,9 @@
 # Sentinel roadmap
 
-Living plan for the `v0.1.0` → `v1.0.0` line. Status reflects the phase branch
-stack (not every PR is merged to `main` yet).
+Living plan from the first tagged pre-release **`v0.1.0`** toward a production-ready
+**`v1.0.0`**. Items below are direction, not delivery dates.
 
-## Completed (phases 1–20 on branch stack)
+## Completed (phases 1–21 on `main`)
 
 | Phase | Topic |
 |-------|--------|
@@ -27,18 +27,21 @@ stack (not every PR is merged to `main` yet).
 | 18 | CI/CD |
 | 19 | Security hardening |
 | 20 | Documentation |
+| 21 | Release prep + first tagged pre-release (`v0.1.0`) |
 
-## In progress / next
+## Release line concept
 
-| Phase | Topic | Notes |
-|-------|--------|-------|
-| **21** | Release prep | VERSION wiring, release-check, SBOM/checksum process. **Honest verdict: tag `v0.1.0` first — not `v1.0.0`.** See [release.md](sentinel/docs/release.md) and project `docs/v1-readiness.md`. |
+| Release | Theme | Focus |
+|---------|-------|--------|
+| **v0.1.0** (this pre-release) | **Preview foundation** | Self-hostable Compose stack: API, agent enrollment, detection, alerts, operator UI, notifications |
+| **v0.1.x** | **Stabilize preview** | Bugfixes, install/upgrade polish, clearer operator docs, UI/API consistency |
+| **v0.2.0** | **Operator depth** | More log collectors, automated retention/purge, public audit-log API + UI |
+| **v0.3.0** | **Hardening** | Agent ↔ API mTLS, cosign/signed images, broader rule packs, GeoIP optional |
+| **v1.0.0** | **Production public** | LICENSE decided, readiness checklist green, stable upgrade path |
 
-## After first tagged release (candidates — not committed)
+## After `v0.1.0` (candidates — not promises)
 
-These are ideas, not promises or schedules:
-
-- Close v1.0 checklist gaps (license, merge stack, collectors, audit API, retention job, mTLS, cosign)
+- Close v1.0 checklist gaps (license, collectors, audit API, retention job, mTLS, cosign)
 - Public audit-log API and UI
 - Automated retention / purge jobs with operator policy
 - Agent ↔ API mTLS
@@ -49,9 +52,9 @@ These are ideas, not promises or schedules:
 - Broader log sources and rule packs
 - Multi-replica rate-limit refinements already partly covered by Redis
 
-## Non-goals for the first tag
+## Non-goals for the first tag / pre-release
 
-- Calling the release `v1.0.0` while LICENSE / merge / collector gaps remain
+- Calling the release `v1.0.0` while LICENSE / collector / hardening gaps remain
 - Multi-tenant SaaS isolation
 - Guaranteed “attacker detected” claims (alerts stay possibility-oriented)
 - Shipping default admin passwords or API keys
@@ -59,6 +62,6 @@ These are ideas, not promises or schedules:
 
 ## Tracking
 
-Implementation plan (store): project `docs/implementation-plan.md`.  
 Changelog: [`CHANGELOG.md`](CHANGELOG.md).  
+Release process: [`sentinel/docs/release.md`](sentinel/docs/release.md).  
 Compatibility: [`sentinel/docs/compatibility.md`](sentinel/docs/compatibility.md).
