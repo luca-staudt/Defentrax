@@ -47,7 +47,39 @@ export type Server = {
   id: string;
   name: string;
   hostname: string;
+  description?: string;
+  environment?: string;
   created_at: string;
+};
+
+export type EnrollmentToken = {
+  id: string;
+  server_id: string;
+  token_prefix: string;
+  token?: string;
+  expires_at: string;
+};
+
+export type NotificationChannel = {
+  id: string;
+  name: string;
+  channel_type: "discord" | "slack" | "email" | "webhook";
+  config: Record<string, unknown>;
+  has_secrets: boolean;
+  enabled: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type NotificationRule = {
+  id: string;
+  name: string;
+  enabled: boolean;
+  min_severity: string;
+  triggers: string[];
+  channel_ids: string[];
+  created_at: string;
+  updated_at: string;
 };
 
 export type Rule = {
