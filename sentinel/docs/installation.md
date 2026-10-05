@@ -1,16 +1,14 @@
 # Installation
 
-## Docker Compose
+Fastest path for local development and small self-hosted setups.
 
-Schnellster Weg für lokale Entwicklung und kleine Self-Host-Setups.
+## Prerequisites
 
-## Voraussetzungen
+- Docker Engine 24+ with Compose plugin (`docker compose version`)
+- ≥ 2 GB RAM recommended for the full stack
+- Free host ports (defaults: `3000` UI, `8080` API)
 
-- Docker Engine 24+ mit Compose Plugin (`docker compose version`)
-- Ausreichend RAM (≥ 2 GB empfohlen für den Stack)
-- Offene Host-Ports (Standard: `3000` UI, `8080` API)
-
-## 1. Repository und `.env`
+## 1. Clone and `.env`
 
 ```bash
 git clone https://github.com/luca-staudt/Sentinel.git
@@ -18,20 +16,20 @@ cd Sentinel
 cp .env.example .env
 ```
 
-Pflichtwerte in `.env` setzen (keine Secrets committen):
+Set required secrets in `.env` (never commit them):
 
 ```bash
 # PostgreSQL
 openssl rand -base64 24   # → POSTGRES_PASSWORD=
 
-# API-Sessions / Crypto (jeweils 32 Byte, base64)
+# API sessions / crypto (32 bytes, base64 each)
 openssl rand -base64 32   # → SESSION_SECRET=
 openssl rand -base64 32   # → TOTP_ENCRYPTION_KEY=
-# optional, sonst Fallback auf TOTP_ENCRYPTION_KEY:
+# optional; otherwise falls back to TOTP_ENCRYPTION_KEY:
 openssl rand -base64 32   # → SECRETS_ENCRYPTION_KEY=
 ```
 
-Für den ersten Admin (einmalig, wenn die `users`-Tabelle leer ist):
+Optional one-time first admin (only when the `users` table is empty):
 
 ```bash
 # in .env
@@ -39,73 +37,86 @@ SENTINEL_BOOTSTRAP_ADMIN_EMAIL=admin@example.com
 SENTINEL_BOOTSTRAP_ADMIN_PASSWORD='choose-a-long-password'
 ```
 
-Lokales HTTP: `COOKIE_SECURE=false` und `CORS_ALLOWED_ORIGINS=http://localhost:3000,http://127.0.0.1:3000` (bereits in `.env.example`).
+Local HTTP: keep `COOKIE_SECURE=false` and
+`CORS_ALLOWED_ORIGINS=http://localhost:3000,http://127.0.0.1:3000` (already in `.env.example`).
 
-## 2. Stack starten
+Full variable reference: [configuration.md](configuration.md).
+
+## 2. Start the stack
 
 ```bash
 docker compose up -d --build
 ```
 
-Services: `postgres`, `redis`, `migrate` (einmalig), `sentinel-api`, `sentinel-frontend`.
+Services: `postgres`, `redis`, `migrate` (one-shot), `sentinel-api`, `sentinel-frontend`.
 
-UI: [http://localhost:3000](http://localhost:3000)  
-API Health: `curl -s http://localhost:8080/healthz` · Ready: `curl -s http://localhost:8080/readyz`
+| Endpoint | URL |
+|----------|-----|
+| UI | http://localhost:3000 |
+| Health | `curl -s http://localhost:8080/healthz` |
+| Ready | `curl -s http://localhost:8080/readyz` |
+| OpenAPI | http://localhost:8080/api/v1/docs |
 
-## 3. Development-Overlay (optional)
+## 3. Development overlay (optional)
 
-Postgres/Redis auf dem Host exponieren und Rules bind-mounten:
+Expose Postgres/Redis on the host and bind-mount rules:
 
 ```bash
 docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
 ```
 
-## 4. Optionale Profile
+## 4. Optional profiles
 
 ```bash
-# Agent (benötigt SENTINEL_ENROLLMENT_TOKEN in .env)
+# Agent (requires SENTINEL_ENROLLMENT_TOKEN in .env)
 docker compose --profile agent up -d --build
 
-# Caddy Reverse-Proxy auf Port 80
+# Caddy reverse proxy on port 80
 docker compose --profile proxy up -d --build
 ```
 
-Mit Proxy: UI unter `http://localhost`, API unter `http://localhost/api/…`.  
-`NEXT_PUBLIC_WS_URL` dann z. B. auf `ws://localhost` setzen und Frontend-Image neu bauen.
+With proxy: UI at `http://localhost`, API under `http://localhost/api/…`.  
+Set `NEXT_PUBLIC_WS_URL` (e.g. `ws://localhost`) and rebuild the frontend image.
 
-## 5. Stoppen / Daten
+Agent rollout details: [agent.md](agent.md).
+
+## 5. Stop / data
 
 ```bash
-docker compose down          # Container weg, Volumes behalten
-docker compose down -v       # inkl. Postgres-/Redis-Volumes (Datenverlust)
+docker compose down          # keep volumes
+docker compose down -v       # delete Postgres/Redis volumes (data loss)
 ```
 
-Postgres-Daten liegen im named Volume `sentinel-postgres-data` (siehe [deployment.md](deployment.md)).
+Postgres data lives in the named volume `sentinel-postgres-data` — see [deployment.md](deployment.md) and [backup.md](backup.md).
 
-## Kubernetes (kind / minikube / Cluster)
+## Kubernetes (kind / minikube / cluster)
 
-Siehe [`../deployments/kubernetes/README.md`](../deployments/kubernetes/README.md).
+See [`../deployments/kubernetes/README.md`](../deployments/kubernetes/README.md).
 
-Kurzfassung:
+1. Build images (`docker compose build`) and load them (`kind load` / `minikube image load`).
+2. Replace all `REPLACE_ME` placeholders in `secret.yaml` **locally** — never commit real secrets.
+3. `kubectl apply -k sentinel/deployments/kubernetes` (or stepwise per the K8s README).
+4. Wait for the migration job; check `/healthz` and `/readyz`.
 
-1. Images bauen (`docker compose build`) und in den Cluster laden (`kind load` / `minikube image load`).
-2. In `secret.yaml` alle `REPLACE_ME`-Platzhalter **lokal** ersetzen — keine echten Secrets committen.
-3. `kubectl apply -k sentinel/deployments/kubernetes` (oder schrittweise laut K8s-README).
-4. Migration-Job abwarten, dann API/Frontend prüfen (`/healthz`, `/readyz`).
-
-Client-Validierung ohne Cluster-Mutationen: `make k8s-dry-run`.
+Client validation without mutating a cluster: `make k8s-dry-run`.
 
 ## Helm
 
-Chart: [`../deployments/helm/sentinel/`](../deployments/helm/sentinel/). Kurzfassung:
+Chart: [`../deployments/helm/sentinel/`](../deployments/helm/sentinel/).
 
-1. Images wie bei Kubernetes laden.
-2. Secrets per `--set` / lokaler Values-Datei / `secrets.existingSecret` setzen (keine Defaults im Chart).
+1. Load images as for Kubernetes.
+2. Pass secrets via `--set`, a local values file, or `secrets.existingSecret` (no default prod passwords in the chart).
 3. `helm upgrade --install sentinel … --namespace sentinel --create-namespace`
-4. Migration-Hook-Job abwarten; Ingress-Host anpassen.
+4. Wait for the migration hook; adjust Ingress hosts.
 
-Validierung: `make helm-lint`.
+Validation: `make helm-lint`.
 
-## Ohne Docker
+## Without Docker
 
-Go 1.22+, Node 20+, lokales PostgreSQL — siehe Root-[`README.md`](../../README.md) und [`frontend/README.md`](../frontend/README.md).
+Go 1.22+, Node 20+, local PostgreSQL — see the root [`README.md`](../../README.md) and [`../frontend/README.md`](../frontend/README.md).
+
+## After install
+
+- [security.md](security.md) — hardening checklist  
+- [backup.md](backup.md) · [retention.md](retention.md) · [privacy.md](privacy.md)  
+- [troubleshooting.md](troubleshooting.md)

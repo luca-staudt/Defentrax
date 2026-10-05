@@ -54,6 +54,8 @@ See also [security.md](security.md) for runtime hardening and residual risks.
 
 ## Release workflow
 
+Operator/maintainer checklist (expanded): [release.md](release.md).
+
 1. Ensure `main` is green (Main workflow).
 2. Create an annotated SemVer tag, e.g. `git tag -a v0.1.0 -m "v0.1.0" && git push origin v0.1.0`  
    Or run **Release** via Actions → `workflow_dispatch` with a tag label.

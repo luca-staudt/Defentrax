@@ -2,48 +2,71 @@
 
 Operator and developer documentation living alongside the codebase.
 
-## Phase 2
+<p align="center">
+  <img src="assets/sentinel-logo.png" alt="Sentinel logo" width="120" />
+</p>
 
-- **License:** No `LICENSE` file in the repository yet. For an OSS release, choose **Apache-2.0** (patent grant, enterprise-friendly) or **MIT** (minimal). Record the decision before adding a license file.
+**Tagline:** MONITOR • DETECT • PROTECT
 
-## Secure defaults (summary)
+## Start here
 
-- No default admin password or bootstrap API keys in application code or charts.
-- Secrets belong in environment variables or a secret manager — never in git, logs, or API responses.
-- Development-only database seeds (when added) are gated on `APP_ENV=development`.
-- Containers run as non-root (UID 65532); see Compose / Kubernetes / Helm.
-- Hardening details, CSRF/TLS, and residual risks: [security.md](security.md) · root [SECURITY.md](../../SECURITY.md)
+| Doc | Description |
+|-----|-------------|
+| [architecture.md](architecture.md) | Components, trust boundaries, data flow |
+| [installation.md](installation.md) | Compose / Kubernetes / Helm / bare metal |
+| [configuration.md](configuration.md) | Environment variables |
+| [troubleshooting.md](troubleshooting.md) | Common failure modes |
 
-## Install & deploy
+## Product areas
 
-- [installation.md](installation.md) — Compose (Phase 15), Kubernetes (Phase 16), Helm (Phase 17)
-- [deployment.md](deployment.md) — images, volumes, healthchecks, immutable tags, K8s, Helm
-- [../deployments/kubernetes/README.md](../deployments/kubernetes/README.md) — apply order, secrets, kind/minikube
-- [../deployments/helm/sentinel/README.md](../deployments/helm/sentinel/README.md) — chart values, hooks, lint
+| Doc | Description |
+|-----|-------------|
+| [agent.md](agent.md) | Install, enrollment, collectors |
+| [docker-monitoring.md](docker-monitoring.md) | Optional Docker Engine monitoring |
+| [detection-engine.md](detection-engine.md) | Rule evaluation worker |
+| [rules.md](rules.md) | YAML schema and authoring |
+| [api.md](api.md) | REST, auth schemes, OpenAPI / Swagger |
+| [plugins.md](plugins.md) | Plugin SDK v1 and load policy |
 
-## Agent
+## Operate & secure
 
-- [agent.md](agent.md) — install, enrollment, permissions
-- [docker-monitoring.md](docker-monitoring.md) — optional Docker Engine monitoring (Phase 11)
+| Doc | Description |
+|-----|-------------|
+| [deployment.md](deployment.md) | Images, volumes, healthchecks, K8s/Helm notes |
+| [security.md](security.md) | Hardening, CSRF/TLS, residual risks |
+| [../../SECURITY.md](../../SECURITY.md) | Vulnerability reporting |
+| [privacy.md](privacy.md) | Data categories and operator duties |
+| [retention.md](retention.md) | Retention policy (honest: no auto-purge yet) |
+| [backup.md](backup.md) | Backup / restore |
+| [release.md](release.md) | Tagging, CI release workflow, checklist |
 
-## Plugins
+## Develop
 
-- [plugins.md](plugins.md) — v1 plugin SDK, load policy, example plugin, API/RBAC (Phase 12)
+| Doc | Description |
+|-----|-------------|
+| [contributing.md](contributing.md) | Pointer to root contributor guide |
+| [../../CONTRIBUTING.md](../../CONTRIBUTING.md) | Setup, PR expectations |
+| [../../CODE_OF_CONDUCT.md](../../CODE_OF_CONDUCT.md) | Community standards |
+| [testing.md](testing.md) | Unit / integration matrix |
+| [ci.md](ci.md) | GitHub Actions ↔ Make |
 
-## API
+## License (open decision)
 
-- [api.md](api.md) — REST overview, auth schemes, OpenAPI / Swagger UI (Phase 13)
-- Spec: [`../api/openapi/openapi.yaml`](../api/openapi/openapi.yaml) — also `GET /api/v1/openapi.yaml` and `GET /api/v1/docs`
+There is **no `LICENSE` file** in the repository yet.
 
-## Testing
+| Recommendation | Notes |
+|----------------|-------|
+| **Apache-2.0** (preferred) | Patent grant; enterprise-friendly |
+| **MIT** | Minimal terms |
 
-- [testing.md](testing.md) — unit/integration matrix (Phase 14)
+Record an explicit maintainer decision before adding a license file. Do not treat README “open-source” wording as a grant of rights until then.
 
-## CI/CD
+## Screenshots
 
-- [ci.md](ci.md) — GitHub Actions workflows, Make target map, release checklist (Phase 18)
+Placeholders: [assets/screenshots/](assets/screenshots/).
 
-## Security
+## Deploy module READMEs
 
-- [security.md](security.md) — hardening, threat notes, residual risks (Phase 19)
-- [SECURITY.md](../../SECURITY.md) — vulnerability reporting
+- [../deployments/kubernetes/README.md](../deployments/kubernetes/README.md)
+- [../deployments/helm/sentinel/README.md](../deployments/helm/sentinel/README.md)
+- [../deployments/docker-compose/README.md](../deployments/docker-compose/README.md)

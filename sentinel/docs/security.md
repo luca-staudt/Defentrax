@@ -88,6 +88,8 @@ Plain HTTP in production logs a warning at API startup.
 ## Related
 
 - [SECURITY.md](../../SECURITY.md) — vulnerability reporting
+- [privacy.md](privacy.md) · [retention.md](retention.md) · [backup.md](backup.md)
+- [configuration.md](configuration.md) · [troubleshooting.md](troubleshooting.md)
 - [ci.md](ci.md) — scanners in GitHub Actions
 - [deployment.md](deployment.md) — Compose / K8s / Helm defaults
 - [plugins.md](plugins.md) — plugin trust boundaries

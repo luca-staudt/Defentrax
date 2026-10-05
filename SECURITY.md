@@ -31,3 +31,15 @@ You should receive an acknowledgment within a few days. We will coordinate discl
 ## Hardening reference
 
 Operator-facing guidance, CSRF/cookie/TLS notes, and residual risks: [`sentinel/docs/security.md`](sentinel/docs/security.md).
+
+## Privacy and data handling
+
+Self-hosted deployments: [`sentinel/docs/privacy.md`](sentinel/docs/privacy.md),
+[`sentinel/docs/retention.md`](sentinel/docs/retention.md),
+[`sentinel/docs/backup.md`](sentinel/docs/backup.md).
+
+## License
+
+There is **no `LICENSE` file** yet. Recommended candidates are **Apache-2.0** or **MIT**;
+the maintainer must record an explicit choice before adding a license file.
+See [`sentinel/docs/README.md`](sentinel/docs/README.md).

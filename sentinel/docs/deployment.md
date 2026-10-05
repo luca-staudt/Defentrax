@@ -97,6 +97,12 @@ kubectl apply -k sentinel/deployments/kubernetes --dry-run=client
 
 **Secrets:** Klartext-Secrets nicht committen; Sealed Secrets / External Secrets / Cloud Secret Manager nutzen. Externe PostgreSQL: `postgres.yaml` weglassen und `DATABASE_URL` setzen (README).
 
+## Backup / retention
+
+- Logical Postgres backups and restore outline: [backup.md](backup.md)
+- Retention policy (no automated purge yet): [retention.md](retention.md)
+- Privacy notes: [privacy.md](privacy.md)
+
 ## Helm
 
 Chart (Phase 17): [`../deployments/helm/sentinel/`](../deployments/helm/sentinel/) — siehe [Chart-README](../deployments/helm/sentinel/README.md).
