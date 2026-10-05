@@ -77,7 +77,7 @@ Alternatively, set the same `SENTINEL_BOOTSTRAP_*` variables before starting the
 
 ```bash
 make api-test
-make api-test-integration   # requires PostgreSQL (TEST_DATABASE_URL)
+make api-test-integration   # requires PostgreSQL (TEST_DATABASE_URL); see sentinel/docs/testing.md
 ```
 
 ## Secure defaults

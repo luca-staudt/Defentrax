@@ -48,6 +48,14 @@ make test
 make run-api
 ```
 
+Testing (unit vs PostgreSQL integration): `sentinel/docs/testing.md`
+
+```bash
+make test                    # CI-safe unit suite
+make api-test-integration    # requires TEST_DATABASE_URL / local Postgres
+./sentinel/scripts/run-unit-tests.sh
+```
+
 Optional dev RBAC seed (development only — never in production):
 
 ```bash

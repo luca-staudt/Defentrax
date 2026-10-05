@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/gorilla/websocket"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/luca-staudt/Sentinel/sentinel/api/internal/alerts"
@@ -29,7 +30,7 @@ import (
 	"github.com/luca-staudt/Sentinel/sentinel/pkg/event"
 )
 
-func startAlertTestServer(t *testing.T, pool *pgxpool.Pool, dsn string) *httptest.Server {
+func startAlertTestServer(t *testing.T, pool *pgxpool.Pool, dsn string) (*httptest.Server, *realtime.Hub) {
 	t.Helper()
 	engine := detection.NewEngine(detection.NewMemoryWindowCounter())
 	rulesPath := filepath.Join(repoRoot(t), "sentinel", "rules")
@@ -60,7 +61,7 @@ func startAlertTestServer(t *testing.T, pool *pgxpool.Pool, dsn string) *httptes
 	})
 	ts := httptest.NewServer(s.Handler())
 	t.Cleanup(ts.Close)
-	return ts
+	return ts, hub
 }
 
 func loginUser(t *testing.T, tsURL, email, pass string) *http.Cookie {
@@ -93,7 +94,7 @@ func TestAlertsRBAC(t *testing.T) {
 	}
 	_ = store.SetUserRoles(ctx, pool, viewerID, []string{"VIEWER"}, nil)
 
-	ts := startAlertTestServer(t, pool, dsn)
+	ts, _ := startAlertTestServer(t, pool, dsn)
 	cookie := loginUser(t, ts.URL, "viewer-alerts@test.local", "integration-test-password-long")
 
 	req, _ := http.NewRequest(http.MethodPatch, ts.URL+"/api/v1/alerts/"+uuid.New().String(), bytes.NewReader([]byte(`{"status":"ACKNOWLEDGED"}`)))
@@ -122,7 +123,7 @@ func TestAlertLifecycleIntegration(t *testing.T) {
 	}
 	_ = store.SetUserRoles(ctx, pool, analystID, []string{"SECURITY_ANALYST"}, nil)
 
-	ts := startAlertTestServer(t, pool, dsn)
+	ts, _ := startAlertTestServer(t, pool, dsn)
 	token := enrollAgentOnServer(t, ts.URL, pool)
 
 	srcIP := "203.0.113.55"
@@ -207,5 +208,66 @@ func TestAlertLifecycleIntegration(t *testing.T) {
 	}
 	if code := patch("OPEN", ""); code != http.StatusConflict {
 		t.Fatalf("reopen expected 409, got %d", code)
+	}
+}
+
+func TestAlertsWebSocketReceivesPublish(t *testing.T) {
+	dsn := testDSN(t)
+	skipUnlessPostgres(t, dsn)
+	pool := resetDB(t, dsn)
+	ctx := context.Background()
+
+	hash, _ := password.Hash("integration-test-password-long")
+	viewerID, err := store.CreateUser(ctx, pool, "ws-viewer@test.local", hash, "Viewer")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = store.SetUserRoles(ctx, pool, viewerID, []string{"VIEWER"}, nil)
+
+	ts, hub := startAlertTestServer(t, pool, dsn)
+	cookie := loginUser(t, ts.URL, "ws-viewer@test.local", "integration-test-password-long")
+
+	header := http.Header{}
+	header.Add("Cookie", cookie.Name+"="+cookie.Value)
+	wsURL := "ws" + ts.URL[4:] + "/api/v1/ws/alerts"
+	conn, resp, err := websocket.DefaultDialer.Dial(wsURL, header)
+	if err != nil {
+		if resp != nil {
+			t.Fatalf("dial ws: %v status=%d", err, resp.StatusCode)
+		}
+		t.Fatalf("dial ws: %v", err)
+	}
+	defer conn.Close()
+
+	alertID := uuid.New()
+	serverID := uuid.New()
+	go func() {
+		time.Sleep(100 * time.Millisecond)
+		hub.Publish(realtime.AlertEvent{
+			Type:     "alert_open",
+			AlertID:  alertID,
+			ServerID: serverID,
+			Severity: "high",
+			Title:    "WS integration",
+		})
+	}()
+
+	conn.SetReadDeadline(time.Now().Add(3 * time.Second))
+	_, payload, err := conn.ReadMessage()
+	if err != nil {
+		t.Fatalf("read ws: %v", err)
+	}
+	var envelope struct {
+		Type string `json:"type"`
+		Data struct {
+			AlertID uuid.UUID `json:"alert_id"`
+			Title   string    `json:"title"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(payload, &envelope); err != nil {
+		t.Fatalf("decode: %v body=%s", err, payload)
+	}
+	if envelope.Data.AlertID != alertID || envelope.Data.Title != "WS integration" {
+		t.Fatalf("unexpected ws payload: %+v", envelope)
 	}
 }
