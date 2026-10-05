@@ -32,7 +32,7 @@ jobs:
 
       - name: Set up Docker Buildx
         if: ${{ inputs.image-ref != '' }}
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Build API image for image SBOM
         if: ${{ inputs.image-ref != '' }}
