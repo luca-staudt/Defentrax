@@ -1,0 +1,13 @@
+# Offline lint / template values ONLY — not for production.
+# These are obviously fake placeholders so `helm lint` / `helm template` can render
+# without real secrets. Never use these values on a live cluster.
+
+secrets:
+  create: true
+  existingSecret: ""
+  postgresPassword: "lint-only-not-a-real-password"
+  sessionSecret: "lint-only-session-secret-not-real"
+  totpEncryptionKey: "lint-only-totp-key-not-real"
+  secretsEncryptionKey: "lint-only-secrets-key-not-real"
+  bootstrapAdminEmail: ""
+  bootstrapAdminPassword: ""

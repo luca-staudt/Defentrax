@@ -1,0 +1,285 @@
+# Default values for Sentinel (Phase 17).
+# Secure defaults: no production passwords, empty secret fields, plugins disabled.
+# Pass secrets via --set, -f secrets.yaml (gitignored), or secrets.existingSecret.
+
+nameOverride: ""
+fullnameOverride: ""
+
+# Create the release namespace if it does not exist (Helm 3).
+namespaceOverride: ""
+
+commonLabels: {}
+
+imagePullSecrets: []
+
+## Global image tag fallback (component images win when set).
+image:
+  tag: "0.1.0"
+  pullPolicy: IfNotPresent
+
+## Non-secret configuration (ConfigMap).
+config:
+  appEnv: production
+  apiPort: "8080"
+  logLevel: info
+  sessionCookieName: sentinel_session
+  sessionTtlHours: "24"
+  cookieSecure: "true"
+  corsAllowedOrigins: "https://sentinel.example.com"
+  redisUrl: "" # default: redis://<redis-service>:6379/0 when redis.enabled
+  rulesPath: /opt/sentinel/rules
+  pluginDir: /opt/sentinel/plugins/examples
+  # Empty allowlist = no plugins loaded (secure default).
+  pluginAllowlist: ""
+  alertDedupCooldownSec: "900"
+  loginRateLimitMax: "10"
+  loginRateLimitWindowSec: "60"
+  ingestRateLimitMax: "120"
+  ingestRateLimitWindowSec: "60"
+  apiProxyTarget: "" # default: http://<api-service>:8080
+  apiInternalUrl: "" # default: http://<api-service>:8080
+  nextPublicWsUrl: "wss://sentinel.example.com"
+  frontendPort: "3000"
+  frontendHostname: "0.0.0.0"
+  postgresUser: sentinel
+  postgresDb: sentinel
+  # Extra non-secret key/value pairs merged into the ConfigMap.
+  extra: {}
+
+## Secrets — never commit real values.
+## Either set secrets.existingSecret to an Opaque Secret you manage outside
+## the chart, or set secrets.create=true and supply the fields below via
+## --set / a local values file (not committed).
+secrets:
+  create: true
+  existingSecret: ""
+  # Required when create=true and existingSecret is empty (no chart defaults).
+  postgresPassword: ""
+  # If empty and postgres.enabled, built as
+  # postgres://USER:PASSWORD@SERVICE:5432/DB?sslmode=disable
+  databaseUrl: ""
+  sessionSecret: ""
+  totpEncryptionKey: ""
+  secretsEncryptionKey: ""
+  # Optional one-time bootstrap (leave empty after first admin exists).
+  bootstrapAdminEmail: ""
+  bootstrapAdminPassword: ""
+  # Extra stringData keys (operator-managed).
+  extra: {}
+
+api:
+  enabled: true
+  replicaCount: 1
+  image:
+    repository: sentinel-api
+    tag: "" # defaults to .Values.image.tag
+    pullPolicy: ""
+  service:
+    type: ClusterIP
+    port: 8080
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: "1"
+      memory: 512Mi
+  livenessProbe:
+    path: /healthz
+    initialDelaySeconds: 10
+    periodSeconds: 15
+    timeoutSeconds: 3
+    failureThreshold: 3
+  readinessProbe:
+    path: /readyz
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 6
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 65532
+    runAsGroup: 65532
+    fsGroup: 65532
+  securityContext:
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    capabilities:
+      drop: ["ALL"]
+  # Extra env vars (name/value or valueFrom).
+  extraEnv: []
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+frontend:
+  enabled: true
+  replicaCount: 1
+  image:
+    repository: sentinel-frontend
+    tag: ""
+    pullPolicy: ""
+  service:
+    type: ClusterIP
+    port: 3000
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: "1"
+      memory: 512Mi
+  livenessProbe:
+    path: /login
+    initialDelaySeconds: 15
+    periodSeconds: 20
+    timeoutSeconds: 5
+    failureThreshold: 3
+  readinessProbe:
+    path: /login
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 6
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 65532
+    runAsGroup: 65532
+    fsGroup: 65532
+  securityContext:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop: ["ALL"]
+  extraEnv: []
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+migrate:
+  enabled: true
+  image:
+    repository: sentinel-migrate
+    tag: ""
+    pullPolicy: ""
+  backoffLimit: 3
+  ttlSecondsAfterFinished: 86400
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+  # Helm hooks (Phase 17): run after install resources; before upgrades.
+  hooks:
+    enabled: true
+    # post-install: Postgres/Redis already created; Job retries until DB ready.
+    # pre-upgrade: schema before rolling API pods.
+    annotations:
+      "helm.sh/hook": post-install,pre-upgrade
+      "helm.sh/hook-weight": "5"
+      "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 65532
+    runAsGroup: 65532
+    fsGroup: 65532
+  securityContext:
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    capabilities:
+      drop: ["ALL"]
+
+postgres:
+  enabled: true
+  image:
+    repository: postgres
+    tag: "16.6-alpine"
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 5432
+  persistence:
+    enabled: true
+    accessModes: ["ReadWriteOnce"]
+    size: 10Gi
+    storageClassName: "" # empty = cluster default
+    existingClaim: ""
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi
+  podSecurityContext:
+    fsGroup: 70
+  securityContext:
+    allowPrivilegeEscalation: false
+  # When false, set secrets.databaseUrl to your external DSN and
+  # secrets.existingSecret (or create) accordingly.
+
+redis:
+  enabled: true
+  image:
+    repository: redis
+    tag: "7.4.2-alpine"
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 6379
+  args: ["redis-server", "--appendonly", "yes", "--save", ""]
+  persistence:
+    enabled: true
+    accessModes: ["ReadWriteOnce"]
+    size: 2Gi
+    storageClassName: ""
+    existingClaim: ""
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+  podSecurityContext:
+    fsGroup: 999
+  securityContext:
+    allowPrivilegeEscalation: false
+    runAsNonRoot: true
+    runAsUser: 999
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-http-version: "1.1"
+  hosts:
+    - host: sentinel.example.com
+      paths:
+        - path: /api
+          pathType: Prefix
+          service: api
+        - path: /healthz
+          pathType: Exact
+          service: api
+        - path: /readyz
+          pathType: Exact
+          service: api
+        - path: /
+          pathType: Prefix
+          service: frontend
+  tls: []
+  # - secretName: sentinel-tls
+  #   hosts:
+  #     - sentinel.example.com
+
+networkPolicy:
+  enabled: true
+
+serviceAccount:
+  create: false
+  name: ""
+  annotations: {}

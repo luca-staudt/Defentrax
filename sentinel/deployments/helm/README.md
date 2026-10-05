@@ -1,5 +1,14 @@
-# Helm chart
+# Helm charts for Sentinel
 
-Packaged Sentinel install with configurable values and migration hooks.
+| Chart | Path | Status |
+|-------|------|--------|
+| **sentinel** | [`sentinel/`](sentinel/) | Phase 17 — full chart |
 
-**Status:** scaffold only (Phase 17).
+```bash
+make helm-lint
+helm upgrade --install sentinel ./sentinel \
+  --namespace sentinel --create-namespace \
+  -f /path/to/local-secrets.yaml   # do not commit
+```
+
+See [`sentinel/README.md`](sentinel/README.md) for values, hooks, and external DB notes.

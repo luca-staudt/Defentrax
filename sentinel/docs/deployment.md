@@ -99,4 +99,16 @@ kubectl apply -k sentinel/deployments/kubernetes --dry-run=client
 
 ## Helm
 
-Charts folgen in Phase 17 (`deployments/helm`).
+Chart (Phase 17): [`../deployments/helm/sentinel/`](../deployments/helm/sentinel/) — siehe [Chart-README](../deployments/helm/sentinel/README.md).
+
+```bash
+make helm-lint
+helm upgrade --install sentinel sentinel/deployments/helm/sentinel \
+  --namespace sentinel --create-namespace \
+  --set secrets.postgresPassword=… \
+  --set secrets.sessionSecret=… \
+  --set secrets.totpEncryptionKey=… \
+  --set secrets.secretsEncryptionKey=…
+```
+
+Keine Default-Prod-Passwörter im Chart; Secrets per `--set`, lokaler Values-Datei oder `secrets.existingSecret`. Migrationen laufen als Helm-Hooks (`post-install` / `pre-upgrade`).

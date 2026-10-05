@@ -2,7 +2,7 @@
 
 Manifeste für kleine Self-Host-Installationen: **API**, **Frontend**, **PostgreSQL**, **Redis**, Migration-Job, Ingress, PVCs und eine NetworkPolicy-Grundlage.
 
-**Status:** Phase 16 — raw manifests (Helm folgt in Phase 17).
+**Status:** Phase 16 — raw manifests. Packaged install: [Helm chart (Phase 17)](../helm/sentinel/).
 
 ## Voraussetzungen
 

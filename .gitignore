@@ -5,6 +5,10 @@
 *.pem
 *.key
 credentials.json
+# Local Helm secret overlays (never commit)
+**/helm/**/secrets.yaml
+**/helm/**/secrets*.yaml
+!**/helm/**/ci/lint-values.yaml
 
 # Go
 *.exe

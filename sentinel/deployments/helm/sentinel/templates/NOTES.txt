@@ -1,0 +1,31 @@
+1. Secrets are required — this chart ships **no default passwords**.
+
+   Generate values locally (do **not** commit):
+
+   ```bash
+   openssl rand -base64 24   # postgresPassword
+   openssl rand -base64 32   # sessionSecret / encryption keys
+   ```
+
+2. Check migration Job (hook):
+
+   ```bash
+   kubectl get jobs -n {{ include "sentinel.namespace" . }} -l app.kubernetes.io/component=migrate
+   kubectl wait --for=condition=complete job/{{ include "sentinel.migrate.fullname" . }} -n {{ include "sentinel.namespace" . }} --timeout=180s
+   ```
+
+3. Port-forward (without Ingress):
+
+   ```bash
+   kubectl -n {{ include "sentinel.namespace" . }} port-forward svc/{{ include "sentinel.frontend.fullname" . }} 3000:{{ .Values.frontend.service.port }}
+   kubectl -n {{ include "sentinel.namespace" . }} port-forward svc/{{ include "sentinel.api.fullname" . }} 8080:{{ .Values.api.service.port }}
+   ```
+
+{{- if .Values.ingress.enabled }}
+4. Ingress host(s):
+{{- range .Values.ingress.hosts }}
+   - http{{ if $.Values.ingress.tls }}s{{ end }}://{{ .host }}
+{{- end }}
+{{- end }}
+
+Docs: https://github.com/luca-staudt/Sentinel/tree/main/sentinel/deployments/helm/sentinel

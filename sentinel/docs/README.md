@@ -17,9 +17,10 @@ Further architecture and phase planning will be added here as phases land (see r
 
 ## Install & deploy
 
-- [installation.md](installation.md) — Compose (Phase 15) and Kubernetes overview (Phase 16)
-- [deployment.md](deployment.md) — images, volumes, healthchecks, immutable tags, K8s
+- [installation.md](installation.md) — Compose (Phase 15), Kubernetes (Phase 16), Helm (Phase 17)
+- [deployment.md](deployment.md) — images, volumes, healthchecks, immutable tags, K8s, Helm
 - [../deployments/kubernetes/README.md](../deployments/kubernetes/README.md) — apply order, secrets, kind/minikube
+- [../deployments/helm/sentinel/README.md](../deployments/helm/sentinel/README.md) — chart values, hooks, lint
 
 ## Agent
 

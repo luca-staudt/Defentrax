@@ -62,6 +62,16 @@ make k8s-dry-run
 kubectl apply -k sentinel/deployments/kubernetes
 ```
 
+Helm chart: [`sentinel/deployments/helm/sentinel/`](sentinel/deployments/helm/sentinel/)
+
+```bash
+make helm-lint
+helm upgrade --install sentinel sentinel/deployments/helm/sentinel \
+  --namespace sentinel --create-namespace \
+  --set secrets.postgresPassword=… --set secrets.sessionSecret=… \
+  --set secrets.totpEncryptionKey=… --set secrets.secretsEncryptionKey=…
+```
+
 Do **not** commit real secrets — use Sealed Secrets / External Secrets / a cloud secret manager in production.
 
 ## Quick start (bare metal)
@@ -121,7 +131,7 @@ make lint
 
 - In-repo: [`sentinel/docs/`](sentinel/docs/)
 - Install (Compose / K8s): [`sentinel/docs/installation.md`](sentinel/docs/installation.md)
-- Deploy / images / K8s: [`sentinel/docs/deployment.md`](sentinel/docs/deployment.md) · [`sentinel/deployments/kubernetes/`](sentinel/deployments/kubernetes/)
+- Deploy / images / K8s / Helm: [`sentinel/docs/deployment.md`](sentinel/docs/deployment.md) · [`sentinel/deployments/kubernetes/`](sentinel/deployments/kubernetes/) · [`sentinel/deployments/helm/sentinel/`](sentinel/deployments/helm/sentinel/)
 - API (OpenAPI): [`sentinel/docs/api.md`](sentinel/docs/api.md) · [`sentinel/api/openapi/openapi.yaml`](sentinel/api/openapi/openapi.yaml)
 - Plugins: [`sentinel/docs/plugins.md`](sentinel/docs/plugins.md)
 - API module: [`sentinel/api/README.md`](sentinel/api/README.md)

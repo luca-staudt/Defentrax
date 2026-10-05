@@ -1,4 +1,4 @@
-.PHONY: build test test-all test-ci lint api-build api-test api-lint api-test-integration agent-build agent-test detection-test plugins-test pkg-test db-migrate-up db-migrate-down db-migrate-status db-seed-dev db-test test-migrations run-api bootstrap-admin openapi-validate compose-up compose-down compose-config k8s-dry-run
+.PHONY: build test test-all test-ci lint api-build api-test api-lint api-test-integration agent-build agent-test detection-test plugins-test pkg-test db-migrate-up db-migrate-down db-migrate-status db-seed-dev db-test test-migrations run-api bootstrap-admin openapi-validate compose-up compose-down compose-config k8s-dry-run helm-lint
 
 API_DIR := sentinel/api
 AGENT_DIR := sentinel/agent
@@ -96,6 +96,8 @@ compose-down:
 	docker compose down
 
 K8S_DIR := sentinel/deployments/kubernetes
+HELM_CHART := sentinel/deployments/helm/sentinel
+HELM_LINT_VALUES := $(HELM_CHART)/ci/lint-values.yaml
 
 k8s-dry-run:
 	@command -v kubectl >/dev/null 2>&1 || { echo "kubectl is required for k8s-dry-run"; exit 1; }
@@ -111,3 +113,9 @@ k8s-dry-run:
 	  echo "k8s-dry-run: no kube-apiserver — skip kubectl apply --dry-run=client"; \
 	  echo "(connect a cluster to also run: kubectl apply -k $(K8S_DIR) --dry-run=client)"; \
 	fi
+
+helm-lint:
+	@command -v helm >/dev/null 2>&1 || { echo "helm is required for helm-lint"; exit 1; }
+	helm lint $(HELM_CHART) -f $(HELM_LINT_VALUES)
+	helm template sentinel $(HELM_CHART) -f $(HELM_LINT_VALUES) >/dev/null
+	@echo "helm-lint: OK (lint + template)"

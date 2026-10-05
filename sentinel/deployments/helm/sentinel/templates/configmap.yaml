@@ -1,0 +1,36 @@
+{{- include "sentinel.validateSecrets" . -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "sentinel.configMapName" . }}
+  namespace: {{ include "sentinel.namespace" . }}
+  labels:
+    {{- include "sentinel.labels" . | nindent 4 }}
+    app.kubernetes.io/component: config
+data:
+  APP_ENV: {{ .Values.config.appEnv | quote }}
+  API_PORT: {{ .Values.config.apiPort | quote }}
+  LOG_LEVEL: {{ .Values.config.logLevel | quote }}
+  SESSION_COOKIE_NAME: {{ .Values.config.sessionCookieName | quote }}
+  SESSION_TTL_HOURS: {{ .Values.config.sessionTtlHours | quote }}
+  COOKIE_SECURE: {{ .Values.config.cookieSecure | quote }}
+  CORS_ALLOWED_ORIGINS: {{ .Values.config.corsAllowedOrigins | quote }}
+  REDIS_URL: {{ include "sentinel.redisUrl" . | quote }}
+  SENTINEL_RULES_PATH: {{ .Values.config.rulesPath | quote }}
+  SENTINEL_PLUGIN_DIR: {{ .Values.config.pluginDir | quote }}
+  SENTINEL_PLUGIN_ALLOWLIST: {{ .Values.config.pluginAllowlist | quote }}
+  ALERT_DEDUP_COOLDOWN_SEC: {{ .Values.config.alertDedupCooldownSec | quote }}
+  LOGIN_RATE_LIMIT_MAX: {{ .Values.config.loginRateLimitMax | quote }}
+  LOGIN_RATE_LIMIT_WINDOW_SEC: {{ .Values.config.loginRateLimitWindowSec | quote }}
+  INGEST_RATE_LIMIT_MAX: {{ .Values.config.ingestRateLimitMax | quote }}
+  INGEST_RATE_LIMIT_WINDOW_SEC: {{ .Values.config.ingestRateLimitWindowSec | quote }}
+  API_PROXY_TARGET: {{ include "sentinel.apiProxyTarget" . | quote }}
+  API_INTERNAL_URL: {{ default (include "sentinel.apiProxyTarget" .) .Values.config.apiInternalUrl | quote }}
+  NEXT_PUBLIC_WS_URL: {{ .Values.config.nextPublicWsUrl | quote }}
+  PORT: {{ .Values.config.frontendPort | quote }}
+  HOSTNAME: {{ .Values.config.frontendHostname | quote }}
+  POSTGRES_USER: {{ .Values.config.postgresUser | quote }}
+  POSTGRES_DB: {{ .Values.config.postgresDb | quote }}
+  {{- range $k, $v := .Values.config.extra }}
+  {{ $k }}: {{ $v | quote }}
+  {{- end }}

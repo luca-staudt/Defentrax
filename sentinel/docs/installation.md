@@ -95,6 +95,17 @@ Kurzfassung:
 
 Client-Validierung ohne Cluster-Mutationen: `make k8s-dry-run`.
 
+## Helm
+
+Chart: [`../deployments/helm/sentinel/`](../deployments/helm/sentinel/). Kurzfassung:
+
+1. Images wie bei Kubernetes laden.
+2. Secrets per `--set` / lokaler Values-Datei / `secrets.existingSecret` setzen (keine Defaults im Chart).
+3. `helm upgrade --install sentinel … --namespace sentinel --create-namespace`
+4. Migration-Hook-Job abwarten; Ingress-Host anpassen.
+
+Validierung: `make helm-lint`.
+
 ## Ohne Docker
 
 Go 1.22+, Node 20+, lokales PostgreSQL — siehe Root-[`README.md`](../../README.md) und [`frontend/README.md`](../frontend/README.md).
