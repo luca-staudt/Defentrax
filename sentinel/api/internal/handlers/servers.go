@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"errors"
 	"net"
 	"net/http"
 	"time"
@@ -8,8 +9,10 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/luca-staudt/Sentinel/sentinel/api/internal/apperrors"
 	"github.com/luca-staudt/Sentinel/sentinel/api/internal/auth/principal"
 	"github.com/luca-staudt/Sentinel/sentinel/api/internal/crypto/secrets"
+	"github.com/luca-staudt/Sentinel/sentinel/api/internal/middleware"
 	"github.com/luca-staudt/Sentinel/sentinel/api/internal/store"
 )
 
@@ -30,6 +33,22 @@ type serverResponse struct {
 	Name      string    `json:"name"`
 	Hostname  string    `json:"hostname"`
 	CreatedAt string    `json:"created_at"`
+}
+
+type agentResponse struct {
+	ID              uuid.UUID `json:"id"`
+	ServerID        uuid.UUID `json:"server_id"`
+	Name            string    `json:"name"`
+	Status          string    `json:"status"`
+	AgentVersion    string    `json:"agent_version"`
+	LastHeartbeatAt *string   `json:"last_heartbeat_at,omitempty"`
+}
+
+type serverDetailResponse struct {
+	serverResponse
+	Description string          `json:"description"`
+	Environment string          `json:"environment"`
+	Agents      []agentResponse `json:"agents"`
 }
 
 type createEnrollmentTokenRequest struct {
@@ -61,6 +80,49 @@ func (h *ServersHandler) List(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"servers": out})
+}
+
+func (h *ServersHandler) Get(w http.ResponseWriter, r *http.Request, id uuid.UUID) {
+	d, err := store.GetServerByID(r.Context(), h.Pool, id)
+	if err != nil {
+		if errors.Is(err, store.ErrNotFound) {
+			apperrors.WriteJSON(w, http.StatusNotFound, "not_found", "server not found", middleware.RequestIDFromContext(r.Context()))
+			return
+		}
+		internalError(w, r)
+		return
+	}
+	agents := make([]agentResponse, 0, len(d.Agents))
+	for _, a := range d.Agents {
+		agents = append(agents, toAgentResponse(a))
+	}
+	writeJSON(w, http.StatusOK, serverDetailResponse{
+		serverResponse: serverResponse{
+			ID:        d.ID,
+			Name:      d.Name,
+			Hostname:  d.Hostname,
+			CreatedAt: d.CreatedAt.UTC().Format(timeRFC3339),
+		},
+		Description: d.Description,
+		Environment: d.Environment,
+		Agents:      agents,
+	})
+}
+
+func toAgentResponse(a store.AgentRecord) agentResponse {
+	var hb *string
+	if a.LastHeartbeatAt != nil {
+		s := a.LastHeartbeatAt.UTC().Format(timeRFC3339)
+		hb = &s
+	}
+	return agentResponse{
+		ID:              a.ID,
+		ServerID:        a.ServerID,
+		Name:            a.Name,
+		Status:          a.Status,
+		AgentVersion:    a.AgentVersion,
+		LastHeartbeatAt: hb,
+	}
 }
 
 func (h *ServersHandler) Create(w http.ResponseWriter, r *http.Request) {

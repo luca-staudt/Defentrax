@@ -12,13 +12,17 @@ func Set(w http.ResponseWriter, name, token string, ttl time.Duration, secure bo
 	if name == "" {
 		name = defaultName
 	}
+	sameSite := http.SameSiteStrictMode
+	if !secure {
+		sameSite = http.SameSiteLaxMode
+	}
 	http.SetCookie(w, &http.Cookie{
 		Name:     name,
 		Value:    token,
 		Path:     "/",
 		HttpOnly: true,
 		Secure:   secure,
-		SameSite: http.SameSiteStrictMode,
+		SameSite: sameSite,
 		MaxAge:   int(ttl.Seconds()),
 	})
 }

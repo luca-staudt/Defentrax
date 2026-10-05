@@ -227,12 +227,14 @@ func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	roles, _ := store.ListUserRoles(r.Context(), h.Pool, p.UserID)
-	writeJSON(w, http.StatusOK, store.UserPublic{
-		ID:          p.UserID,
-		Email:       p.Email,
-		DisplayName: "",
-		IsActive:    true,
-		Roles:       roles,
+	perms, _ := store.ListPermissionsForUser(r.Context(), h.Pool, p.UserID)
+	writeJSON(w, http.StatusOK, map[string]any{
+		"id":           p.UserID,
+		"email":        p.Email,
+		"display_name": "",
+		"is_active":    true,
+		"roles":        roles,
+		"permissions":  perms,
 	})
 }
 

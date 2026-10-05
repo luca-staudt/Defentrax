@@ -57,6 +57,43 @@ func CreateServer(ctx context.Context, pool *pgxpool.Pool, name, hostname, descr
 	return s, err
 }
 
+type ServerDetail struct {
+	Server
+	Description string
+	Environment string
+	Agents      []AgentRecord
+}
+
+func GetServerByID(ctx context.Context, pool *pgxpool.Pool, id uuid.UUID) (ServerDetail, error) {
+	var d ServerDetail
+	err := pool.QueryRow(ctx, `
+		SELECT id, name, hostname, description, environment, created_at
+		FROM servers WHERE id = $1
+	`, id).Scan(&d.ID, &d.Name, &d.Hostname, &d.Description, &d.Environment, &d.CreatedAt)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return ServerDetail{}, ErrNotFound
+	}
+	if err != nil {
+		return ServerDetail{}, err
+	}
+	rows, err := pool.Query(ctx, `
+		SELECT id, server_id, name, status, agent_version, last_heartbeat_at
+		FROM agents WHERE server_id = $1 ORDER BY created_at
+	`, id)
+	if err != nil {
+		return ServerDetail{}, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var a AgentRecord
+		if err := rows.Scan(&a.ID, &a.ServerID, &a.Name, &a.Status, &a.AgentVersion, &a.LastHeartbeatAt); err != nil {
+			return ServerDetail{}, err
+		}
+		d.Agents = append(d.Agents, a)
+	}
+	return d, rows.Err()
+}
+
 func ListServers(ctx context.Context, pool *pgxpool.Pool) ([]Server, error) {
 	rows, err := pool.Query(ctx, `
 		SELECT id, name, hostname, created_at FROM servers ORDER BY name

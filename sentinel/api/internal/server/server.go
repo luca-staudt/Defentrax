@@ -57,6 +57,9 @@ func NewWithOptions(log *slog.Logger, cfg config.Config, pool *pgxpool.Pool, log
 	agentH := &handlers.AgentHandler{Pool: pool, Config: cfg, IngestLimiter: ingestLimiter}
 	rulesH := &handlers.RulesHandler{Pool: pool}
 	alertsH := &handlers.AlertsHandler{Pool: pool, Hub: opts.AlertHub}
+	eventsH := &handlers.EventsHandler{Pool: pool}
+	dashboardH := &handlers.DashboardHandler{Pool: pool}
+	realtimeH := &handlers.RealtimeHandler{Pool: pool, Config: cfg, Hub: opts.AlertHub}
 	if opts.Detection != nil && opts.Detection.Runner != nil {
 		runner := opts.Detection.Runner
 		agentH.OnDetect = func(eventID, serverID, agentID uuid.UUID, occurredAt time.Time, source, category, severity, host, message string, fields []byte) {
@@ -114,7 +117,29 @@ func NewWithOptions(log *slog.Logger, cfg config.Config, pool *pgxpool.Pool, log
 	apiMux.Handle("POST /api/v1/agent/heartbeat", agentAuth(http.HandlerFunc(agentH.Heartbeat)))
 	apiMux.Handle("POST /api/v1/agent/events", agentAuth(http.HandlerFunc(agentH.IngestEvents)))
 
+	apiMux.Handle("GET /api/v1/dashboard/stats", protectPerm(pool, cfg, "alerts", "read", http.HandlerFunc(dashboardH.Stats)))
+	apiMux.Handle("GET /api/v1/events", protectPerm(pool, cfg, "events", "read", http.HandlerFunc(eventsH.List)))
+	apiMux.Handle("GET /api/v1/events/{id}", protectPerm(pool, cfg, "events", "read", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		id, err := uuid.Parse(r.PathValue("id"))
+		if err != nil {
+			requestID := middleware.RequestIDFromContext(r.Context())
+			apperrors.WriteJSON(w, http.StatusBadRequest, "invalid_id", "invalid event id", requestID)
+			return
+		}
+		eventsH.Get(w, r, id)
+	})))
+	apiMux.Handle("GET /api/v1/ws/alerts", protectPerm(pool, cfg, "alerts", "read", http.HandlerFunc(realtimeH.AlertsWS)))
+
 	apiMux.Handle("GET /api/v1/servers", protectPerm(pool, cfg, "servers", "write", http.HandlerFunc(serversH.List)))
+	apiMux.Handle("GET /api/v1/servers/{id}", protectPerm(pool, cfg, "servers", "write", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		id, err := uuid.Parse(r.PathValue("id"))
+		if err != nil {
+			requestID := middleware.RequestIDFromContext(r.Context())
+			apperrors.WriteJSON(w, http.StatusBadRequest, "invalid_id", "invalid server id", requestID)
+			return
+		}
+		serversH.Get(w, r, id)
+	})))
 	apiMux.Handle("POST /api/v1/servers", protectPerm(pool, cfg, "servers", "write", http.HandlerFunc(serversH.Create)))
 	apiMux.Handle("POST /api/v1/servers/{id}/enrollment-tokens", protectPerm(pool, cfg, "servers", "write", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		id, err := uuid.Parse(r.PathValue("id"))
@@ -186,6 +211,7 @@ func NewWithOptions(log *slog.Logger, cfg config.Config, pool *pgxpool.Pool, log
 	rootMux.HandleFunc("/", rootNotFound)
 
 	handler := middleware.RequestID(rootMux)
+	handler = middleware.CORS(cfg.CORSAllowedOrigins)(handler)
 	handler = loggingMiddleware(log, handler)
 
 	addr := fmt.Sprintf(":%d", cfg.Port)

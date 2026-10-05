@@ -12,6 +12,8 @@ Go HTTP service for Sentinel’s control plane: REST under `/api/v1`, future Web
 
 **Phase 8 scope:** Alert creation from detection matches with Redis/in-memory dedup and DB aggregation; lifecycle API (`OPEN` → `ACKNOWLEDGED` → `INVESTIGATING` → `RESOLVED`); assignment and resolution notes; timeline events; audit on lifecycle changes; `GET/PATCH /api/v1/alerts/*` with filters; recent-events stub for live dashboards.
 
+**Phase 9 scope (frontend support):** Dashboard stats aggregation, events list/get, server detail with agents, WebSocket alert feed (`GET /api/v1/ws/alerts`), optional CORS (`CORS_ALLOWED_ORIGINS`), `/auth/me` includes permission keys for UI RBAC.
+
 ## Run locally
 
 From the repository root (requires `DATABASE_URL`, `SESSION_SECRET`, and migrations applied):

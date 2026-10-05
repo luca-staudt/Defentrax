@@ -35,6 +35,8 @@ type Config struct {
 	IngestDBTimeout       time.Duration
 
 	AlertDedupCooldown time.Duration
+
+	CORSAllowedOrigins string
 }
 
 // Load reads configuration from environment variables with secure defaults.
@@ -44,7 +46,8 @@ func Load() (Config, error) {
 		LogLevel:    strings.TrimSpace(getEnv("LOG_LEVEL", "info")),
 		DatabaseURL: strings.TrimSpace(os.Getenv("DATABASE_URL")),
 		SessionCookieName: strings.TrimSpace(getEnv("SESSION_COOKIE_NAME", "sentinel_session")),
-		RedisURL:          strings.TrimSpace(os.Getenv("REDIS_URL")),
+		RedisURL:           strings.TrimSpace(os.Getenv("REDIS_URL")),
+		CORSAllowedOrigins: strings.TrimSpace(os.Getenv("CORS_ALLOWED_ORIGINS")),
 	}
 
 	portStr := strings.TrimSpace(getEnv("API_PORT", "8080"))
