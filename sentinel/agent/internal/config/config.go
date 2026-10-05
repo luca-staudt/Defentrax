@@ -7,6 +7,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/luca-staudt/Sentinel/sentinel/pkg/version"
 )
 
 // Config holds agent runtime settings (env + optional file overrides via SENTINEL_AGENT_*).
@@ -42,7 +44,7 @@ func Load() (Config, error) {
 		cfg.CredentialPath = defaultCredentialPath
 	}
 	if cfg.AgentVersion == "" {
-		cfg.AgentVersion = "0.5.0-dev"
+		cfg.AgentVersion = version.String()
 	}
 	if v := strings.TrimSpace(os.Getenv("SENTINEL_TLS_INSECURE")); v == "1" || strings.EqualFold(v, "true") {
 		cfg.TLSSkipVerify = true

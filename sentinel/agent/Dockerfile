@@ -8,17 +8,23 @@ WORKDIR /src
 
 COPY sentinel/agent/go.mod sentinel/agent/go.sum ./sentinel/agent/
 COPY sentinel/pkg/event/go.mod ./sentinel/pkg/event/
+COPY sentinel/pkg/version/go.mod ./sentinel/pkg/version/
 
 WORKDIR /src/sentinel/agent
 RUN go mod download
 
 WORKDIR /src
+COPY VERSION ./VERSION
 COPY sentinel/agent/ ./sentinel/agent/
 COPY sentinel/pkg/ ./sentinel/pkg/
 
 WORKDIR /src/sentinel/agent
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
-    go build -trimpath -ldflags="-s -w" -o /out/sentinel-agent ./cmd/sentinel-agent
+ARG SENTINEL_VERSION=
+RUN VER="${SENTINEL_VERSION:-$(tr -d '[:space:]' < /src/VERSION)}" && \
+    CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
+    go build -trimpath \
+      -ldflags="-s -w -X github.com/luca-staudt/Sentinel/sentinel/pkg/version.buildVersion=${VER}" \
+      -o /out/sentinel-agent ./cmd/sentinel-agent
 
 FROM alpine:3.20 AS runtime
 RUN apk add --no-cache ca-certificates tzdata \

@@ -4,6 +4,8 @@ go 1.22
 
 replace github.com/luca-staudt/Sentinel/sentinel/pkg/event => ../pkg/event
 
+replace github.com/luca-staudt/Sentinel/sentinel/pkg/version => ../pkg/version
+
 replace github.com/luca-staudt/Sentinel/sentinel/detection => ../detection
 
 replace github.com/luca-staudt/Sentinel/sentinel/plugins => ../plugins
@@ -13,6 +15,7 @@ require (
 	github.com/jackc/pgx/v5 v5.7.4
 	github.com/luca-staudt/Sentinel/sentinel/detection v0.0.0
 	github.com/luca-staudt/Sentinel/sentinel/pkg/event v0.0.0
+	github.com/luca-staudt/Sentinel/sentinel/pkg/version v0.0.0
 	github.com/luca-staudt/Sentinel/sentinel/plugins v0.0.0
 	github.com/pquerna/otp v1.4.0
 	github.com/redis/go-redis/v9 v9.7.0

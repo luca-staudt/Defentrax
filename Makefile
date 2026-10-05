@@ -1,4 +1,4 @@
-.PHONY: build test test-all test-ci fmt-check lint frontend-lint frontend-build api-build api-test api-lint api-test-integration agent-build agent-test detection-test plugins-test pkg-test db-migrate-up db-migrate-down db-migrate-status db-seed-dev db-test test-migrations run-api bootstrap-admin openapi-validate compose-up compose-down compose-config k8s-dry-run helm-lint security-gitleaks security-gosec
+.PHONY: build test test-all test-ci fmt-check lint frontend-lint frontend-build api-build api-test api-lint api-test-integration agent-build agent-test detection-test plugins-test pkg-test version-test db-migrate-up db-migrate-down db-migrate-status db-seed-dev db-test test-migrations run-api bootstrap-admin openapi-validate compose-up compose-down compose-config k8s-dry-run helm-lint security-gitleaks security-gosec release-check release-sbom-local
 
 API_DIR := sentinel/api
 AGENT_DIR := sentinel/agent
@@ -6,15 +6,29 @@ DETECTION_DIR := sentinel/detection
 PLUGINS_DIR := sentinel/plugins
 DB_DIR := sentinel/database
 PKG_DIR := sentinel/pkg/event
+VERSION_DIR := sentinel/pkg/version
 FRONTEND_DIR := sentinel/frontend
+VERSION_FILE := VERSION
+VERSION := $(shell tr -d '[:space:]' < $(VERSION_FILE) 2>/dev/null)
+VERSION_LDFLAGS := -X github.com/luca-staudt/Sentinel/sentinel/pkg/version.buildVersion=$(VERSION)
 
 build: api-build agent-build
 
-test: api-test agent-test detection-test plugins-test pkg-test db-test
+test: api-test agent-test detection-test plugins-test pkg-test version-test db-test
 
 test-all: test api-test-integration
 
-test-ci: test openapi-validate
+test-ci: test openapi-validate release-check
+
+version-test:
+	cd $(VERSION_DIR) && go test ./...
+
+release-check:
+	./sentinel/scripts/release-check.sh
+
+release-sbom-local:
+	./sentinel/scripts/release-sbom-local.sh ./dist/sbom
+
 
 # Fail if any Go file differs from gofmt (CI Formatting job).
 fmt-check:
@@ -33,7 +47,7 @@ frontend-build:
 	cd $(FRONTEND_DIR) && npx next build
 
 api-build:
-	cd $(API_DIR) && go build ./...
+	cd $(API_DIR) && go build -ldflags="$(VERSION_LDFLAGS)" ./...
 
 api-test:
 	cd $(API_DIR) && go test ./...
@@ -42,7 +56,7 @@ api-test-integration:
 	cd $(API_DIR) && go test -tags=integration ./internal/integration/... ./internal/handlers/...
 
 agent-build:
-	cd $(AGENT_DIR) && go build ./...
+	cd $(AGENT_DIR) && go build -ldflags="$(VERSION_LDFLAGS)" ./...
 
 agent-test:
 	cd $(AGENT_DIR) && go test ./...
