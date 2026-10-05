@@ -17,8 +17,9 @@ Further architecture and phase planning will be added here as phases land (see r
 
 ## Install & deploy
 
-- [installation.md](installation.md) — `docker compose up` local path (Phase 15)
-- [deployment.md](deployment.md) — images, volumes, healthchecks, immutable tags
+- [installation.md](installation.md) — Compose (Phase 15) and Kubernetes overview (Phase 16)
+- [deployment.md](deployment.md) — images, volumes, healthchecks, immutable tags, K8s
+- [../deployments/kubernetes/README.md](../deployments/kubernetes/README.md) — apply order, secrets, kind/minikube
 
 ## Agent
 

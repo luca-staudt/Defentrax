@@ -1,4 +1,4 @@
-# Deployment (Docker)
+# Deployment (Docker & Kubernetes)
 
 ## Compose-Layout
 
@@ -71,6 +71,32 @@ docker push registry.example.com/sentinel-frontend:0.1.0
 - WebSocket direkt an API: `NEXT_PUBLIC_WS_URL` (Build-Arg + Runtime; bei Änderung Frontend neu bauen).
 - Lokales HTTP: `COOKIE_SECURE=false`. Hinter TLS Proxy: `COOKIE_SECURE=true` und passende `CORS_ALLOWED_ORIGINS`.
 
-## Kubernetes / Helm
+## Kubernetes
 
-Manifeste und Charts folgen in späteren Phasen (`deployments/kubernetes`, `deployments/helm`).
+Raw-Manifeste (Phase 16): [`../deployments/kubernetes/`](../deployments/kubernetes/) — siehe dortige [README](../deployments/kubernetes/README.md).
+
+Kurzüberblick:
+
+| Ressource | Zweck |
+|-----------|--------|
+| Deployments | `api`, `frontend`, `postgres`, `redis` |
+| Services | ClusterIP für alle Workloads |
+| ConfigMap / Secret | Nicht-geheim vs. Template (`REPLACE_ME`, keine echten Secrets in Git) |
+| Job | `sentinel-migrate` (goose `up`) |
+| PVCs | `postgres-data` (10Gi), `redis-data` (2Gi) |
+| Ingress | Host-Beispiel `sentinel.example.com` |
+| NetworkPolicies | Default-deny + explizite Allows |
+
+Probes: API `GET /healthz` (liveness) und `GET /readyz` (readiness).
+
+```bash
+make k8s-dry-run
+# oder:
+kubectl apply -k sentinel/deployments/kubernetes --dry-run=client
+```
+
+**Secrets:** Klartext-Secrets nicht committen; Sealed Secrets / External Secrets / Cloud Secret Manager nutzen. Externe PostgreSQL: `postgres.yaml` weglassen und `DATABASE_URL` setzen (README).
+
+## Helm
+
+Charts folgen in Phase 17 (`deployments/helm`).

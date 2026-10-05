@@ -1,4 +1,6 @@
-# Installation (Docker Compose)
+# Installation
+
+## Docker Compose
 
 Schnellster Weg für lokale Entwicklung und kleine Self-Host-Setups.
 
@@ -79,6 +81,19 @@ docker compose down -v       # inkl. Postgres-/Redis-Volumes (Datenverlust)
 ```
 
 Postgres-Daten liegen im named Volume `sentinel-postgres-data` (siehe [deployment.md](deployment.md)).
+
+## Kubernetes (kind / minikube / Cluster)
+
+Siehe [`../deployments/kubernetes/README.md`](../deployments/kubernetes/README.md).
+
+Kurzfassung:
+
+1. Images bauen (`docker compose build`) und in den Cluster laden (`kind load` / `minikube image load`).
+2. In `secret.yaml` alle `REPLACE_ME`-Platzhalter **lokal** ersetzen — keine echten Secrets committen.
+3. `kubectl apply -k sentinel/deployments/kubernetes` (oder schrittweise laut K8s-README).
+4. Migration-Job abwarten, dann API/Frontend prüfen (`/healthz`, `/readyz`).
+
+Client-Validierung ohne Cluster-Mutationen: `make k8s-dry-run`.
 
 ## Ohne Docker
 

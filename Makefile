@@ -1,4 +1,4 @@
-.PHONY: build test test-all test-ci lint api-build api-test api-lint api-test-integration agent-build agent-test detection-test plugins-test pkg-test db-migrate-up db-migrate-down db-migrate-status db-seed-dev db-test test-migrations run-api bootstrap-admin openapi-validate compose-up compose-down compose-config
+.PHONY: build test test-all test-ci lint api-build api-test api-lint api-test-integration agent-build agent-test detection-test plugins-test pkg-test db-migrate-up db-migrate-down db-migrate-status db-seed-dev db-test test-migrations run-api bootstrap-admin openapi-validate compose-up compose-down compose-config k8s-dry-run
 
 API_DIR := sentinel/api
 AGENT_DIR := sentinel/agent
@@ -94,3 +94,20 @@ compose-up:
 
 compose-down:
 	docker compose down
+
+K8S_DIR := sentinel/deployments/kubernetes
+
+k8s-dry-run:
+	@command -v kubectl >/dev/null 2>&1 || { echo "kubectl is required for k8s-dry-run"; exit 1; }
+	@if command -v kubeconform >/dev/null 2>&1; then \
+	  kubectl kustomize $(K8S_DIR) | kubeconform -strict -summary; \
+	else \
+	  kubectl kustomize $(K8S_DIR) >/dev/null; \
+	  echo "k8s-dry-run: kubectl kustomize OK (install kubeconform for schema checks)"; \
+	fi
+	@if kubectl cluster-info >/dev/null 2>&1; then \
+	  kubectl apply -k $(K8S_DIR) --dry-run=client; \
+	else \
+	  echo "k8s-dry-run: no kube-apiserver — skip kubectl apply --dry-run=client"; \
+	  echo "(connect a cluster to also run: kubectl apply -k $(K8S_DIR) --dry-run=client)"; \
+	fi

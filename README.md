@@ -52,6 +52,18 @@ docker compose up -d --build
 
 Optional profiles: `--profile agent`, `--profile proxy` (Caddy on `:80`).
 
+## Quick start (Kubernetes)
+
+Manifests: [`sentinel/deployments/kubernetes/`](sentinel/deployments/kubernetes/) (see README there).
+
+```bash
+# build images, load into kind/minikube, replace REPLACE_ME in secret.yaml locally
+make k8s-dry-run
+kubectl apply -k sentinel/deployments/kubernetes
+```
+
+Do **not** commit real secrets — use Sealed Secrets / External Secrets / a cloud secret manager in production.
+
 ## Quick start (bare metal)
 
 **Requirements:** Go 1.22+, PostgreSQL 14+, Node 20+ (UI)
@@ -108,8 +120,8 @@ make lint
 ## Documentation
 
 - In-repo: [`sentinel/docs/`](sentinel/docs/)
-- Install (Compose): [`sentinel/docs/installation.md`](sentinel/docs/installation.md)
-- Deploy / images: [`sentinel/docs/deployment.md`](sentinel/docs/deployment.md)
+- Install (Compose / K8s): [`sentinel/docs/installation.md`](sentinel/docs/installation.md)
+- Deploy / images / K8s: [`sentinel/docs/deployment.md`](sentinel/docs/deployment.md) · [`sentinel/deployments/kubernetes/`](sentinel/deployments/kubernetes/)
 - API (OpenAPI): [`sentinel/docs/api.md`](sentinel/docs/api.md) · [`sentinel/api/openapi/openapi.yaml`](sentinel/api/openapi/openapi.yaml)
 - Plugins: [`sentinel/docs/plugins.md`](sentinel/docs/plugins.md)
 - API module: [`sentinel/api/README.md`](sentinel/api/README.md)
