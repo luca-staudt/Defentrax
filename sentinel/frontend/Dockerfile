@@ -16,6 +16,10 @@ ENV NEXT_TELEMETRY_DISABLED=1 \
 # Browser-facing WebSocket URL (baked into the client bundle).
 ARG NEXT_PUBLIC_WS_URL=ws://localhost:8080
 ENV NEXT_PUBLIC_WS_URL=$NEXT_PUBLIC_WS_URL
+# Next.js rewrites bake API_PROXY_TARGET at build time. Default to the Compose
+# service DNS name — 127.0.0.1 inside this container is the frontend itself.
+ARG API_PROXY_TARGET=http://sentinel-api:8080
+ENV API_PROXY_TARGET=$API_PROXY_TARGET
 # Prefer classic Next production build inside images (smaller/more portable than turbopack).
 RUN npx next build
 

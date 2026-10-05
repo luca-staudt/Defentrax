@@ -10,6 +10,7 @@ Short operator runbook. Cross-check [configuration.md](configuration.md) and [se
 | API unhealthy | `docker compose logs sentinel-api`; `SESSION_SECRET` set; DB reachable |
 | `/readyz` fails | Postgres not ready or migrations incomplete |
 | Frontend blank / API errors | `CORS_ALLOWED_ORIGINS`; `NEXT_PUBLIC_WS_URL`; rebuild UI after env change |
+| Login Internal Server Error / `ECONNREFUSED` | Frontend image built with wrong `API_PROXY_TARGET` (must be `http://sentinel-api:8080` for Compose, not `127.0.0.1`). Rebuild: `docker compose build --no-cache sentinel-frontend && docker compose up -d sentinel-frontend` |
 
 ```bash
 docker compose ps
@@ -22,7 +23,8 @@ docker compose logs --tail=200 sentinel-api
 
 - Bootstrap only works when the **users table is empty**.
 - Password must meet minimum length (bootstrap: ≥ 12 characters).
-- After first admin exists, unset bootstrap env vars.
+- After setting or uncommenting `SENTINEL_BOOTSTRAP_ADMIN_*` in `.env`, recreate the API: `docker compose up -d --force-recreate --no-deps sentinel-api` (restart alone may not reload env from compose).
+- After first admin exists, unset bootstrap env vars and recreate the API again.
 - Rate limited? Wait for `LOGIN_RATE_LIMIT_*` window or check Redis.
 - Production with `COOKIE_SECURE=true` over plain HTTP will not keep the session — use HTTPS or local `COOKIE_SECURE=false` only in dev.
 
