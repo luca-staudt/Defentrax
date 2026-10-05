@@ -32,10 +32,21 @@ openssl rand -base64 32   # → SECRETS_ENCRYPTION_KEY=
 Optional one-time first admin (only when the `users` table is empty):
 
 ```bash
-# in .env
+# in .env — uncomment and set both
 SENTINEL_BOOTSTRAP_ADMIN_EMAIL=admin@example.com
 SENTINEL_BOOTSTRAP_ADMIN_PASSWORD='choose-a-long-password'
 ```
+
+Bootstrap runs when the API process starts and `users` is empty. After uncommenting
+or changing `SENTINEL_BOOTSTRAP_ADMIN_*`, **recreate the API container** so it
+picks up the new env (a plain `restart` is not enough if compose already started
+without those vars):
+
+```bash
+docker compose up -d --force-recreate --no-deps sentinel-api
+```
+
+Then remove or comment out the bootstrap vars and recreate again once login works.
 
 Local HTTP: keep `COOKIE_SECURE=false` and
 `CORS_ALLOWED_ORIGINS=http://localhost:3000,http://127.0.0.1:3000` (already in `.env.example`).
@@ -49,6 +60,18 @@ docker compose up -d --build
 ```
 
 Services: `postgres`, `redis`, `migrate` (one-shot), `sentinel-api`, `sentinel-frontend`.
+
+The frontend image bakes Next.js `/api/v1/*` rewrites at **build** time from
+`API_PROXY_TARGET` (Compose default: `http://sentinel-api:8080`). That must be
+the API’s Docker DNS name — `http://127.0.0.1:8080` inside the frontend
+container points at itself and causes login `ECONNREFUSED` / Internal Server
+Error. Override via build arg / `.env` only if your service name differs, then
+rebuild:
+
+```bash
+docker compose build --no-cache sentinel-frontend
+docker compose up -d sentinel-frontend
+```
 
 | Endpoint | URL |
 |----------|-----|

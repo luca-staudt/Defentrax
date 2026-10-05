@@ -54,9 +54,9 @@ Key vars: `SENTINEL_API_URL`, `SENTINEL_ENROLLMENT_TOKEN` (first run), `SENTINEL
 | Variable | Purpose |
 |----------|---------|
 | `NEXT_PUBLIC_WS_URL` | Browser WebSocket URL to the API (must be reachable from the browser) |
-| `API_PROXY_TARGET` / `API_INTERNAL_URL` | Bare-metal Next.js proxy targets |
+| `API_PROXY_TARGET` / `API_INTERNAL_URL` | Next.js rewrite / server fetch target. **Baked into the frontend image at build** for rewrites; Compose default is `http://sentinel-api:8080`. Use `127.0.0.1` only for bare-metal Next. |
 
-Compose sets UI→API networking inside the compose network; rebuild the frontend image after changing `NEXT_PUBLIC_*`.
+Compose sets UI→API networking inside the compose network; rebuild the frontend image after changing `NEXT_PUBLIC_*` or `API_PROXY_TARGET`.
 
 ## Docker Compose
 
