@@ -15,6 +15,11 @@ Operator and developer documentation living alongside the codebase.
 
 Further architecture and phase planning will be added here as phases land (see repository root `README.md`).
 
+## Install & deploy
+
+- [installation.md](installation.md) — `docker compose up` local path (Phase 15)
+- [deployment.md](deployment.md) — images, volumes, healthchecks, immutable tags
+
 ## Agent
 
 - [agent.md](agent.md) — install, enrollment, permissions
@@ -28,3 +33,7 @@ Further architecture and phase planning will be added here as phases land (see r
 
 - [api.md](api.md) — REST overview, auth schemes, OpenAPI / Swagger UI (Phase 13)
 - Spec: [`../api/openapi/openapi.yaml`](../api/openapi/openapi.yaml) — also `GET /api/v1/openapi.yaml` and `GET /api/v1/docs`
+
+## Testing
+
+- [testing.md](testing.md) — unit/integration matrix (Phase 14)

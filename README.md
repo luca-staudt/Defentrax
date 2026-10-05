@@ -35,12 +35,29 @@ sentinel/
 
 Shared Go packages stay inside `api/internal` unless a deliberate shared `pkg/` is introduced for agent/API types.
 
-## Quick start (API + database — Phase 3)
+## Quick start (Docker Compose — recommended)
 
-**Requirements:** Go 1.22+, PostgreSQL 14+
+**Requirements:** Docker Engine + Compose plugin
 
 ```bash
-cp .env.example .env   # set DATABASE_URL for your local Postgres
+cp .env.example .env
+# set POSTGRES_PASSWORD, SESSION_SECRET (openssl rand -base64 32), optional bootstrap admin
+docker compose up -d --build
+```
+
+- UI: http://localhost:3000  
+- API: http://localhost:8080 (`/healthz`, `/readyz`)  
+- Dev overlay: `docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build`  
+- Docs: [`sentinel/docs/installation.md`](sentinel/docs/installation.md), [`sentinel/docs/deployment.md`](sentinel/docs/deployment.md)
+
+Optional profiles: `--profile agent`, `--profile proxy` (Caddy on `:80`).
+
+## Quick start (bare metal)
+
+**Requirements:** Go 1.22+, PostgreSQL 14+, Node 20+ (UI)
+
+```bash
+cp .env.example .env   # set DATABASE_URL / SESSION_SECRET for your local Postgres
 make build
 export DATABASE_URL='postgres://user:pass@localhost:5432/sentinel?sslmode=disable'
 make db-migrate-up
@@ -91,6 +108,8 @@ make lint
 ## Documentation
 
 - In-repo: [`sentinel/docs/`](sentinel/docs/)
+- Install (Compose): [`sentinel/docs/installation.md`](sentinel/docs/installation.md)
+- Deploy / images: [`sentinel/docs/deployment.md`](sentinel/docs/deployment.md)
 - API (OpenAPI): [`sentinel/docs/api.md`](sentinel/docs/api.md) · [`sentinel/api/openapi/openapi.yaml`](sentinel/api/openapi/openapi.yaml)
 - Plugins: [`sentinel/docs/plugins.md`](sentinel/docs/plugins.md)
 - API module: [`sentinel/api/README.md`](sentinel/api/README.md)

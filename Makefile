@@ -1,4 +1,4 @@
-.PHONY: build test test-all test-ci lint api-build api-test api-lint api-test-integration agent-build agent-test detection-test plugins-test pkg-test db-migrate-up db-migrate-down db-migrate-status db-seed-dev db-test test-migrations run-api bootstrap-admin openapi-validate
+.PHONY: build test test-all test-ci lint api-build api-test api-lint api-test-integration agent-build agent-test detection-test plugins-test pkg-test db-migrate-up db-migrate-down db-migrate-status db-seed-dev db-test test-migrations run-api bootstrap-admin openapi-validate compose-up compose-down compose-config
 
 API_DIR := sentinel/api
 AGENT_DIR := sentinel/agent
@@ -85,3 +85,12 @@ run-api:
 bootstrap-admin:
 	@test -n "$$DATABASE_URL" || (echo "DATABASE_URL is required"; exit 1)
 	cd $(API_DIR) && go run ./cmd/bootstrap-admin
+
+compose-config:
+	docker compose config -q
+
+compose-up:
+	docker compose up -d --build
+
+compose-down:
+	docker compose down
