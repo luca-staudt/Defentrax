@@ -17,6 +17,7 @@ func TestLoadAcceptsValidSecrets(t *testing.T) {
 	t.Setenv("DATABASE_URL", "postgres://localhost:5432/sentinel?sslmode=disable")
 	t.Setenv("SESSION_SECRET", "YWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWE=")
 	t.Setenv("TOTP_ENCRYPTION_KEY", "YmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmI=")
+	t.Setenv("SECRETS_ENCRYPTION_KEY", "")
 	cfg, err := Load()
 	if err != nil {
 		t.Fatal(err)
@@ -26,5 +27,11 @@ func TestLoadAcceptsValidSecrets(t *testing.T) {
 	}
 	if len(cfg.TOTPEncryptionKey) != 32 {
 		t.Fatal("totp key must be 32 bytes")
+	}
+	if len(cfg.SecretsEncryptionKey) != 32 {
+		t.Fatal("secrets key should fall back to TOTP key")
+	}
+	if cfg.NotifyMaxAttempts != 5 {
+		t.Fatalf("default max attempts=%d", cfg.NotifyMaxAttempts)
 	}
 }

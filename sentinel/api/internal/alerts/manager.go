@@ -8,10 +8,16 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/luca-staudt/Sentinel/sentinel/api/internal/notify"
 	"github.com/luca-staudt/Sentinel/sentinel/api/internal/realtime"
 	"github.com/luca-staudt/Sentinel/sentinel/api/internal/store"
 	"github.com/luca-staudt/Sentinel/sentinel/detection"
 )
+
+// Notifier is implemented by notify.Dispatcher (optional).
+type Notifier interface {
+	Notify(ctx context.Context, ev notify.AlertEvent)
+}
 
 // MatchInput is one detection match ready for alert deduplication.
 type MatchInput struct {
@@ -66,6 +72,7 @@ type Manager struct {
 	CooldownStore    CooldownStore
 	CooldownDuration time.Duration
 	Hub              *realtime.Hub
+	Notifier         Notifier
 }
 
 // HandleMatch returns alert id and whether a new alert was created (false when aggregated).
@@ -87,7 +94,20 @@ func (m *Manager) HandleMatch(ctx context.Context, in MatchInput) (uuid.UUID, bo
 			return uuid.Nil, false, err
 		}
 		_ = m.CooldownStore.Remember(ctx, dedupKey, existing.ID, m.cooldownDur())
-		m.publishUpdated(existing.ID, existing.ServerID, existing.Status, existing.Severity, existing.Title, existing.EventCount+1)
+		count := existing.EventCount + 1
+		m.publishUpdated(existing.ID, existing.ServerID, existing.Status, existing.Severity, existing.Title, count)
+		m.notify(ctx, notify.AlertEvent{
+			AlertID:     existing.ID,
+			ServerID:    existing.ServerID,
+			Title:       existing.Title,
+			Description: existing.Description,
+			Severity:    existing.Severity,
+			Status:      existing.Status,
+			SourceIP:    existing.SourceIP,
+			EventCount:  count,
+			Trigger:     notify.TriggerAlertUpdated,
+			OccurredAt:  in.OccurredAt,
+		})
 		return existing.ID, false, nil
 	}
 
@@ -107,7 +127,26 @@ func (m *Manager) HandleMatch(ctx context.Context, in MatchInput) (uuid.UUID, bo
 	}
 	_ = m.CooldownStore.Remember(ctx, dedupKey, id, m.cooldownDur())
 	m.publishCreated(id, in.Match.ServerID, in.Match.Severity, in.Match.Title)
+	m.notify(ctx, notify.AlertEvent{
+		AlertID:     id,
+		ServerID:    in.Match.ServerID,
+		Title:       in.Match.Title,
+		Description: in.Match.Description,
+		Severity:    in.Match.Severity,
+		Status:      StatusOpen,
+		SourceIP:    sourceIP,
+		EventCount:  1,
+		Trigger:     notify.TriggerAlertCreated,
+		OccurredAt:  in.OccurredAt,
+	})
 	return id, true, nil
+}
+
+func (m *Manager) notify(ctx context.Context, ev notify.AlertEvent) {
+	if m.Notifier == nil {
+		return
+	}
+	m.Notifier.Notify(ctx, ev)
 }
 
 func (m *Manager) findExisting(ctx context.Context, dedupKey string) (*store.Alert, error) {

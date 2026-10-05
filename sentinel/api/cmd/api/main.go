@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -19,6 +20,7 @@ import (
 	"github.com/luca-staudt/Sentinel/sentinel/api/internal/db"
 	"github.com/luca-staudt/Sentinel/sentinel/api/internal/detectionrun"
 	"github.com/luca-staudt/Sentinel/sentinel/api/internal/logging"
+	"github.com/luca-staudt/Sentinel/sentinel/api/internal/notify"
 	"github.com/luca-staudt/Sentinel/sentinel/api/internal/realtime"
 	"github.com/luca-staudt/Sentinel/sentinel/api/internal/server"
 	"github.com/luca-staudt/Sentinel/sentinel/detection"
@@ -87,8 +89,24 @@ func main() {
 
 	alertHub := realtime.NewHub(256)
 
+	var notifier *notify.Dispatcher
+	if pool != nil && len(cfg.SecretsEncryptionKey) == 32 {
+		notifier = notify.NewDispatcher(log, pool, cfg.SecretsEncryptionKey)
+		notifier.MaxAttempts = cfg.NotifyMaxAttempts
+		notifier.BaseBackoff = cfg.NotifyBaseBackoff
+		notifier.MaxBackoff = cfg.NotifyMaxBackoff
+		defer notifier.Close()
+		go runNotificationRetrier(log, notifier)
+	} else if pool != nil {
+		log.Warn("notification dispatcher disabled: set SECRETS_ENCRYPTION_KEY or TOTP_ENCRYPTION_KEY (32-byte base64)")
+	}
+
 	var detectSvc *detectionrun.Service
-	opts := server.Options{AlertHub: alertHub}
+	opts := server.Options{
+		AlertHub:   alertHub,
+		Notifier:   notifier,
+		SecretsKey: cfg.SecretsEncryptionKey,
+	}
 	if pool != nil {
 		engine := detection.NewEngine(windowCounter)
 		rulesPath := rulesDir()
@@ -98,6 +116,7 @@ func main() {
 		}
 		rules := engine.Rules()
 		alertMgr := alerts.NewManagerFromPool(log, pool, alertCooldown, cfg.AlertDedupCooldown, alertHub)
+		alertMgr.Notifier = notifier
 		runner := detectionrun.New(log, pool, engine, alertMgr, 1024)
 		defer runner.Close()
 		detectSvc = &detectionrun.Service{
@@ -156,3 +175,18 @@ func rulesDir() string {
 	}
 	return filepath.Join("..", "rules")
 }
+
+func runNotificationRetrier(log *slog.Logger, d *notify.Dispatcher) {
+	ticker := time.NewTicker(15 * time.Second)
+	defer ticker.Stop()
+	for range ticker.C {
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		n := d.ProcessPending(ctx, 50)
+		cancel()
+		if n > 0 {
+			log.Info("notification retrier processed deliveries", "count", n)
+		}
+	}
+}
+
+

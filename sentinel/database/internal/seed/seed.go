@@ -60,6 +60,8 @@ func RunDev(ctx context.Context, pool *pgxpool.Pool) error {
 		{"servers", "write", "Manage servers and agents"},
 		{"rules", "read", "View detection rules"},
 		{"rules", "write", "Manage detection rules"},
+		{"notifications", "read", "View notification channels and rules"},
+		{"notifications", "write", "Manage notification channels and rules"},
 		{"audit_logs", "read", "View audit trail"},
 		{"api_keys", "write", "Manage personal API keys"},
 	}

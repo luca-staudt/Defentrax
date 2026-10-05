@@ -37,6 +37,14 @@ type Config struct {
 	AlertDedupCooldown time.Duration
 
 	CORSAllowedOrigins string
+
+	// SecretsEncryptionKey encrypts notification channel secrets at rest (AES-256-GCM).
+	// Loaded from SECRETS_ENCRYPTION_KEY, falling back to TOTP_ENCRYPTION_KEY.
+	SecretsEncryptionKey []byte
+
+	NotifyMaxAttempts int
+	NotifyBaseBackoff time.Duration
+	NotifyMaxBackoff  time.Duration
 }
 
 // Load reads configuration from environment variables with secure defaults.
@@ -109,6 +117,21 @@ func Load() (Config, error) {
 	}
 	cfg.AlertDedupCooldown = time.Duration(alertCooldownSec) * time.Second
 
+	cfg.NotifyMaxAttempts, err = strconv.Atoi(getEnv("NOTIFY_MAX_ATTEMPTS", "5"))
+	if err != nil || cfg.NotifyMaxAttempts < 1 || cfg.NotifyMaxAttempts > 20 {
+		return Config{}, fmt.Errorf("invalid NOTIFY_MAX_ATTEMPTS (1-20)")
+	}
+	baseBackoffMs, err := strconv.Atoi(getEnv("NOTIFY_BASE_BACKOFF_MS", "500"))
+	if err != nil || baseBackoffMs < 50 {
+		return Config{}, fmt.Errorf("invalid NOTIFY_BASE_BACKOFF_MS")
+	}
+	cfg.NotifyBaseBackoff = time.Duration(baseBackoffMs) * time.Millisecond
+	maxBackoffMs, err := strconv.Atoi(getEnv("NOTIFY_MAX_BACKOFF_MS", "30000"))
+	if err != nil || maxBackoffMs < baseBackoffMs {
+		return Config{}, fmt.Errorf("invalid NOTIFY_MAX_BACKOFF_MS")
+	}
+	cfg.NotifyMaxBackoff = time.Duration(maxBackoffMs) * time.Millisecond
+
 	if cfg.DatabaseURL != "" {
 		sec := strings.TrimSpace(os.Getenv("SESSION_SECRET"))
 		if sec == "" {
@@ -127,6 +150,17 @@ func Load() (Config, error) {
 			return Config{}, fmt.Errorf("TOTP_ENCRYPTION_KEY must be base64 encoding exactly 32 bytes")
 		}
 		cfg.TOTPEncryptionKey = decoded
+	}
+
+	secretsKey := strings.TrimSpace(os.Getenv("SECRETS_ENCRYPTION_KEY"))
+	if secretsKey != "" {
+		decoded, err := base64.StdEncoding.DecodeString(secretsKey)
+		if err != nil || len(decoded) != 32 {
+			return Config{}, fmt.Errorf("SECRETS_ENCRYPTION_KEY must be base64 encoding exactly 32 bytes")
+		}
+		cfg.SecretsEncryptionKey = decoded
+	} else if len(cfg.TOTPEncryptionKey) == 32 {
+		cfg.SecretsEncryptionKey = cfg.TOTPEncryptionKey
 	}
 
 	return cfg, nil

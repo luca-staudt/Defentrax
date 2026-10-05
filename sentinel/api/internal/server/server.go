@@ -16,6 +16,7 @@ import (
 	"github.com/luca-staudt/Sentinel/sentinel/api/internal/detectionrun"
 	"github.com/luca-staudt/Sentinel/sentinel/api/internal/handlers"
 	"github.com/luca-staudt/Sentinel/sentinel/api/internal/middleware"
+	"github.com/luca-staudt/Sentinel/sentinel/api/internal/notify"
 	"github.com/luca-staudt/Sentinel/sentinel/api/internal/realtime"
 )
 
@@ -27,8 +28,10 @@ type Server struct {
 
 // Options configures optional detection and realtime wiring.
 type Options struct {
-	Detection *detectionrun.Service
-	AlertHub  *realtime.Hub
+	Detection  *detectionrun.Service
+	AlertHub   *realtime.Hub
+	Notifier   *notify.Dispatcher
+	SecretsKey []byte
 }
 
 // New constructs the API HTTP server with routes and middleware.
@@ -56,10 +59,14 @@ func NewWithOptions(log *slog.Logger, cfg config.Config, pool *pgxpool.Pool, log
 	serversH := &handlers.ServersHandler{Pool: pool}
 	agentH := &handlers.AgentHandler{Pool: pool, Config: cfg, IngestLimiter: ingestLimiter}
 	rulesH := &handlers.RulesHandler{Pool: pool}
-	alertsH := &handlers.AlertsHandler{Pool: pool, Hub: opts.AlertHub}
+	alertsH := &handlers.AlertsHandler{Pool: pool, Hub: opts.AlertHub, Notifier: opts.Notifier}
 	eventsH := &handlers.EventsHandler{Pool: pool}
 	dashboardH := &handlers.DashboardHandler{Pool: pool}
 	realtimeH := &handlers.RealtimeHandler{Pool: pool, Config: cfg, Hub: opts.AlertHub}
+	notifH := &handlers.NotificationsHandler{Pool: pool, SecretsKey: opts.SecretsKey}
+	if len(notifH.SecretsKey) == 0 {
+		notifH.SecretsKey = cfg.SecretsEncryptionKey
+	}
 	if opts.Detection != nil && opts.Detection.Runner != nil {
 		runner := opts.Detection.Runner
 		agentH.OnDetect = func(eventID, serverID, agentID uuid.UUID, occurredAt time.Time, source, category, severity, host, message string, fields []byte) {
@@ -190,6 +197,66 @@ func NewWithOptions(log *slog.Logger, cfg config.Config, pool *pgxpool.Pool, log
 			return
 		}
 		alertsH.Patch(w, r, id)
+	})))
+
+	apiMux.Handle("GET /api/v1/notification-channels", protectPerm(pool, cfg, "notifications", "read", http.HandlerFunc(notifH.ListChannels)))
+	apiMux.Handle("POST /api/v1/notification-channels", protectPerm(pool, cfg, "notifications", "write", http.HandlerFunc(notifH.CreateChannel)))
+	apiMux.Handle("GET /api/v1/notification-channels/{id}", protectPerm(pool, cfg, "notifications", "read", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		id, err := uuid.Parse(r.PathValue("id"))
+		if err != nil {
+			requestID := middleware.RequestIDFromContext(r.Context())
+			apperrors.WriteJSON(w, http.StatusBadRequest, "invalid_id", "invalid channel id", requestID)
+			return
+		}
+		notifH.GetChannel(w, r, id)
+	})))
+	apiMux.Handle("PATCH /api/v1/notification-channels/{id}", protectPerm(pool, cfg, "notifications", "write", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		id, err := uuid.Parse(r.PathValue("id"))
+		if err != nil {
+			requestID := middleware.RequestIDFromContext(r.Context())
+			apperrors.WriteJSON(w, http.StatusBadRequest, "invalid_id", "invalid channel id", requestID)
+			return
+		}
+		notifH.PatchChannel(w, r, id)
+	})))
+	apiMux.Handle("DELETE /api/v1/notification-channels/{id}", protectPerm(pool, cfg, "notifications", "write", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		id, err := uuid.Parse(r.PathValue("id"))
+		if err != nil {
+			requestID := middleware.RequestIDFromContext(r.Context())
+			apperrors.WriteJSON(w, http.StatusBadRequest, "invalid_id", "invalid channel id", requestID)
+			return
+		}
+		notifH.DeleteChannel(w, r, id)
+	})))
+
+	apiMux.Handle("GET /api/v1/notification-rules", protectPerm(pool, cfg, "notifications", "read", http.HandlerFunc(notifH.ListRules)))
+	apiMux.Handle("POST /api/v1/notification-rules", protectPerm(pool, cfg, "notifications", "write", http.HandlerFunc(notifH.CreateRule)))
+	apiMux.Handle("GET /api/v1/notification-rules/{id}", protectPerm(pool, cfg, "notifications", "read", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		id, err := uuid.Parse(r.PathValue("id"))
+		if err != nil {
+			requestID := middleware.RequestIDFromContext(r.Context())
+			apperrors.WriteJSON(w, http.StatusBadRequest, "invalid_id", "invalid rule id", requestID)
+			return
+		}
+		notifH.GetRule(w, r, id)
+	})))
+	apiMux.Handle("PATCH /api/v1/notification-rules/{id}", protectPerm(pool, cfg, "notifications", "write", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		id, err := uuid.Parse(r.PathValue("id"))
+		if err != nil {
+			requestID := middleware.RequestIDFromContext(r.Context())
+			apperrors.WriteJSON(w, http.StatusBadRequest, "invalid_id", "invalid rule id", requestID)
+			return
+		}
+		notifH.PatchRule(w, r, id)
+	})))
+	apiMux.Handle("DELETE /api/v1/notification-rules/{id}", protectPerm(pool, cfg, "notifications", "write", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		id, err := uuid.Parse(r.PathValue("id"))
+		if err != nil {
+			requestID := middleware.RequestIDFromContext(r.Context())
+			apperrors.WriteJSON(w, http.StatusBadRequest, "invalid_id", "invalid rule id", requestID)
+			return
+		}
+		notifH.DeleteRule(w, r, id)
 	})))
 
 	apiMux.Handle("PATCH /api/v1/rules/{id}", protectPerm(pool, cfg, "rules", "write", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

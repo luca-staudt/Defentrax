@@ -14,6 +14,8 @@ Go HTTP service for Sentinel’s control plane: REST under `/api/v1`, future Web
 
 **Phase 9 scope (frontend support):** Dashboard stats aggregation, events list/get, server detail with agents, WebSocket alert feed (`GET /api/v1/ws/alerts`), optional CORS (`CORS_ALLOWED_ORIGINS`), `/auth/me` includes permission keys for UI RBAC.
 
+**Phase 10 scope:** Notification channels (Discord/Slack/email/generic webhook) with AES-GCM secrets at rest; severity-threshold rules; retry/backoff; audit on delivery failures; wired to alert create/update/status-change; admin APIs under `/api/v1/notification-channels` and `/api/v1/notification-rules` (`notifications:read`/`notifications:write`).
+
 ## Run locally
 
 From the repository root (requires `DATABASE_URL`, `SESSION_SECRET`, and migrations applied):
@@ -24,6 +26,7 @@ make bootstrap-admin   # or set SENTINEL_BOOTSTRAP_* env on first API start
 make run-api
 ```
 
+Set `SECRETS_ENCRYPTION_KEY` (or `TOTP_ENCRYPTION_KEY`) to a 32-byte base64 key before creating notification channels.
 ## Bootstrap first admin
 
 When the `users` table is empty:

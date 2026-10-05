@@ -14,14 +14,16 @@ import (
 	"github.com/luca-staudt/Sentinel/sentinel/api/internal/apperrors"
 	"github.com/luca-staudt/Sentinel/sentinel/api/internal/auth/principal"
 	"github.com/luca-staudt/Sentinel/sentinel/api/internal/middleware"
+	"github.com/luca-staudt/Sentinel/sentinel/api/internal/notify"
 	"github.com/luca-staudt/Sentinel/sentinel/api/internal/realtime"
 	"github.com/luca-staudt/Sentinel/sentinel/api/internal/store"
 )
 
 // AlertsHandler serves /api/v1/alerts/*.
 type AlertsHandler struct {
-	Pool *pgxpool.Pool
-	Hub  *realtime.Hub
+	Pool     *pgxpool.Pool
+	Hub      *realtime.Hub
+	Notifier alertsvc.Notifier
 }
 
 type alertResponse struct {
@@ -203,6 +205,20 @@ func (h *AlertsHandler) Patch(w http.ResponseWriter, r *http.Request, id uuid.UU
 			Severity:   updated.Severity,
 			Title:      updated.Title,
 			EventCount: updated.EventCount,
+		})
+	}
+
+	if h.Notifier != nil && req.Status != nil && *req.Status != current.Status {
+		h.Notifier.Notify(r.Context(), notify.AlertEvent{
+			AlertID:     updated.ID,
+			ServerID:    updated.ServerID,
+			Title:       updated.Title,
+			Description: updated.Description,
+			Severity:    updated.Severity,
+			Status:      updated.Status,
+			SourceIP:    updated.SourceIP,
+			EventCount:  updated.EventCount,
+			Trigger:     notify.TriggerAlertStatusChanged,
 		})
 	}
 
