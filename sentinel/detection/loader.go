@@ -62,7 +62,8 @@ func LoadRulesFromDir(root string) ([]Rule, error) {
 
 // LoadRuleFile parses one YAML rule file.
 func LoadRuleFile(path string) (Rule, error) {
-	data, err := os.ReadFile(path)
+	// path comes from Walk of an operator-configured rules directory.
+	data, err := os.ReadFile(path) // #nosec G304 -- rule pack path under configured root
 	if err != nil {
 		return Rule{}, err
 	}

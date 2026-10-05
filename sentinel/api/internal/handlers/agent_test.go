@@ -106,7 +106,7 @@ func TestAgentEnrollmentFlow(t *testing.T) {
 
 	cfg := config.Config{Port: 0, SessionCookieName: "sid", DatabaseURL: dsn}
 	log := slog.Default()
-	s := server.New(log, cfg, pool, ratelimit.NewMemory(1000, time.Minute), ratelimit.NewMemory(1000, time.Minute))
+	s := server.New(log, cfg, pool, ratelimit.NewMemory(1000, time.Minute), ratelimit.NewMemory(1000, time.Minute), ratelimit.NewMemory(1000, time.Minute))
 	ts := httptest.NewServer(s.Handler())
 	t.Cleanup(ts.Close)
 
@@ -198,7 +198,7 @@ func startAgentTestServer(t *testing.T, pool *pgxpool.Pool, dsn string, ingestLi
 		IngestMaxBodyBytes: 1 << 20,
 		IngestDBTimeout:    10 * time.Second,
 	}
-	s := server.New(slog.Default(), cfg, pool, ratelimit.NewMemory(1000, time.Minute), ingestLimiter)
+	s := server.New(slog.Default(), cfg, pool, ratelimit.NewMemory(1000, time.Minute), ingestLimiter, ratelimit.NewMemory(1000, time.Minute))
 	ts := httptest.NewServer(s.Handler())
 	t.Cleanup(ts.Close)
 	return ts

@@ -55,7 +55,7 @@ func startAlertTestServer(t *testing.T, pool *pgxpool.Pool, dsn string) (*httpte
 	}
 	sec, _ := base64.StdEncoding.DecodeString("YWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWE=")
 	cfg.SessionSecret = sec
-	s := server.NewWithOptions(slog.Default(), cfg, pool, ratelimit.NewMemory(1000, time.Minute), ratelimit.NewMemory(1000, time.Minute), server.Options{
+	s := server.NewWithOptions(slog.Default(), cfg, pool, ratelimit.NewMemory(1000, time.Minute), ratelimit.NewMemory(1000, time.Minute), ratelimit.NewMemory(1000, time.Minute), server.Options{
 		Detection: detectSvc,
 		AlertHub:  hub,
 	})

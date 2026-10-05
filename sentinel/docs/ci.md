@@ -35,17 +35,22 @@ Service container: `postgres:16.6-alpine` with user/db `sentinel_test` / `sentin
 
 **Configured in CI**
 
+- **gitleaks** secret scan (`.gitleaks.toml`) on every security workflow run
 - `govulncheck` on Go modules under `sentinel/`
-- `gosec -severity=high` on `api`, `agent`, `database`, `detection`, `plugins` (MEDIUM/LOW deferred to Phase 19)
-- Trivy filesystem scan (CRITICAL/HIGH, unfixed ignored)
+- `gosec -severity=medium` on `api`, `agent`, `database`, `detection`, `plugins` (LOW remains informational)
+- Trivy filesystem scan (CRITICAL/HIGH/**MEDIUM**, unfixed ignored; scanners include `secret`)
 - Trivy image scan on built `sentinel-api` (PR/main/release container jobs)
+- Dependabot config (`.github/dependabot.yml`) for Go modules, npm, and Actions
 
 **Not configured here** (do not assume they run)
 
 - GitHub Code Scanning / CodeQL SARIF upload
-- Dependabot (enable separately in repo settings if desired)
 - Registry push / cosign / image signing (Phase 21 release prep)
-- Secret scanning beyond Trivy’s `secret` scanner on the checkout
+- Automatic merge of Dependabot PRs (human review required)
+
+Local helpers: `make security-gitleaks`, `make security-gosec`.
+
+See also [security.md](security.md) for runtime hardening and residual risks.
 
 ## Release workflow
 

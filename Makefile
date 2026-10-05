@@ -1,4 +1,4 @@
-.PHONY: build test test-all test-ci fmt-check lint frontend-lint frontend-build api-build api-test api-lint api-test-integration agent-build agent-test detection-test plugins-test pkg-test db-migrate-up db-migrate-down db-migrate-status db-seed-dev db-test test-migrations run-api bootstrap-admin openapi-validate compose-up compose-down compose-config k8s-dry-run helm-lint
+.PHONY: build test test-all test-ci fmt-check lint frontend-lint frontend-build api-build api-test api-lint api-test-integration agent-build agent-test detection-test plugins-test pkg-test db-migrate-up db-migrate-down db-migrate-status db-seed-dev db-test test-migrations run-api bootstrap-admin openapi-validate compose-up compose-down compose-config k8s-dry-run helm-lint security-gitleaks security-gosec
 
 API_DIR := sentinel/api
 AGENT_DIR := sentinel/agent
@@ -134,3 +134,15 @@ helm-lint:
 	helm lint $(HELM_CHART) -f $(HELM_LINT_VALUES)
 	helm template sentinel $(HELM_CHART) -f $(HELM_LINT_VALUES) >/dev/null
 	@echo "helm-lint: OK (lint + template)"
+
+security-gitleaks:
+	@command -v gitleaks >/dev/null 2>&1 || { echo "gitleaks is required: https://github.com/gitleaks/gitleaks"; exit 1; }
+	gitleaks detect --source . --config .gitleaks.toml --verbose --redact
+
+security-gosec:
+	@command -v gosec >/dev/null 2>&1 || { echo "gosec is required: go install github.com/securego/gosec/v2/cmd/gosec@latest"; exit 1; }
+	@for mod in api agent database detection plugins; do \
+	  echo "==> gosec -severity=medium sentinel/$$mod"; \
+	  (cd sentinel/$$mod && gosec -quiet -severity=medium ./...) || exit $$?; \
+	done
+	@echo "security-gosec: OK"

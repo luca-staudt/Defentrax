@@ -128,6 +128,14 @@ func (h *AuthHandler) VerifyTOTP(w http.ResponseWriter, r *http.Request) {
 		methodNotAllowed(w, r)
 		return
 	}
+	ip := clientIP(r)
+	if h.Limiter != nil {
+		allowed, err := h.Limiter.Allow(r.Context(), "totp|"+ip)
+		if err != nil || !allowed {
+			apperrors.WriteJSON(w, http.StatusTooManyRequests, "rate_limited", "too many authentication attempts", middleware.RequestIDFromContext(r.Context()))
+			return
+		}
+	}
 	var req totpVerifyRequest
 	if err := decodeJSON(r, &req); err != nil {
 		badRequest(w, r, "invalid_json", "invalid request body")
@@ -140,7 +148,7 @@ func (h *AuthHandler) VerifyTOTP(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := h.verifyTOTPCode(r, userID, req.Code); err != nil {
 		uid := userID
-		auditAuth(r, h.Pool, &uid, "auth.login_failed", map[string]any{"reason": "totp_invalid"}, clientIP(r), r.UserAgent())
+		auditAuth(r, h.Pool, &uid, "auth.login_failed", map[string]any{"reason": "totp_invalid"}, ip, r.UserAgent())
 		apperrors.WriteJSON(w, http.StatusUnauthorized, "invalid_totp", "invalid authentication code", middleware.RequestIDFromContext(r.Context()))
 		return
 	}
@@ -149,7 +157,7 @@ func (h *AuthHandler) VerifyTOTP(w http.ResponseWriter, r *http.Request) {
 		internalError(w, r)
 		return
 	}
-	if err := h.finishLogin(w, r, user.ID, user.Email, clientIP(r)); err != nil {
+	if err := h.finishLogin(w, r, user.ID, user.Email, ip); err != nil {
 		internalError(w, r)
 		return
 	}
@@ -159,6 +167,14 @@ func (h *AuthHandler) VerifyRecovery(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		methodNotAllowed(w, r)
 		return
+	}
+	ip := clientIP(r)
+	if h.Limiter != nil {
+		allowed, err := h.Limiter.Allow(r.Context(), "recovery|"+ip)
+		if err != nil || !allowed {
+			apperrors.WriteJSON(w, http.StatusTooManyRequests, "rate_limited", "too many authentication attempts", middleware.RequestIDFromContext(r.Context()))
+			return
+		}
 	}
 	var req recoveryRequest
 	if err := decodeJSON(r, &req); err != nil {
@@ -178,7 +194,7 @@ func (h *AuthHandler) VerifyRecovery(w http.ResponseWriter, r *http.Request) {
 	newBlob, ok, err := totp.ConsumeRecoveryCode(tf.BackupCodesHash, req.RecoveryCode)
 	if err != nil || !ok {
 		uid := userID
-		auditAuth(r, h.Pool, &uid, "auth.login_failed", map[string]any{"reason": "recovery_invalid"}, clientIP(r), r.UserAgent())
+		auditAuth(r, h.Pool, &uid, "auth.login_failed", map[string]any{"reason": "recovery_invalid"}, ip, r.UserAgent())
 		apperrors.WriteJSON(w, http.StatusUnauthorized, "invalid_recovery", "invalid recovery code", middleware.RequestIDFromContext(r.Context()))
 		return
 	}
@@ -191,7 +207,7 @@ func (h *AuthHandler) VerifyRecovery(w http.ResponseWriter, r *http.Request) {
 		internalError(w, r)
 		return
 	}
-	if err := h.finishLogin(w, r, user.ID, user.Email, clientIP(r)); err != nil {
+	if err := h.finishLogin(w, r, user.ID, user.Email, ip); err != nil {
 		internalError(w, r)
 		return
 	}

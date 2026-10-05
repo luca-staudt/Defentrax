@@ -25,6 +25,7 @@ import (
 // Server wraps the HTTP server and routing.
 type Server struct {
 	log  *slog.Logger
+	cfg  config.Config
 	http *http.Server
 }
 
@@ -38,12 +39,12 @@ type Options struct {
 }
 
 // New constructs the API HTTP server with routes and middleware.
-func New(log *slog.Logger, cfg config.Config, pool *pgxpool.Pool, loginLimiter, ingestLimiter ratelimit.Limiter) *Server {
-	return NewWithOptions(log, cfg, pool, loginLimiter, ingestLimiter, Options{})
+func New(log *slog.Logger, cfg config.Config, pool *pgxpool.Pool, loginLimiter, ingestLimiter, enrollLimiter ratelimit.Limiter) *Server {
+	return NewWithOptions(log, cfg, pool, loginLimiter, ingestLimiter, enrollLimiter, Options{})
 }
 
 // NewWithOptions constructs the API HTTP server with optional detection integration.
-func NewWithOptions(log *slog.Logger, cfg config.Config, pool *pgxpool.Pool, loginLimiter, ingestLimiter ratelimit.Limiter, opts Options) *Server {
+func NewWithOptions(log *slog.Logger, cfg config.Config, pool *pgxpool.Pool, loginLimiter, ingestLimiter, enrollLimiter ratelimit.Limiter, opts Options) *Server {
 	rootMux := http.NewServeMux()
 
 	readiness := handlers.Readiness{
@@ -64,7 +65,7 @@ func NewWithOptions(log *slog.Logger, cfg config.Config, pool *pgxpool.Pool, log
 	usersH := &handlers.UsersHandler{Pool: pool}
 	keysH := &handlers.APIKeysHandler{Pool: pool}
 	serversH := &handlers.ServersHandler{Pool: pool}
-	agentH := &handlers.AgentHandler{Pool: pool, Config: cfg, IngestLimiter: ingestLimiter}
+	agentH := &handlers.AgentHandler{Pool: pool, Config: cfg, IngestLimiter: ingestLimiter, EnrollLimiter: enrollLimiter}
 	rulesH := &handlers.RulesHandler{Pool: pool}
 	alertsH := &handlers.AlertsHandler{Pool: pool, Hub: opts.AlertHub, Notifier: opts.Notifier}
 	eventsH := &handlers.EventsHandler{Pool: pool}
@@ -328,17 +329,20 @@ func NewWithOptions(log *slog.Logger, cfg config.Config, pool *pgxpool.Pool, log
 
 	var apiHandler http.Handler = apiMux
 	apiHandler = middleware.Authenticate(pool, cfg.SessionCookieName)(apiHandler)
+	apiHandler = middleware.OriginGuard(cfg.CORSAllowedOrigins, cfg.SessionCookieName)(apiHandler)
 	rootMux.Handle("/api/v1/", apiHandler)
 
 	rootMux.HandleFunc("/", rootNotFound)
 
 	handler := middleware.RequestID(rootMux)
+	handler = middleware.SecurityHeaders(cfg.CookieSecure)(handler)
 	handler = middleware.CORS(cfg.CORSAllowedOrigins)(handler)
 	handler = loggingMiddleware(log, handler)
 
 	addr := fmt.Sprintf(":%d", cfg.Port)
 	return &Server{
 		log: log,
+		cfg: cfg,
 		http: &http.Server{
 			Addr:              addr,
 			Handler:           handler,
@@ -384,6 +388,7 @@ func loggingMiddleware(log *slog.Logger, next http.Handler) http.Handler {
 		start := time.Now()
 		rw := &responseWriter{ResponseWriter: w, status: http.StatusOK}
 		next.ServeHTTP(rw, r)
+		// Never log Authorization, cookies, or query strings (may contain tokens).
 		log.Info("request",
 			"method", r.Method,
 			"path", r.URL.Path,
@@ -409,8 +414,12 @@ func (s *Server) Handler() http.Handler {
 	return s.http.Handler
 }
 
-// ListenAndServe starts the HTTP server.
+// ListenAndServe starts the HTTP or HTTPS server.
 func (s *Server) ListenAndServe() error {
+	if s.cfg.TLSCertFile != "" && s.cfg.TLSKeyFile != "" {
+		s.log.Info("starting https server", "addr", s.http.Addr, "cert", s.cfg.TLSCertFile)
+		return s.http.ListenAndServeTLS(s.cfg.TLSCertFile, s.cfg.TLSKeyFile)
+	}
 	s.log.Info("starting http server", "addr", s.http.Addr)
 	return s.http.ListenAndServe()
 }

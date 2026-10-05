@@ -5,7 +5,8 @@ import (
 	"strings"
 )
 
-// CORS adds development-friendly cross-origin headers when allowed origins are configured.
+// CORS adds cross-origin headers when allowed origins are configured.
+// Wildcard "*" is never accepted with credentials — configure explicit origins.
 func CORS(allowedOrigins string) func(http.Handler) http.Handler {
 	origins := parseOrigins(allowedOrigins)
 	return func(next http.Handler) http.Handler {
@@ -40,16 +41,21 @@ func parseOrigins(raw string) []string {
 	out := make([]string, 0, len(parts))
 	for _, p := range parts {
 		p = strings.TrimSpace(p)
-		if p != "" {
-			out = append(out, p)
+		if p == "" || p == "*" {
+			// Never treat "*" as a credentialed allow-all origin.
+			continue
 		}
+		out = append(out, p)
 	}
 	return out
 }
 
 func originAllowed(allowed []string, origin string) bool {
+	if origin == "*" || strings.Contains(origin, "*") {
+		return false
+	}
 	for _, a := range allowed {
-		if a == "*" || a == origin {
+		if a == origin {
 			return true
 		}
 	}

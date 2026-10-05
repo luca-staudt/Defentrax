@@ -128,11 +128,13 @@ Migration integration script: `./sentinel/scripts/test-migrations.sh`
 - **No default admin password or API keys** — Phase 4 adds secure bootstrap; dev seed only with explicit env flags.
 - **Migrations:** [goose](https://github.com/pressly/goose) in `sentinel/database/` — see `sentinel/database/README.md`.
 - **Structured logs** — JSON to stdout; do not log credentials or tokens.
+- **Hardening** — [`SECURITY.md`](SECURITY.md) · [`sentinel/docs/security.md`](sentinel/docs/security.md) (headers, CSRF, rate limits, TLS, residual risks).
 - **License** — not yet chosen; see `sentinel/docs/README.md` before distributing.
 
 ## Documentation
 
 - In-repo: [`sentinel/docs/`](sentinel/docs/)
+- Security: [`SECURITY.md`](SECURITY.md) · [`sentinel/docs/security.md`](sentinel/docs/security.md)
 - Install (Compose / K8s): [`sentinel/docs/installation.md`](sentinel/docs/installation.md)
 - Deploy / images / K8s / Helm: [`sentinel/docs/deployment.md`](sentinel/docs/deployment.md) · [`sentinel/deployments/kubernetes/`](sentinel/deployments/kubernetes/) · [`sentinel/deployments/helm/sentinel/`](sentinel/deployments/helm/sentinel/)
 - CI/CD: [`sentinel/docs/ci.md`](sentinel/docs/ci.md) · [`.github/workflows/`](.github/workflows/)

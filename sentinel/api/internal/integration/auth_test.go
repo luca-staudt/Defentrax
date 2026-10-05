@@ -40,7 +40,7 @@ func TestAuthFlowIntegration(t *testing.T) {
 	}
 
 	cfg := testutil.TestConfig(dsn)
-	srv := server.New(slog.Default(), cfg, pool, ratelimit.NewMemory(100, time.Minute), ratelimit.NewMemory(1000, time.Minute))
+	srv := server.New(slog.Default(), cfg, pool, ratelimit.NewMemory(100, time.Minute), ratelimit.NewMemory(1000, time.Minute), ratelimit.NewMemory(1000, time.Minute))
 	ts := httptest.NewServer(srv.Handler())
 	defer ts.Close()
 
@@ -122,7 +122,7 @@ func TestTOTPLoginIntegration(t *testing.T) {
 	_ = store.UpsertTwoFactorPending(ctx, pool, id, enc, backup)
 	_ = store.EnableTwoFactor(ctx, pool, id)
 
-	srv := server.New(slog.Default(), cfg, pool, ratelimit.NewMemory(100, time.Minute), ratelimit.NewMemory(1000, time.Minute))
+	srv := server.New(slog.Default(), cfg, pool, ratelimit.NewMemory(100, time.Minute), ratelimit.NewMemory(1000, time.Minute), ratelimit.NewMemory(1000, time.Minute))
 	ts := httptest.NewServer(srv.Handler())
 	defer ts.Close()
 

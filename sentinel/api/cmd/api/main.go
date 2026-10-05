@@ -73,6 +73,13 @@ func main() {
 		os.Exit(1)
 	}
 	defer func() { _ = closeIngest() }()
+
+	enrollLimiter, closeEnroll, err := ratelimit.NewFromConfig(cfg.RedisURL, cfg.EnrollRateLimitMax, cfg.EnrollRateLimitWindow, "sentinel:enroll:")
+	if err != nil {
+		log.Error("enroll rate limiter init failed", "error", err)
+		os.Exit(1)
+	}
+	defer func() { _ = closeEnroll() }()
 	if cfg.RedisURL == "" {
 		log.Info("rate limiting uses in-memory store (set REDIS_URL for multi-instance)")
 	}
@@ -157,7 +164,13 @@ func main() {
 		log.Info("plugin runtime ready", "plugin_dir", pluginDir, "allowlist", cfg.PluginAllowlist)
 	}
 
-	srv := server.NewWithOptions(log, cfg, pool, loginLimiter, ingestLimiter, opts)
+	srv := server.NewWithOptions(log, cfg, pool, loginLimiter, ingestLimiter, enrollLimiter, opts)
+
+	if cfg.TLSCertFile != "" {
+		log.Info("TLS enabled", "cert_file", cfg.TLSCertFile)
+	} else if cfg.Env == "production" {
+		log.Warn("API listening on plain HTTP; terminate TLS at a reverse proxy or set API_TLS_CERT_FILE/API_TLS_KEY_FILE")
+	}
 
 	errCh := make(chan error, 1)
 	go func() {

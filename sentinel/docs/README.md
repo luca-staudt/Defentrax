@@ -11,9 +11,8 @@ Operator and developer documentation living alongside the codebase.
 - No default admin password or bootstrap API keys in application code or charts.
 - Secrets belong in environment variables or a secret manager — never in git, logs, or API responses.
 - Development-only database seeds (when added) are gated on `APP_ENV=development`.
-- Containers should run as non-root (enforced in deployment phases).
-
-Further architecture and phase planning will be added here as phases land (see repository root `README.md`).
+- Containers run as non-root (UID 65532); see Compose / Kubernetes / Helm.
+- Hardening details, CSRF/TLS, and residual risks: [security.md](security.md) · root [SECURITY.md](../../SECURITY.md)
 
 ## Install & deploy
 
@@ -43,3 +42,8 @@ Further architecture and phase planning will be added here as phases land (see r
 ## CI/CD
 
 - [ci.md](ci.md) — GitHub Actions workflows, Make target map, release checklist (Phase 18)
+
+## Security
+
+- [security.md](security.md) — hardening, threat notes, residual risks (Phase 19)
+- [SECURITY.md](../../SECURITY.md) — vulnerability reporting

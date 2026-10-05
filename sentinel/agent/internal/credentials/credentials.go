@@ -22,7 +22,8 @@ type StoredCredentials struct {
 
 // Load reads credentials from path.
 func Load(path string) (StoredCredentials, error) {
-	b, err := os.ReadFile(path)
+	// path is operator-configured (SENTINEL_AGENT_CREDENTIAL_PATH), not request input.
+	b, err := os.ReadFile(path) // #nosec G304 -- trusted local credential path from config
 	if err != nil {
 		return StoredCredentials{}, err
 	}

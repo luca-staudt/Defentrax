@@ -70,7 +70,7 @@ func startNotifyTestServer(t *testing.T, pool *pgxpool.Pool, dsn string, disp *n
 	sec, _ := base64.StdEncoding.DecodeString("YWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWE=")
 	cfg.SessionSecret = sec
 	hub := realtime.NewHub(16)
-	s := server.NewWithOptions(slog.Default(), cfg, pool, ratelimit.NewMemory(1000, time.Minute), ratelimit.NewMemory(1000, time.Minute), server.Options{
+	s := server.NewWithOptions(slog.Default(), cfg, pool, ratelimit.NewMemory(1000, time.Minute), ratelimit.NewMemory(1000, time.Minute), ratelimit.NewMemory(1000, time.Minute), server.Options{
 		AlertHub:   hub,
 		Notifier:   disp,
 		SecretsKey: secretsKey(),

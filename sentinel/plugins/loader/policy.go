@@ -120,7 +120,7 @@ func ChecksumArtifacts(dir string, artifacts []string) (hexSum string, digest []
 		if err != nil || strings.HasPrefix(rel, "..") {
 			return "", nil, fmt.Errorf("artifact escapes plugin dir: %q", a)
 		}
-		f, err := os.Open(path)
+		f, err := os.Open(path) // #nosec G304 -- artifact path validated under plugin dir above
 		if err != nil {
 			return "", nil, err
 		}

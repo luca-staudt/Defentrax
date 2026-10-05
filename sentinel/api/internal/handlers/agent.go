@@ -27,6 +27,7 @@ type AgentHandler struct {
 	Pool          *pgxpool.Pool
 	Config        config.Config
 	IngestLimiter ratelimit.Limiter
+	EnrollLimiter ratelimit.Limiter
 	OnDetect      DetectionEnqueue
 }
 
@@ -53,20 +54,29 @@ type ingestEventsRequest struct {
 }
 
 func (h *AgentHandler) Enroll(w http.ResponseWriter, r *http.Request) {
+	ip := clientIP(r)
+	if h.EnrollLimiter != nil {
+		allowed, err := h.EnrollLimiter.Allow(r.Context(), "enroll|"+ip)
+		if err != nil || !allowed {
+			apperrors.WriteJSON(w, http.StatusTooManyRequests, "rate_limited", "too many enrollment attempts", middleware.RequestIDFromContext(r.Context()))
+			return
+		}
+	}
 	var req enrollRequest
 	if err := decodeJSON(r, &req); err != nil || req.EnrollmentToken == "" {
 		badRequest(w, r, "invalid_input", "enrollment_token required")
 		return
 	}
 	if !secrets.LooksLikeEnrollmentToken(req.EnrollmentToken) {
-		badRequest(w, r, "invalid_input", "invalid enrollment token")
+		badRequest(w, r, "invalid_input", "enrollment token invalid or expired")
 		return
 	}
 	hash := secrets.HashToken(req.EnrollmentToken)
 	rec, err := store.GetEnrollmentTokenByHash(r.Context(), h.Pool, hash)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			badRequest(w, r, "invalid_token", "enrollment token not found")
+			// Same message as expired/used — avoid token-oracle enumeration.
+			badRequest(w, r, "invalid_token", "enrollment token invalid or expired")
 			return
 		}
 		internalError(w, r)
@@ -74,7 +84,7 @@ func (h *AgentHandler) Enroll(w http.ResponseWriter, r *http.Request) {
 	}
 	now := time.Now().UTC()
 	if rec.RevokedAt != nil || rec.UsedAt != nil || now.After(rec.ExpiresAt) {
-		badRequest(w, r, "invalid_token", "enrollment token expired or already used")
+		badRequest(w, r, "invalid_token", "enrollment token invalid or expired")
 		return
 	}
 	name := req.Name

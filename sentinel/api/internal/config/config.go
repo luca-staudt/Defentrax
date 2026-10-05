@@ -28,6 +28,9 @@ type Config struct {
 	LoginRateLimitMax    int
 	LoginRateLimitWindow time.Duration
 
+	EnrollRateLimitMax    int
+	EnrollRateLimitWindow time.Duration
+
 	IngestRateLimitMax    int
 	IngestRateLimitWindow time.Duration
 	IngestMaxBatchSize    int
@@ -37,6 +40,10 @@ type Config struct {
 	AlertDedupCooldown time.Duration
 
 	CORSAllowedOrigins string
+
+	// TLSCertFile / TLSKeyFile enable HTTPS ListenAndServeTLS when both are set.
+	TLSCertFile string
+	TLSKeyFile  string
 
 	// SecretsEncryptionKey encrypts notification channel secrets at rest (AES-256-GCM).
 	// Loaded from SECRETS_ENCRYPTION_KEY, falling back to TOTP_ENCRYPTION_KEY.
@@ -81,6 +88,13 @@ func Load() (Config, error) {
 	if v := strings.TrimSpace(os.Getenv("COOKIE_SECURE")); v != "" {
 		cfg.CookieSecure = v == "1" || strings.EqualFold(v, "true")
 	}
+	// Production must not silently ship insecure session cookies.
+	if cfg.Env == "production" && !cfg.CookieSecure {
+		allow := strings.TrimSpace(os.Getenv("ALLOW_INSECURE_COOKIES"))
+		if allow != "1" && !strings.EqualFold(allow, "true") {
+			return Config{}, fmt.Errorf("COOKIE_SECURE must be true in production (set ALLOW_INSECURE_COOKIES=true only for explicit break-glass)")
+		}
+	}
 
 	cfg.LoginRateLimitMax, err = strconv.Atoi(getEnv("LOGIN_RATE_LIMIT_MAX", "10"))
 	if err != nil || cfg.LoginRateLimitMax < 1 {
@@ -91,6 +105,16 @@ func Load() (Config, error) {
 		return Config{}, fmt.Errorf("invalid LOGIN_RATE_LIMIT_WINDOW_SEC")
 	}
 	cfg.LoginRateLimitWindow = time.Duration(windowSec) * time.Second
+
+	cfg.EnrollRateLimitMax, err = strconv.Atoi(getEnv("ENROLL_RATE_LIMIT_MAX", "30"))
+	if err != nil || cfg.EnrollRateLimitMax < 1 {
+		return Config{}, fmt.Errorf("invalid ENROLL_RATE_LIMIT_MAX")
+	}
+	enrollWindowSec, err := strconv.Atoi(getEnv("ENROLL_RATE_LIMIT_WINDOW_SEC", "60"))
+	if err != nil || enrollWindowSec < 1 {
+		return Config{}, fmt.Errorf("invalid ENROLL_RATE_LIMIT_WINDOW_SEC")
+	}
+	cfg.EnrollRateLimitWindow = time.Duration(enrollWindowSec) * time.Second
 
 	cfg.IngestRateLimitMax, err = strconv.Atoi(getEnv("INGEST_RATE_LIMIT_MAX", "120"))
 	if err != nil || cfg.IngestRateLimitMax < 1 {
@@ -174,6 +198,15 @@ func Load() (Config, error) {
 	cfg.PluginTrustedPublicKey = strings.TrimSpace(os.Getenv("SENTINEL_PLUGIN_TRUSTED_PUBLIC_KEY"))
 	if v := strings.TrimSpace(os.Getenv("SENTINEL_PLUGIN_REQUIRE_SIGNATURE")); v != "" {
 		cfg.PluginRequireSignature = v == "1" || strings.EqualFold(v, "true")
+	}
+
+	cfg.TLSCertFile = strings.TrimSpace(os.Getenv("API_TLS_CERT_FILE"))
+	cfg.TLSKeyFile = strings.TrimSpace(os.Getenv("API_TLS_KEY_FILE"))
+	if (cfg.TLSCertFile == "") != (cfg.TLSKeyFile == "") {
+		return Config{}, fmt.Errorf("API_TLS_CERT_FILE and API_TLS_KEY_FILE must both be set or both empty")
+	}
+	if cfg.TLSCertFile != "" && !cfg.CookieSecure {
+		return Config{}, fmt.Errorf("COOKIE_SECURE must be true when API TLS files are configured")
 	}
 
 	return cfg, nil

@@ -24,7 +24,8 @@ type Manifest struct {
 
 // LoadManifest reads and validates plugin.json at path.
 func LoadManifest(path string) (Manifest, error) {
-	b, err := os.ReadFile(path)
+	// path is under the configured plugin directory after allowlist checks.
+	b, err := os.ReadFile(path) // #nosec G304 -- plugin.json under operator plugin root
 	if err != nil {
 		return Manifest{}, err
 	}
