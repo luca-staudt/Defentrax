@@ -33,6 +33,8 @@ type Config struct {
 	IngestMaxBatchSize    int
 	IngestMaxBodyBytes    int64
 	IngestDBTimeout       time.Duration
+
+	AlertDedupCooldown time.Duration
 }
 
 // Load reads configuration from environment variables with secure defaults.
@@ -97,6 +99,12 @@ func Load() (Config, error) {
 		return Config{}, fmt.Errorf("invalid INGEST_DB_TIMEOUT_SEC")
 	}
 	cfg.IngestDBTimeout = time.Duration(ingestDBSec) * time.Second
+
+	alertCooldownSec, err := strconv.Atoi(getEnv("ALERT_DEDUP_COOLDOWN_SEC", "900"))
+	if err != nil || alertCooldownSec < 1 {
+		return Config{}, fmt.Errorf("invalid ALERT_DEDUP_COOLDOWN_SEC")
+	}
+	cfg.AlertDedupCooldown = time.Duration(alertCooldownSec) * time.Second
 
 	if cfg.DatabaseURL != "" {
 		sec := strings.TrimSpace(os.Getenv("SESSION_SECRET"))

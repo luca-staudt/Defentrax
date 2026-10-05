@@ -10,6 +10,8 @@ Go HTTP service for Sentinel’s control plane: REST under `/api/v1`, future Web
 
 **Phase 7 scope:** Detection engine integration — load YAML rules from `sentinel/rules`, async evaluation after ingest, Rules API (`list`/`get`/`enable`), minimal OPEN alert stubs.
 
+**Phase 8 scope:** Alert creation from detection matches with Redis/in-memory dedup and DB aggregation; lifecycle API (`OPEN` → `ACKNOWLEDGED` → `INVESTIGATING` → `RESOLVED`); assignment and resolution notes; timeline events; audit on lifecycle changes; `GET/PATCH /api/v1/alerts/*` with filters; recent-events stub for live dashboards.
+
 ## Run locally
 
 From the repository root (requires `DATABASE_URL`, `SESSION_SECRET`, and migrations applied):

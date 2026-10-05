@@ -12,12 +12,14 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/luca-staudt/Sentinel/sentinel/api/internal/alerts"
 	"github.com/luca-staudt/Sentinel/sentinel/api/internal/auth/ratelimit"
 	"github.com/luca-staudt/Sentinel/sentinel/api/internal/bootstrap"
 	"github.com/luca-staudt/Sentinel/sentinel/api/internal/config"
 	"github.com/luca-staudt/Sentinel/sentinel/api/internal/db"
 	"github.com/luca-staudt/Sentinel/sentinel/api/internal/detectionrun"
 	"github.com/luca-staudt/Sentinel/sentinel/api/internal/logging"
+	"github.com/luca-staudt/Sentinel/sentinel/api/internal/realtime"
 	"github.com/luca-staudt/Sentinel/sentinel/api/internal/server"
 	"github.com/luca-staudt/Sentinel/sentinel/detection"
 )
@@ -76,8 +78,17 @@ func main() {
 	}
 	defer func() { _ = closeWindow() }()
 
+	alertCooldown, closeAlertCooldown, err := alerts.NewCooldownFromRedisURL(cfg.RedisURL)
+	if err != nil {
+		log.Error("alert dedup store init failed", "error", err)
+		os.Exit(1)
+	}
+	defer func() { _ = closeAlertCooldown() }()
+
+	alertHub := realtime.NewHub(256)
+
 	var detectSvc *detectionrun.Service
-	opts := server.Options{}
+	opts := server.Options{AlertHub: alertHub}
 	if pool != nil {
 		engine := detection.NewEngine(windowCounter)
 		rulesPath := rulesDir()
@@ -86,7 +97,8 @@ func main() {
 			os.Exit(1)
 		}
 		rules := engine.Rules()
-		runner := detectionrun.New(log, pool, engine, 1024)
+		alertMgr := alerts.NewManagerFromPool(log, pool, alertCooldown, cfg.AlertDedupCooldown, alertHub)
+		runner := detectionrun.New(log, pool, engine, alertMgr, 1024)
 		defer runner.Close()
 		detectSvc = &detectionrun.Service{
 			Log:    log,

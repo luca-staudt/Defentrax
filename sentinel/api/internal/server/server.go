@@ -16,6 +16,7 @@ import (
 	"github.com/luca-staudt/Sentinel/sentinel/api/internal/detectionrun"
 	"github.com/luca-staudt/Sentinel/sentinel/api/internal/handlers"
 	"github.com/luca-staudt/Sentinel/sentinel/api/internal/middleware"
+	"github.com/luca-staudt/Sentinel/sentinel/api/internal/realtime"
 )
 
 // Server wraps the HTTP server and routing.
@@ -24,9 +25,10 @@ type Server struct {
 	http *http.Server
 }
 
-// Options configures optional detection wiring.
+// Options configures optional detection and realtime wiring.
 type Options struct {
 	Detection *detectionrun.Service
+	AlertHub  *realtime.Hub
 }
 
 // New constructs the API HTTP server with routes and middleware.
@@ -54,6 +56,7 @@ func NewWithOptions(log *slog.Logger, cfg config.Config, pool *pgxpool.Pool, log
 	serversH := &handlers.ServersHandler{Pool: pool}
 	agentH := &handlers.AgentHandler{Pool: pool, Config: cfg, IngestLimiter: ingestLimiter}
 	rulesH := &handlers.RulesHandler{Pool: pool}
+	alertsH := &handlers.AlertsHandler{Pool: pool, Hub: opts.AlertHub}
 	if opts.Detection != nil && opts.Detection.Runner != nil {
 		runner := opts.Detection.Runner
 		agentH.OnDetect = func(eventID, serverID, agentID uuid.UUID, occurredAt time.Time, source, category, severity, host, message string, fields []byte) {
@@ -143,6 +146,27 @@ func NewWithOptions(log *slog.Logger, cfg config.Config, pool *pgxpool.Pool, log
 		}
 		rulesH.Get(w, r, id)
 	})))
+	apiMux.Handle("GET /api/v1/alerts", protectPerm(pool, cfg, "alerts", "read", http.HandlerFunc(alertsH.List)))
+	apiMux.Handle("GET /api/v1/alerts/recent-events", protectPerm(pool, cfg, "alerts", "read", http.HandlerFunc(alertsH.RecentEvents)))
+	apiMux.Handle("GET /api/v1/alerts/{id}", protectPerm(pool, cfg, "alerts", "read", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		id, err := uuid.Parse(r.PathValue("id"))
+		if err != nil {
+			requestID := middleware.RequestIDFromContext(r.Context())
+			apperrors.WriteJSON(w, http.StatusBadRequest, "invalid_id", "invalid alert id", requestID)
+			return
+		}
+		alertsH.Get(w, r, id)
+	})))
+	apiMux.Handle("PATCH /api/v1/alerts/{id}", protectPerm(pool, cfg, "alerts", "write", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		id, err := uuid.Parse(r.PathValue("id"))
+		if err != nil {
+			requestID := middleware.RequestIDFromContext(r.Context())
+			apperrors.WriteJSON(w, http.StatusBadRequest, "invalid_id", "invalid alert id", requestID)
+			return
+		}
+		alertsH.Patch(w, r, id)
+	})))
+
 	apiMux.Handle("PATCH /api/v1/rules/{id}", protectPerm(pool, cfg, "rules", "write", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		id, err := uuid.Parse(r.PathValue("id"))
 		if err != nil {

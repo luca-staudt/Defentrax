@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/luca-staudt/Sentinel/sentinel/api/internal/alerts"
 	"github.com/luca-staudt/Sentinel/sentinel/api/internal/store"
 	"github.com/luca-staudt/Sentinel/sentinel/detection"
 )
@@ -33,11 +34,12 @@ type Runner struct {
 	log    *slog.Logger
 	pool   *pgxpool.Pool
 	engine *detection.Engine
+	alerts *alerts.Manager
 	ch     chan PendingEvent
 	wg     sync.WaitGroup
 }
 
-func New(log *slog.Logger, pool *pgxpool.Pool, engine *detection.Engine, queueSize int) *Runner {
+func New(log *slog.Logger, pool *pgxpool.Pool, engine *detection.Engine, alertMgr *alerts.Manager, queueSize int) *Runner {
 	if queueSize < 1 {
 		queueSize = 256
 	}
@@ -45,6 +47,7 @@ func New(log *slog.Logger, pool *pgxpool.Pool, engine *detection.Engine, queueSi
 		log:    log,
 		pool:   pool,
 		engine: engine,
+		alerts: alertMgr,
 		ch:     make(chan PendingEvent, queueSize),
 	}
 	r.wg.Add(1)
@@ -104,19 +107,24 @@ func (r *Runner) processOne(pe PendingEvent) {
 			r.log.Warn("rule id not in database", "yaml_id", m.RuleID, "error", err)
 			continue
 		}
-		alertID, err := store.InsertAlert(ctx, r.pool, store.AlertInsert{
-			ServerID:    m.ServerID,
-			RuleID:      ruleID,
-			Title:       m.Title,
-			Description: m.Description,
-			Severity:    m.Severity,
-			EventID:     m.EventID,
-		})
-		if err != nil {
-			r.log.Error("alert insert failed", "error", err, "rule_id", m.RuleID)
+		if r.alerts == nil {
+			r.log.Warn("alert manager not configured, skipping match", "rule_id", m.RuleID)
 			continue
 		}
-		r.log.Info("detection alert opened", "alert_id", alertID, "rule_id", m.RuleID, "event_id", pe.ID)
+		alertID, created, err := r.alerts.HandleMatch(ctx, alerts.MatchInput{
+			Match:      m,
+			RuleDBID:   ruleID,
+			OccurredAt: pe.OccurredAt,
+		})
+		if err != nil {
+			r.log.Error("alert handle failed", "error", err, "rule_id", m.RuleID)
+			continue
+		}
+		if created {
+			r.log.Info("detection alert opened", "alert_id", alertID, "rule_id", m.RuleID, "event_id", pe.ID)
+		} else {
+			r.log.Info("detection alert aggregated", "alert_id", alertID, "rule_id", m.RuleID, "event_id", pe.ID)
+		}
 	}
 }
 
