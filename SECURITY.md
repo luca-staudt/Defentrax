@@ -4,8 +4,9 @@
 
 | Version | Supported |
 |---------|-----------|
-| `main` (pre-1.0) | Yes — best-effort security fixes |
-| Tagged releases (`v0.x`, later `v1.x`) | Yes once published |
+| `main` (pre-tag / pre-1.0) | Yes — best-effort security fixes |
+| `v0.1.x` (first planned tags) | Yes once published |
+| `v1.x` | Only after an honest v1 readiness gate (license, merge, checklist) |
 
 There is no LTS track yet. Prefer the latest tagged release or `main` for self-hosted installs.
 

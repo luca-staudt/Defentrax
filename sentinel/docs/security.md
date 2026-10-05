@@ -70,7 +70,7 @@ Plain HTTP in production logs a warning at API startup.
 3. **Plugin code runs in-process** — allowlist + signatures reduce risk; they are not a sandbox.
 4. **Trusted reverse-proxy IP** — API uses `RemoteAddr` only (no `X-Forwarded-For` trust yet); place rate-limit-aware proxies carefully.
 5. **OpenAPI /docs unauthenticated** — intentional for operators; disable at the proxy if undesired.
-6. **SBOM / image signing** — SBOM in CI (Phase 18); cosign/signing deferred to Phase 21.
+6. **SBOM / image signing** — SBOM in CI (Phase 18); checksums + local SBOM scripts in Phase 21; cosign still optional/manual (not in CI).
 7. **LICENSE unset** — legal distribution risk until maintainer chooses a license (no LICENSE file without that decision).
 8. **Dependabot PRs** need human review — config is present; merging vulnerable deps is still an operator process.
 

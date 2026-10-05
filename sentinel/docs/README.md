@@ -38,7 +38,8 @@ Operator and developer documentation living alongside the codebase.
 | [privacy.md](privacy.md) | Data categories and operator duties |
 | [retention.md](retention.md) | Retention policy (honest: no auto-purge yet) |
 | [backup.md](backup.md) | Backup / restore |
-| [release.md](release.md) | Tagging, CI release workflow, checklist |
+| [release.md](release.md) | Tagging, CI release workflow, SBOM/checksum commands |
+| [compatibility.md](compatibility.md) | Version matrix and upgrade expectations |
 
 ## Develop
 

@@ -55,15 +55,21 @@ See also [security.md](security.md) for runtime hardening and residual risks.
 ## Release workflow
 
 Operator/maintainer checklist (expanded): [release.md](release.md).
+Compatibility matrix: [compatibility.md](compatibility.md).
 
-1. Ensure `main` is green (Main workflow).
-2. Create an annotated SemVer tag, e.g. `git tag -a v0.1.0 -m "v0.1.0" && git push origin v0.1.0`  
+1. Ensure `main` is green (Main workflow) — or an integration branch you intend to merge first.
+2. Keep `VERSION` (and mirrors) consistent; run `make release-check`.
+3. Create an annotated SemVer tag from `VERSION`, e.g.  
+   `git tag -a v0.1.0 -m "v0.1.0" && git push origin v0.1.0`  
    Or run **Release** via Actions → `workflow_dispatch` with a tag label.
-3. Wait for **Release** workflow: full tests, security, Docker builds, SBOM artifacts.
-4. Download artifacts (source SBOM, API image SBOM, optional `sentinel-api` tarball).
-5. Push immutable tags to **your** registry (manual / future CD — not in these workflows).
-6. Align Helm/Compose image tags; draft GitHub Release notes + checksums (Phase 21).
-7. Do not distribute publicly until a LICENSE decision is recorded.
+4. Wait for **Release** workflow: full tests, security, Docker builds, SBOM artifacts.
+5. Download artifacts (source SBOM, API image SBOM, optional `sentinel-api` tarball).
+6. `./sentinel/scripts/release-checksums.sh <artifact-dir> SHA256SUMS`
+7. Push immutable tags to **your** registry (manual / future CD — not in these workflows).
+8. Align Helm/Compose image tags; publish GitHub Release notes + checksums + SBOMs.
+9. Do not market **`v1.0.0`** / public OSS distribution until LICENSE + readiness checklist are green.
+
+Local SBOM mirror: `make release-sbom-local` / `./sentinel/scripts/release-sbom-local.sh`.
 
 ## Branch protection (recommended)
 
@@ -88,12 +94,16 @@ make frontend-lint          # ESLint (needs node_modules)
 make test                   # Unit tests
 make api-test-integration   # Integration (needs Postgres)
 make test-all               # Unit + integration
-make test-ci                # Unit + OpenAPI
+make test-ci                # Unit + OpenAPI + release-check
+make release-check          # VERSION / docs consistency
+make release-sbom-local     # Local Syft source SPDX
 make openapi-validate
-make build                  # API + agent binaries
+make build                  # API + agent binaries (VERSION stamped)
 make frontend-build         # Next.js production build
 ./sentinel/scripts/run-unit-tests.sh
 ./sentinel/scripts/run-integration-tests.sh
+./sentinel/scripts/release-check.sh
+./sentinel/scripts/release-checksums.sh ./dist/sbom
 ```
 
 See also [testing.md](testing.md).
