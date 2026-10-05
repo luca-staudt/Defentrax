@@ -58,8 +58,14 @@ func RunDev(ctx context.Context, pool *pgxpool.Pool) error {
 		{"alerts", "write", "Update alert lifecycle"},
 		{"events", "read", "View events"},
 		{"servers", "write", "Manage servers and agents"},
+		{"rules", "read", "View detection rules"},
 		{"rules", "write", "Manage detection rules"},
+		{"notifications", "read", "View notification channels and rules"},
+		{"notifications", "write", "Manage notification channels and rules"},
+		{"plugins", "read", "View plugins and plugin configs"},
+		{"plugins", "write", "Enable/disable plugins and manage plugin configs"},
 		{"audit_logs", "read", "View audit trail"},
+		{"api_keys", "write", "Manage personal API keys"},
 	}
 	for _, p := range perms {
 		_, err := tx.Exec(ctx, `

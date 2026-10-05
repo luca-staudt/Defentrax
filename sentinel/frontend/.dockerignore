@@ -1,0 +1,12 @@
+node_modules
+.next
+out
+.git
+*.md
+.env
+.env.*
+!.env.example
+coverage
+.turbo
+*.tsbuildinfo
+eslint.config.mjs

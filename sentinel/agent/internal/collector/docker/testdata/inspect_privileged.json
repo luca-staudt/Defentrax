@@ -1,0 +1,12 @@
+{
+  "Id": "f00dcafe00112233445566778899aabb",
+  "Name": "/debug-priv",
+  "Config": {"Image": "alpine:3.19"},
+  "HostConfig": {
+    "Privileged": true,
+    "NetworkMode": "bridge",
+    "PidMode": "",
+    "Binds": []
+  },
+  "Mounts": []
+}

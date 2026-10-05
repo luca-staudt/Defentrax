@@ -1,0 +1,20 @@
+{
+  "Id": "baddcafebaddcafebaddcafebaddcafe",
+  "Name": "/socket-mount",
+  "Config": {"Image": "busybox:1.36"},
+  "HostConfig": {
+    "Privileged": false,
+    "NetworkMode": "bridge",
+    "PidMode": "",
+    "Binds": ["/var/run/docker.sock:/var/run/docker.sock"]
+  },
+  "Mounts": [
+    {
+      "Type": "bind",
+      "Source": "/var/run/docker.sock",
+      "Destination": "/var/run/docker.sock",
+      "Mode": "",
+      "RW": true
+    }
+  ]
+}

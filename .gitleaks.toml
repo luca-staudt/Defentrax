@@ -1,0 +1,22 @@
+# Gitleaks configuration for Sentinel (Phase 19).
+# Extends default rules; ignores known placeholder examples only.
+
+title = "Sentinel"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Placeholders and fixtures — not real secrets"
+paths = [
+  '''(.*?)(/|\\)\.env\.example$''',
+  '''(.*?)(/|\\)ci(/|\\)lint-values\.yaml$''',
+  '''(.*?)(/|\\).*_test\.go$''',
+]
+regexes = [
+  '''CHANGE_ME_USE_OPENSSL_RAND''',
+  '''REPLACE_ME''',
+  '''your-password-here''',
+  '''YWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWE=''',
+  '''YmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmI=''',
+]

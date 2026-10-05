@@ -1,0 +1,13 @@
+id: linux.possible-failed-login
+name: Possible failed login attempt
+description: A failed authentication event was recorded and may warrant correlation with other auth activity.
+severity: low
+version: 1
+condition:
+  source: authlog
+  category: auth
+  fields:
+    result: failed
+action:
+  title: Possible failed login for {{user}} from {{src_ip}}
+  description: Failed authentication for user {{user}} from {{src_ip}} on {{host}}. Consider reviewing surrounding auth events.

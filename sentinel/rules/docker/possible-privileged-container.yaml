@@ -1,0 +1,14 @@
+id: docker.possible-privileged-container
+name: Possible privileged container start
+description: A container was started with the privileged flag, which grants broad host capabilities and may increase risk if unexpected.
+severity: high
+version: 1
+condition:
+  source: docker
+  category: container
+  event_type: container_start
+  fields:
+    privileged: "true"
+action:
+  title: Possible privileged container on {{host}}
+  description: Container {{container_name}} (id {{container_id}}) started with privileged mode on {{host}}. Confirm this deployment matches policy.

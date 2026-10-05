@@ -1,0 +1,45 @@
+{{- if .Values.migrate.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "sentinel.migrate.fullname" . }}
+  namespace: {{ include "sentinel.namespace" . }}
+  labels:
+    {{- include "sentinel.labels" . | nindent 4 }}
+    app.kubernetes.io/component: migrate
+  {{- if .Values.migrate.hooks.enabled }}
+  annotations:
+    {{- toYaml .Values.migrate.hooks.annotations | nindent 4 }}
+  {{- end }}
+spec:
+  backoffLimit: {{ .Values.migrate.backoffLimit }}
+  ttlSecondsAfterFinished: {{ .Values.migrate.ttlSecondsAfterFinished }}
+  template:
+    metadata:
+      labels:
+        {{- include "sentinel.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: migrate
+    spec:
+      restartPolicy: OnFailure
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.migrate.podSecurityContext | nindent 8 }}
+      containers:
+        - name: migrate
+          image: {{ include "sentinel.migrate.image" . | quote }}
+          imagePullPolicy: {{ .Values.migrate.image.pullPolicy | default .Values.image.pullPolicy }}
+          args: ["up"]
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "sentinel.secretName" . }}
+                  key: DATABASE_URL
+          resources:
+            {{- toYaml .Values.migrate.resources | nindent 12 }}
+          securityContext:
+            {{- toYaml .Values.migrate.securityContext | nindent 12 }}
+{{- end }}

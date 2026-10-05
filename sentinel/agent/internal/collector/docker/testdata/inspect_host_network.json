@@ -1,0 +1,12 @@
+{
+  "Id": "c0ffeec0ffeec0ffeec0ffeec0ffee01",
+  "Name": "/edge-hostnet",
+  "Config": {"Image": "traefik:v3"},
+  "HostConfig": {
+    "Privileged": false,
+    "NetworkMode": "host",
+    "PidMode": "",
+    "Binds": []
+  },
+  "Mounts": []
+}

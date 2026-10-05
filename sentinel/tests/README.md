@@ -1,5 +1,7 @@
 # Cross-module tests
 
-Integration and end-to-end tests that span multiple Sentinel modules (API + database + agent, etc.).
+Most tests live next to the code they exercise (`sentinel/api/...`, `sentinel/agent/...`, etc.).
 
-**Status:** scaffold only. Module-level tests live under each component (e.g. `sentinel/api/..._test.go`) until Phase 14 expands coverage.
+**Phase 14:** See [`sentinel/docs/testing.md`](../docs/testing.md) for the full test matrix, required services, and CI entry points (`make test`, `make api-test-integration`, scripts under `sentinel/scripts/`).
+
+Integration tests that span API + PostgreSQL use the Go build tag `integration` and shared helpers in `sentinel/api/internal/testutil`.

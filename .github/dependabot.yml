@@ -1,0 +1,44 @@
+# Dependabot — keep Go modules, Actions, and frontend deps current (Phase 19).
+version: 2
+updates:
+  - package-ecosystem: "gomod"
+    directory: "/sentinel/api"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+
+  - package-ecosystem: "gomod"
+    directory: "/sentinel/agent"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+
+  - package-ecosystem: "gomod"
+    directory: "/sentinel/database"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 3
+
+  - package-ecosystem: "gomod"
+    directory: "/sentinel/detection"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 3
+
+  - package-ecosystem: "gomod"
+    directory: "/sentinel/plugins"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 3
+
+  - package-ecosystem: "npm"
+    directory: "/sentinel/frontend"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5

@@ -1,0 +1,2116 @@
+openapi: 3.0.3
+info:
+  title: Sentinel API
+  description: |
+    Control-plane REST API for Sentinel (security monitoring / lightweight SIEM).
+
+    This specification documents **implemented** routes only (inventory from
+    `sentinel/api/internal/server/server.go`). It does **not** invent endpoints.
+
+    **Not exposed as REST (yet):**
+    - No `GET /api/v1/audit` — audit rows are written server-side; there is no list API.
+    - No standalone `GET /api/v1/agents` — agents appear nested under `GET /api/v1/servers/{id}`.
+    - No `/api/v1/metrics` — use `GET /api/v1/dashboard/stats`.
+
+    Interactive UI: `GET /api/v1/docs` (Swagger UI). Raw spec: `GET /api/v1/openapi.yaml`.
+  version: 0.1.0
+  contact:
+    name: Sentinel
+servers:
+  - url: http://localhost:8080
+    description: Local default (API_PORT / PORT)
+tags:
+  - name: Health
+    description: "Process liveness and readiness (outside `/api/v1` prefix)"
+  - name: Meta
+    description: Version and OpenAPI artifacts
+  - name: Auth
+    description: Sessions, TOTP 2FA, recovery codes
+  - name: Users
+    description: User admin and personal API keys
+  - name: Servers
+    description: Managed hosts and enrollment tokens
+  - name: Agents
+    description: Agent enrollment, heartbeat, and event ingest
+  - name: Events
+    description: Persisted security events
+  - name: Alerts
+    description: Alert lifecycle and realtime feed
+  - name: Rules
+    description: Detection rules (enable/disable)
+  - name: Notifications
+    description: Notification channels and rules
+  - name: Dashboard
+    description: Aggregated operator metrics
+  - name: Plugins
+    description: Plugin registry and configs
+  - name: Audit
+    description: Audit is write-side only today (no list endpoint)
+
+paths:
+  /healthz:
+    get:
+      tags: [Health]
+      operationId: getHealthz
+      summary: Liveness probe
+      security: []
+      responses:
+        "200":
+          description: Process is running
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status:
+                    type: string
+                    example: ok
+
+  /readyz:
+    get:
+      tags: [Health]
+      operationId: getReadyz
+      summary: Readiness probe
+      description: "When `DATABASE_URL` is set, pings PostgreSQL."
+      security: []
+      responses:
+        "200":
+          description: Ready
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReadyResponse"
+        "503":
+          description: Not ready
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReadyResponse"
+
+  /api/v1:
+    get:
+      tags: [Meta]
+      operationId: getAPIVersion
+      summary: API version metadata
+      security: []
+      responses:
+        "200":
+          description: Version payload
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [service, version, api]
+                properties:
+                  service:
+                    type: string
+                    example: sentinel-api
+                  version:
+                    type: string
+                    example: "0.1.0"
+                  api:
+                    type: string
+                    example: v1
+
+  /api/v1/openapi.yaml:
+    get:
+      tags: [Meta]
+      operationId: getOpenAPISpec
+      summary: OpenAPI 3 YAML document
+      security: []
+      responses:
+        "200":
+          description: OpenAPI specification
+          content:
+            application/yaml:
+              schema:
+                type: string
+
+  /api/v1/docs:
+    get:
+      tags: [Meta]
+      operationId: getSwaggerUI
+      summary: Swagger UI for this specification
+      security: []
+      responses:
+        "200":
+          description: HTML page
+          content:
+            text/html:
+              schema:
+                type: string
+
+  /api/v1/auth/login:
+    post:
+      tags: [Auth]
+      operationId: authLogin
+      summary: Password login
+      description: |
+        On success without 2FA, sets the session cookie and returns the user.
+        When TOTP is enabled, returns `requires_totp` + `login_challenge` (no session yet).
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  format: password
+      responses:
+        "200":
+          description: Logged in or TOTP challenge required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResponse"
+        "401":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/Error"
+
+  /api/v1/auth/totp/verify:
+    post:
+      tags: [Auth]
+      operationId: authTotpVerify
+      summary: Complete login with TOTP code
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [login_challenge, code]
+              properties:
+                login_challenge:
+                  type: string
+                code:
+                  type: string
+      responses:
+        "200":
+          description: Session established
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResponse"
+        "401":
+          $ref: "#/components/responses/Error"
+
+  /api/v1/auth/recovery/verify:
+    post:
+      tags: [Auth]
+      operationId: authRecoveryVerify
+      summary: Complete login with a recovery code
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [login_challenge, recovery_code]
+              properties:
+                login_challenge:
+                  type: string
+                recovery_code:
+                  type: string
+      responses:
+        "200":
+          description: Session established
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResponse"
+        "401":
+          $ref: "#/components/responses/Error"
+
+  /api/v1/auth/logout:
+    post:
+      tags: [Auth]
+      operationId: authLogout
+      summary: End current session
+      security:
+        - SessionCookie: []
+        - BearerApiKey: []
+      responses:
+        "204":
+          description: Logged out
+        "401":
+          $ref: "#/components/responses/Error"
+
+  /api/v1/auth/me:
+    get:
+      tags: [Auth]
+      operationId: authMe
+      summary: Current authenticated user
+      security:
+        - SessionCookie: []
+        - BearerApiKey: []
+      responses:
+        "200":
+          description: Principal + roles + permission keys
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MeResponse"
+        "401":
+          $ref: "#/components/responses/Error"
+
+  /api/v1/auth/totp/enroll:
+    post:
+      tags: [Auth]
+      operationId: authTotpEnroll
+      summary: Start TOTP enrollment
+      security:
+        - SessionCookie: []
+        - BearerApiKey: []
+      responses:
+        "200":
+          description: Provisioning material (shown once)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [provisioning_uri, secret, recovery_codes]
+                properties:
+                  provisioning_uri:
+                    type: string
+                  secret:
+                    type: string
+                  recovery_codes:
+                    type: array
+                    items:
+                      type: string
+        "401":
+          $ref: "#/components/responses/Error"
+
+  /api/v1/auth/totp/confirm:
+    post:
+      tags: [Auth]
+      operationId: authTotpConfirm
+      summary: Confirm TOTP enrollment
+      security:
+        - SessionCookie: []
+        - BearerApiKey: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code]
+              properties:
+                code:
+                  type: string
+      responses:
+        "204":
+          description: TOTP enabled
+        "401":
+          $ref: "#/components/responses/Error"
+
+  /api/v1/auth/totp/disable:
+    post:
+      tags: [Auth]
+      operationId: authTotpDisable
+      summary: Disable TOTP (password + code)
+      security:
+        - SessionCookie: []
+        - BearerApiKey: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [password, code]
+              properties:
+                password:
+                  type: string
+                  format: password
+                code:
+                  type: string
+      responses:
+        "204":
+          description: TOTP disabled
+        "401":
+          $ref: "#/components/responses/Error"
+
+  /api/v1/users:
+    get:
+      tags: [Users]
+      operationId: listUsers
+      summary: List users
+      description: "Requires permission `users:read`."
+      security:
+        - SessionCookie: []
+        - BearerApiKey: []
+      responses:
+        "200":
+          description: User list
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [users]
+                properties:
+                  users:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/UserPublic"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+    post:
+      tags: [Users]
+      operationId: createUser
+      summary: Create user
+      description: "Requires permission `users:write`. Password minimum 12 characters. Default role `VIEWER` if omitted."
+      security:
+        - SessionCookie: []
+        - BearerApiKey: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  minLength: 12
+                display_name:
+                  type: string
+                roles:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/RoleName"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserPublic"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+
+  /api/v1/users/{id}/roles:
+    put:
+      tags: [Users]
+      operationId: updateUserRoles
+      summary: Replace user roles
+      description: "Requires permission `users:write`. Audited as `user.role_changed`."
+      security:
+        - SessionCookie: []
+        - BearerApiKey: []
+      parameters:
+        - $ref: "#/components/parameters/PathUUID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [roles]
+              properties:
+                roles:
+                  type: array
+                  minItems: 1
+                  items:
+                    $ref: "#/components/schemas/RoleName"
+      responses:
+        "204":
+          description: Updated
+        "400":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+
+  /api/v1/users/me/api-keys:
+    get:
+      tags: [Users]
+      operationId: listMyAPIKeys
+      summary: List own API keys
+      description: "Requires permission `api_keys:write`. Never returns full key material."
+      security:
+        - SessionCookie: []
+        - BearerApiKey: []
+      responses:
+        "200":
+          description: Keys (prefix only)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [api_keys]
+                properties:
+                  api_keys:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/APIKey"
+    post:
+      tags: [Users]
+      operationId: createMyAPIKey
+      summary: Create API key
+      description: |
+        Requires permission `api_keys:write`.
+        Response includes the full `sent_…` key **once**.
+      security:
+        - SessionCookie: []
+        - BearerApiKey: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+      responses:
+        "201":
+          description: Created (includes full key once)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/APIKeyCreated"
+
+  /api/v1/users/me/api-keys/{id}:
+    delete:
+      tags: [Users]
+      operationId: revokeMyAPIKey
+      summary: Revoke own API key
+      description: "Requires permission `api_keys:write`."
+      security:
+        - SessionCookie: []
+        - BearerApiKey: []
+      parameters:
+        - $ref: "#/components/parameters/PathUUID"
+      responses:
+        "204":
+          description: Revoked
+        "404":
+          $ref: "#/components/responses/Error"
+
+  /api/v1/servers:
+    get:
+      tags: [Servers]
+      operationId: listServers
+      summary: List servers
+      description: "Requires permission `servers:write`."
+      security:
+        - SessionCookie: []
+        - BearerApiKey: []
+      responses:
+        "200":
+          description: Server list
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [servers]
+                properties:
+                  servers:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Server"
+    post:
+      tags: [Servers]
+      operationId: createServer
+      summary: Create server
+      description: "Requires permission `servers:write`."
+      security:
+        - SessionCookie: []
+        - BearerApiKey: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                hostname:
+                  type: string
+                description:
+                  type: string
+                environment:
+                  type: string
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Server"
+
+  /api/v1/servers/{id}:
+    get:
+      tags: [Servers, Agents]
+      operationId: getServer
+      summary: Get server with nested agents
+      description: |
+        Requires permission `servers:write`.
+        Agents are returned nested here; there is no standalone agents list endpoint.
+      security:
+        - SessionCookie: []
+        - BearerApiKey: []
+      parameters:
+        - $ref: "#/components/parameters/PathUUID"
+      responses:
+        "200":
+          description: Server detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServerDetail"
+        "404":
+          $ref: "#/components/responses/Error"
+
+  /api/v1/servers/{id}/enrollment-tokens:
+    post:
+      tags: [Servers, Agents]
+      operationId: createEnrollmentToken
+      summary: Create one-time enrollment token
+      description: |
+        Requires permission `servers:write`.
+        Returns a one-time `senr_…` token (shown once). Default TTL 60 minutes (max 24h).
+      security:
+        - SessionCookie: []
+        - BearerApiKey: []
+      parameters:
+        - $ref: "#/components/parameters/PathUUID"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                label:
+                  type: string
+                ttl_minutes:
+                  type: integer
+                  minimum: 1
+                  maximum: 1440
+                  default: 60
+      responses:
+        "201":
+          description: Token created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnrollmentToken"
+
+  /api/v1/agent/enroll:
+    post:
+      tags: [Agents]
+      operationId: agentEnroll
+      summary: Enroll agent with enrollment token
+      description: "Consumes a `senr_…` token; returns one-time `sagt_…` agent bearer."
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [enrollment_token]
+              properties:
+                enrollment_token:
+                  type: string
+                name:
+                  type: string
+                hostname:
+                  type: string
+                agent_version:
+                  type: string
+      responses:
+        "201":
+          description: Enrolled
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [agent_id, server_id, agent_token, token_prefix]
+                properties:
+                  agent_id:
+                    type: string
+                    format: uuid
+                  server_id:
+                    type: string
+                    format: uuid
+                  agent_token:
+                    type: string
+                    description: "One-time `sagt_…` bearer"
+                  token_prefix:
+                    type: string
+        "400":
+          $ref: "#/components/responses/Error"
+
+  /api/v1/agent/heartbeat:
+    post:
+      tags: [Agents]
+      operationId: agentHeartbeat
+      summary: Agent heartbeat
+      security:
+        - BearerAgentToken: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                agent_version:
+                  type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+                  agent_id:
+                    type: string
+                    format: uuid
+        "401":
+          $ref: "#/components/responses/Error"
+
+  /api/v1/agent/events:
+    post:
+      tags: [Agents, Events]
+      operationId: agentIngestEvents
+      summary: Batch ingest events
+      description: |
+        Agent bearer required. Partial success — invalid rows appear in `rejected`.
+        Default max batch size 100 (configurable). Rate limited per agent.
+      security:
+        - BearerAgentToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [events]
+              properties:
+                events:
+                  type: array
+                  minItems: 1
+                  items:
+                    $ref: "#/components/schemas/CanonicalEvent"
+      responses:
+        "202":
+          description: Accepted (may include rejections/duplicates)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IngestEventsResponse"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "413":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/Error"
+
+  /api/v1/events:
+    get:
+      tags: [Events]
+      operationId: listEvents
+      summary: List events
+      description: "Requires permission `events:read`."
+      security:
+        - SessionCookie: []
+        - BearerApiKey: []
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: server_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: severity
+          in: query
+          schema:
+            type: string
+        - name: source
+          in: query
+          schema:
+            type: string
+        - name: category
+          in: query
+          schema:
+            type: string
+        - name: q
+          in: query
+          description: Message search
+          schema:
+            type: string
+        - name: since
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: until
+          in: query
+          schema:
+            type: string
+            format: date-time
+      responses:
+        "200":
+          description: Paginated events
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [events, total, limit, offset]
+                properties:
+                  events:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Event"
+                  total:
+                    type: integer
+                  limit:
+                    type: integer
+                  offset:
+                    type: integer
+
+  /api/v1/events/{id}:
+    get:
+      tags: [Events]
+      operationId: getEvent
+      summary: Get event by id
+      description: "Requires permission `events:read`."
+      security:
+        - SessionCookie: []
+        - BearerApiKey: []
+      parameters:
+        - $ref: "#/components/parameters/PathUUID"
+      responses:
+        "200":
+          description: Event
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Event"
+        "404":
+          $ref: "#/components/responses/Error"
+
+  /api/v1/alerts:
+    get:
+      tags: [Alerts]
+      operationId: listAlerts
+      summary: List alerts
+      description: "Requires permission `alerts:read`."
+      security:
+        - SessionCookie: []
+        - BearerApiKey: []
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: status
+          in: query
+          schema:
+            $ref: "#/components/schemas/AlertStatus"
+        - name: severity
+          in: query
+          schema:
+            type: string
+        - name: server_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Paginated alerts
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [alerts, total, limit, offset]
+                properties:
+                  alerts:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Alert"
+                  total:
+                    type: integer
+                  limit:
+                    type: integer
+                  offset:
+                    type: integer
+
+  /api/v1/alerts/recent-events:
+    get:
+      tags: [Alerts]
+      operationId: listRecentAlertEvents
+      summary: Recent in-memory alert feed buffer
+      description: "Requires permission `alerts:read`. Returns hub buffer (empty if hub unset)."
+      security:
+        - SessionCookie: []
+        - BearerApiKey: []
+      responses:
+        "200":
+          description: Recent realtime alert events
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [events]
+                properties:
+                  events:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/RealtimeAlertEvent"
+
+  /api/v1/alerts/{id}:
+    get:
+      tags: [Alerts]
+      operationId: getAlert
+      summary: Get alert with timeline
+      description: "Requires permission `alerts:read`."
+      security:
+        - SessionCookie: []
+        - BearerApiKey: []
+      parameters:
+        - $ref: "#/components/parameters/PathUUID"
+      responses:
+        "200":
+          description: Alert + timeline
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [alert, timeline]
+                properties:
+                  alert:
+                    $ref: "#/components/schemas/Alert"
+                  timeline:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/AlertTimelineEntry"
+        "404":
+          $ref: "#/components/responses/Error"
+    patch:
+      tags: [Alerts]
+      operationId: patchAlert
+      summary: Update alert lifecycle
+      description: |
+        Requires permission `alerts:write`.
+        Status transitions: `OPEN` → `ACKNOWLEDGED` → `INVESTIGATING` → `RESOLVED`.
+        Audited on status/assignment changes.
+      security:
+        - SessionCookie: []
+        - BearerApiKey: []
+      parameters:
+        - $ref: "#/components/parameters/PathUUID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  $ref: "#/components/schemas/AlertStatus"
+                assigned_to:
+                  type: string
+                  format: uuid
+                  nullable: true
+                resolution_notes:
+                  type: string
+      responses:
+        "200":
+          description: Updated alert
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Alert"
+        "409":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+
+  /api/v1/ws/alerts:
+    get:
+      tags: [Alerts]
+      operationId: wsAlerts
+      summary: WebSocket alert feed
+      description: |
+        Requires permission `alerts:read` (session or API key).
+        Upgrades to WebSocket; text frames are JSON `{ "type": "alert", "data": … }`.
+      security:
+        - SessionCookie: []
+        - BearerApiKey: []
+      responses:
+        "101":
+          description: Switching Protocols
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "503":
+          $ref: "#/components/responses/Error"
+
+  /api/v1/rules:
+    get:
+      tags: [Rules]
+      operationId: listRules
+      summary: List detection rules
+      description: "Requires permission `rules:read`."
+      security:
+        - SessionCookie: []
+        - BearerApiKey: []
+      responses:
+        "200":
+          description: Rules
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [rules]
+                properties:
+                  rules:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Rule"
+
+  /api/v1/rules/{id}:
+    get:
+      tags: [Rules]
+      operationId: getRule
+      summary: Get detection rule
+      description: "Requires permission `rules:read`."
+      security:
+        - SessionCookie: []
+        - BearerApiKey: []
+      parameters:
+        - $ref: "#/components/parameters/PathUUID"
+      responses:
+        "200":
+          description: Rule
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Rule"
+        "404":
+          $ref: "#/components/responses/Error"
+    patch:
+      tags: [Rules]
+      operationId: patchRule
+      summary: Enable or disable a rule
+      description: "Requires permission `rules:write`. Body must include `enabled`."
+      security:
+        - SessionCookie: []
+        - BearerApiKey: []
+      parameters:
+        - $ref: "#/components/parameters/PathUUID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [enabled]
+              properties:
+                enabled:
+                  type: boolean
+      responses:
+        "200":
+          description: Updated rule
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Rule"
+        "404":
+          $ref: "#/components/responses/Error"
+
+  /api/v1/notification-channels:
+    get:
+      tags: [Notifications]
+      operationId: listNotificationChannels
+      summary: List notification channels
+      description: "Requires permission `notifications:read`. Secrets are never returned."
+      security:
+        - SessionCookie: []
+        - BearerApiKey: []
+      responses:
+        "200":
+          description: Channels
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [channels]
+                properties:
+                  channels:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/NotificationChannel"
+    post:
+      tags: [Notifications]
+      operationId: createNotificationChannel
+      summary: Create notification channel
+      description: |
+        Requires permission `notifications:write`.
+        Needs `SECRETS_ENCRYPTION_KEY` (32-byte) when storing secrets.
+        `channel_type`: `discord` | `slack` | `email` | `webhook`.
+      security:
+        - SessionCookie: []
+        - BearerApiKey: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateNotificationChannel"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotificationChannel"
+        "400":
+          $ref: "#/components/responses/Error"
+        "503":
+          $ref: "#/components/responses/Error"
+
+  /api/v1/notification-channels/{id}:
+    get:
+      tags: [Notifications]
+      operationId: getNotificationChannel
+      summary: Get notification channel
+      description: "Requires permission `notifications:read`."
+      security:
+        - SessionCookie: []
+        - BearerApiKey: []
+      parameters:
+        - $ref: "#/components/parameters/PathUUID"
+      responses:
+        "200":
+          description: Channel
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotificationChannel"
+        "404":
+          $ref: "#/components/responses/Error"
+    patch:
+      tags: [Notifications]
+      operationId: patchNotificationChannel
+      summary: Update notification channel
+      description: "Requires permission `notifications:write`."
+      security:
+        - SessionCookie: []
+        - BearerApiKey: []
+      parameters:
+        - $ref: "#/components/parameters/PathUUID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PatchNotificationChannel"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotificationChannel"
+        "404":
+          $ref: "#/components/responses/Error"
+        "503":
+          $ref: "#/components/responses/Error"
+    delete:
+      tags: [Notifications]
+      operationId: deleteNotificationChannel
+      summary: Delete notification channel
+      description: "Requires permission `notifications:write`."
+      security:
+        - SessionCookie: []
+        - BearerApiKey: []
+      parameters:
+        - $ref: "#/components/parameters/PathUUID"
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          $ref: "#/components/responses/Error"
+
+  /api/v1/notification-rules:
+    get:
+      tags: [Notifications]
+      operationId: listNotificationRules
+      summary: List notification rules
+      description: "Requires permission `notifications:read`."
+      security:
+        - SessionCookie: []
+        - BearerApiKey: []
+      responses:
+        "200":
+          description: Rules
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [rules]
+                properties:
+                  rules:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/NotificationRule"
+    post:
+      tags: [Notifications]
+      operationId: createNotificationRule
+      summary: Create notification rule
+      description: "Requires permission `notifications:write`."
+      security:
+        - SessionCookie: []
+        - BearerApiKey: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateNotificationRule"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotificationRule"
+
+  /api/v1/notification-rules/{id}:
+    get:
+      tags: [Notifications]
+      operationId: getNotificationRule
+      summary: Get notification rule
+      description: "Requires permission `notifications:read`."
+      security:
+        - SessionCookie: []
+        - BearerApiKey: []
+      parameters:
+        - $ref: "#/components/parameters/PathUUID"
+      responses:
+        "200":
+          description: Rule
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotificationRule"
+        "404":
+          $ref: "#/components/responses/Error"
+    patch:
+      tags: [Notifications]
+      operationId: patchNotificationRule
+      summary: Update notification rule
+      description: "Requires permission `notifications:write`."
+      security:
+        - SessionCookie: []
+        - BearerApiKey: []
+      parameters:
+        - $ref: "#/components/parameters/PathUUID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PatchNotificationRule"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotificationRule"
+        "404":
+          $ref: "#/components/responses/Error"
+    delete:
+      tags: [Notifications]
+      operationId: deleteNotificationRule
+      summary: Delete notification rule
+      description: "Requires permission `notifications:write`."
+      security:
+        - SessionCookie: []
+        - BearerApiKey: []
+      parameters:
+        - $ref: "#/components/parameters/PathUUID"
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          $ref: "#/components/responses/Error"
+
+  /api/v1/dashboard/stats:
+    get:
+      tags: [Dashboard]
+      operationId: getDashboardStats
+      summary: Dashboard aggregate metrics
+      description: |
+        Requires permission `alerts:read`.
+        This is the implemented metrics surface (there is no `/api/v1/metrics`).
+      security:
+        - SessionCookie: []
+        - BearerApiKey: []
+      responses:
+        "200":
+          description: Stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardStats"
+
+  /api/v1/plugins:
+    get:
+      tags: [Plugins]
+      operationId: listPlugins
+      summary: List plugins + v1 support matrix
+      description: "Requires permission `plugins:read`."
+      security:
+        - SessionCookie: []
+        - BearerApiKey: []
+      responses:
+        "200":
+          description: Plugins and support matrix
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [plugins, support]
+                properties:
+                  plugins:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Plugin"
+                  support:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/PluginSupportStatus"
+
+  /api/v1/plugins/{id}:
+    get:
+      tags: [Plugins]
+      operationId: getPlugin
+      summary: Get plugin
+      description: "Requires permission `plugins:read`."
+      security:
+        - SessionCookie: []
+        - BearerApiKey: []
+      parameters:
+        - $ref: "#/components/parameters/PathUUID"
+      responses:
+        "200":
+          description: Plugin
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Plugin"
+        "404":
+          $ref: "#/components/responses/Error"
+    patch:
+      tags: [Plugins]
+      operationId: patchPlugin
+      summary: Enable or disable plugin
+      description: "Requires permission `plugins:write`. Body must include `enabled`."
+      security:
+        - SessionCookie: []
+        - BearerApiKey: []
+      parameters:
+        - $ref: "#/components/parameters/PathUUID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [enabled]
+              properties:
+                enabled:
+                  type: boolean
+      responses:
+        "200":
+          description: Updated plugin
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Plugin"
+        "404":
+          $ref: "#/components/responses/Error"
+
+  /api/v1/plugins/{id}/configs:
+    get:
+      tags: [Plugins]
+      operationId: listPluginConfigs
+      summary: List plugin configs
+      description: "Requires permission `plugins:read`."
+      security:
+        - SessionCookie: []
+        - BearerApiKey: []
+      parameters:
+        - $ref: "#/components/parameters/PathUUID"
+      responses:
+        "200":
+          description: Configs
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [configs]
+                properties:
+                  configs:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/PluginConfig"
+
+  /api/v1/plugins/{id}/configs/{key}:
+    put:
+      tags: [Plugins]
+      operationId: putPluginConfig
+      summary: Upsert plugin config key
+      description: "Requires permission `plugins:write`."
+      security:
+        - SessionCookie: []
+        - BearerApiKey: []
+      parameters:
+        - $ref: "#/components/parameters/PathUUID"
+        - name: key
+          in: path
+          required: true
+          schema:
+            type: string
+            maxLength: 128
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [value]
+              properties:
+                value:
+                  description: Arbitrary JSON value
+      responses:
+        "200":
+          description: Upserted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PluginConfig"
+        "404":
+          $ref: "#/components/responses/Error"
+    delete:
+      tags: [Plugins]
+      operationId: deletePluginConfig
+      summary: Delete plugin config key
+      description: "Requires permission `plugins:write`."
+      security:
+        - SessionCookie: []
+        - BearerApiKey: []
+      parameters:
+        - $ref: "#/components/parameters/PathUUID"
+        - name: key
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          $ref: "#/components/responses/Error"
+
+components:
+  securitySchemes:
+    SessionCookie:
+      type: apiKey
+      in: cookie
+      name: sentinel_session
+      description: "Server-side session cookie (name configurable via `SESSION_COOKIE_NAME`; default `sentinel_session`)."
+    BearerApiKey:
+      type: http
+      scheme: bearer
+      bearerFormat: sent_
+      description: "Personal API key (`Authorization: Bearer sent_…`)."
+    BearerAgentToken:
+      type: http
+      scheme: bearer
+      bearerFormat: sagt_
+      description: "Agent token from enrollment (`Authorization: Bearer sagt_…`)."
+
+  parameters:
+    PathUUID:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+  responses:
+    Error:
+      description: Standard error envelope
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+
+  schemas:
+    Error:
+      type: object
+      required: [code, message, request_id]
+      properties:
+        code:
+          type: string
+          example: unauthorized
+        message:
+          type: string
+        request_id:
+          type: string
+
+    ReadyResponse:
+      type: object
+      required: [status, checks]
+      properties:
+        status:
+          type: string
+          enum: [ready, not_ready]
+        checks:
+          type: object
+          additionalProperties:
+            type: string
+
+    RoleName:
+      type: string
+      enum: [ADMIN, SECURITY_ANALYST, OPERATOR, VIEWER]
+
+    UserPublic:
+      type: object
+      required: [id, email, display_name, is_active]
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        display_name:
+          type: string
+        is_active:
+          type: boolean
+        roles:
+          type: array
+          items:
+            $ref: "#/components/schemas/RoleName"
+
+    MeResponse:
+      type: object
+      required: [id, email, roles, permissions]
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+        display_name:
+          type: string
+        is_active:
+          type: boolean
+        roles:
+          type: array
+          items:
+            type: string
+        permissions:
+          type: array
+          items:
+            type: string
+          description: "Permission keys such as `alerts:read`"
+
+    LoginResponse:
+      type: object
+      properties:
+        user:
+          $ref: "#/components/schemas/UserPublic"
+        requires_totp:
+          type: boolean
+        login_challenge:
+          type: string
+          description: "Present when `requires_totp` is true"
+
+    APIKey:
+      type: object
+      required: [id, name, key_prefix, created_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        key_prefix:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    APIKeyCreated:
+      allOf:
+        - $ref: "#/components/schemas/APIKey"
+        - type: object
+          properties:
+            key:
+              type: string
+              description: "Full `sent_…` key (create response only)"
+
+    Server:
+      type: object
+      required: [id, name, hostname, created_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        hostname:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    Agent:
+      type: object
+      required: [id, server_id, name, status, agent_version]
+      properties:
+        id:
+          type: string
+          format: uuid
+        server_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        status:
+          type: string
+        agent_version:
+          type: string
+        last_heartbeat_at:
+          type: string
+          format: date-time
+
+    ServerDetail:
+      allOf:
+        - $ref: "#/components/schemas/Server"
+        - type: object
+          properties:
+            description:
+              type: string
+            environment:
+              type: string
+            agents:
+              type: array
+              items:
+                $ref: "#/components/schemas/Agent"
+
+    EnrollmentToken:
+      type: object
+      required: [id, server_id, token_prefix, expires_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        server_id:
+          type: string
+          format: uuid
+        token_prefix:
+          type: string
+        token:
+          type: string
+          description: "Full `senr_…` token (create response only)"
+        expires_at:
+          type: string
+          format: date-time
+
+    CanonicalEvent:
+      type: object
+      required: [ingest_id, occurred_at, source, message]
+      properties:
+        ingest_id:
+          type: string
+          maxLength: 128
+          description: "Idempotency key (alphanumeric / `.` `_` `-`)"
+        occurred_at:
+          type: string
+          format: date-time
+        source:
+          type: string
+          maxLength: 64
+          example: authlog
+        category:
+          type: string
+        severity:
+          type: string
+          enum: [info, low, medium, high, critical]
+        host:
+          type: string
+        message:
+          type: string
+          maxLength: 8192
+        raw:
+          description: Optional JSON payload
+        fields:
+          type: object
+          additionalProperties: true
+        fingerprint:
+          type: string
+
+    RejectedEvent:
+      type: object
+      properties:
+        index:
+          type: integer
+        code:
+          type: string
+        message:
+          type: string
+
+    IngestEventsResponse:
+      type: object
+      required: [accepted, duplicates]
+      properties:
+        accepted:
+          type: integer
+        duplicates:
+          type: integer
+        rejected:
+          type: array
+          items:
+            $ref: "#/components/schemas/RejectedEvent"
+
+    Event:
+      type: object
+      required: [id, agent_id, server_id, received_at, occurred_at, source, category, severity, host, message, ingest_id]
+      properties:
+        id:
+          type: string
+          format: uuid
+        agent_id:
+          type: string
+          format: uuid
+        server_id:
+          type: string
+          format: uuid
+        received_at:
+          type: string
+          format: date-time
+        occurred_at:
+          type: string
+          format: date-time
+        source:
+          type: string
+        category:
+          type: string
+        severity:
+          type: string
+        host:
+          type: string
+        message:
+          type: string
+        ingest_id:
+          type: string
+
+    AlertStatus:
+      type: string
+      enum: [OPEN, ACKNOWLEDGED, INVESTIGATING, RESOLVED]
+
+    Alert:
+      type: object
+      required: [id, server_id, title, description, status, severity, event_count, first_seen_at, last_seen_at, opened_at, created_at, updated_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        server_id:
+          type: string
+          format: uuid
+        rule_id:
+          type: string
+          format: uuid
+        assigned_to:
+          type: string
+          format: uuid
+          nullable: true
+        title:
+          type: string
+        description:
+          type: string
+        status:
+          $ref: "#/components/schemas/AlertStatus"
+        severity:
+          type: string
+        source_ip:
+          type: string
+        event_count:
+          type: integer
+        first_seen_at:
+          type: string
+          format: date-time
+        last_seen_at:
+          type: string
+          format: date-time
+        resolution_notes:
+          type: string
+        opened_at:
+          type: string
+          format: date-time
+        acknowledged_at:
+          type: string
+          format: date-time
+        investigating_at:
+          type: string
+          format: date-time
+        resolved_at:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    AlertTimelineEntry:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        event_type:
+          type: string
+        message:
+          type: string
+        actor_user_id:
+          type: string
+          format: uuid
+          nullable: true
+        metadata: {}
+        created_at:
+          type: string
+          format: date-time
+
+    RealtimeAlertEvent:
+      type: object
+      properties:
+        type:
+          type: string
+        alert_id:
+          type: string
+          format: uuid
+        server_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+        severity:
+          type: string
+        title:
+          type: string
+        event_count:
+          type: integer
+        at:
+          type: string
+          format: date-time
+
+    Rule:
+      type: object
+      required: [id, rule_id, name, enabled, severity, version, definition, created_at, updated_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        rule_id:
+          type: string
+          description: Stable YAML rule id
+        name:
+          type: string
+        description:
+          type: string
+        enabled:
+          type: boolean
+        severity:
+          type: string
+        version:
+          type: integer
+        definition:
+          description: Rule definition JSON
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    NotificationChannel:
+      type: object
+      required: [id, name, channel_type, config, has_secrets, enabled, created_at, updated_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        channel_type:
+          type: string
+          enum: [discord, slack, email, webhook]
+        config: {}
+        has_secrets:
+          type: boolean
+        enabled:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CreateNotificationChannel:
+      type: object
+      required: [name, channel_type]
+      properties:
+        name:
+          type: string
+        channel_type:
+          type: string
+          enum: [discord, slack, email, webhook]
+        config: {}
+        secrets:
+          type: object
+          properties:
+            webhook_url:
+              type: string
+            smtp_password:
+              type: string
+            headers:
+              type: object
+              additionalProperties:
+                type: string
+        enabled:
+          type: boolean
+
+    PatchNotificationChannel:
+      type: object
+      properties:
+        name:
+          type: string
+        config: {}
+        secrets:
+          type: object
+          properties:
+            webhook_url:
+              type: string
+            smtp_password:
+              type: string
+            headers:
+              type: object
+              additionalProperties:
+                type: string
+        enabled:
+          type: boolean
+
+    NotificationRule:
+      type: object
+      required: [id, name, enabled, min_severity, triggers, channel_ids, created_at, updated_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        enabled:
+          type: boolean
+        min_severity:
+          type: string
+        triggers:
+          type: array
+          items:
+            type: string
+        channel_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CreateNotificationRule:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        enabled:
+          type: boolean
+        min_severity:
+          type: string
+        triggers:
+          type: array
+          items:
+            type: string
+        channel_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+
+    PatchNotificationRule:
+      type: object
+      properties:
+        name:
+          type: string
+        enabled:
+          type: boolean
+        min_severity:
+          type: string
+        triggers:
+          type: array
+          items:
+            type: string
+        channel_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+
+    DashboardStats:
+      type: object
+      required: [servers_total, agents_active, events_last_24h, alerts_open, alerts_by_status, alerts_by_severity, events_by_severity_24h]
+      properties:
+        servers_total:
+          type: integer
+        agents_active:
+          type: integer
+        events_last_24h:
+          type: integer
+        alerts_open:
+          type: integer
+        alerts_by_status:
+          type: object
+          additionalProperties:
+            type: integer
+        alerts_by_severity:
+          type: object
+          additionalProperties:
+            type: integer
+        events_by_severity_24h:
+          type: object
+          additionalProperties:
+            type: integer
+
+    Plugin:
+      type: object
+      required: [id, slug, name, version, kind, api_version, checksum_sha256, has_signature, source_path, load_status, enabled, created_at, updated_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        slug:
+          type: string
+        name:
+          type: string
+        version:
+          type: string
+        description:
+          type: string
+        kind:
+          type: string
+        api_version:
+          type: integer
+        checksum_sha256:
+          type: string
+        has_signature:
+          type: boolean
+        source_path:
+          type: string
+        load_status:
+          type: string
+        load_error:
+          type: string
+        enabled:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    PluginSupportStatus:
+      type: object
+      properties:
+        Kind:
+          type: string
+        Runtime:
+          type: string
+          description: "`loaded` or `interface_only`"
+        Notes:
+          type: string
+
+    PluginConfig:
+      type: object
+      required: [key, value, updated_at]
+      properties:
+        key:
+          type: string
+        value: {}
+        updated_at:
+          type: string
+          format: date-time
