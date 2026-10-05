@@ -45,6 +45,13 @@ export default function NotificationsPage() {
   const [smtpPassword, setSmtpPassword] = useState("");
   const [chSaving, setChSaving] = useState(false);
   const [chError, setChError] = useState<string | null>(null);
+  const [testBusyId, setTestBusyId] = useState<string | null>(null);
+  const [testSuccess, setTestSuccess] = useState<string | null>(null);
+  const [testFailure, setTestFailure] = useState<{
+    channelName: string;
+    message: string;
+    detail?: string;
+  } | null>(null);
 
   const [ruleName, setRuleName] = useState("");
   const [minSeverity, setMinSeverity] = useState("high");
@@ -153,6 +160,41 @@ export default function NotificationsPage() {
     }
   }
 
+  async function testChannel(ch: NotificationChannel) {
+    if (!canWrite) return;
+    setTestBusyId(ch.id);
+    setTestSuccess(null);
+    setTestFailure(null);
+    setChError(null);
+    try {
+      const res = await apiFetch<{
+        ok: boolean;
+        message?: string;
+        channel_name?: string;
+      }>(`/notification-channels/${ch.id}/test`, { method: "POST" });
+      setTestSuccess(
+        res.message || `Test notification sent to ${ch.name}`,
+      );
+      setTimeout(() => setTestSuccess(null), 4000);
+    } catch (err) {
+      const message =
+        err instanceof ApiRequestError
+          ? err.message
+          : "Test notification failed";
+      const detail =
+        err instanceof ApiRequestError && err.code
+          ? `code: ${err.code}${err.status ? ` · HTTP ${err.status}` : ""}`
+          : undefined;
+      setTestFailure({
+        channelName: ch.name,
+        message,
+        detail,
+      });
+    } finally {
+      setTestBusyId(null);
+    }
+  }
+
   async function onCreateRule(e: FormEvent) {
     e.preventDefault();
     if (!canWrite) return;
@@ -235,6 +277,47 @@ export default function NotificationsPage() {
           Channels deliver alerts; rules decide when and to which channels
         </p>
       </header>
+
+      {testSuccess ? (
+        <div
+          role="status"
+          className="rounded-lg border border-emerald-700/50 bg-emerald-950/40 px-4 py-3 text-sm text-emerald-200"
+        >
+          {testSuccess}
+        </div>
+      ) : null}
+
+      {testFailure ? (
+        <div
+          role="alertdialog"
+          aria-modal="true"
+          className="rounded-xl border border-red-800/60 bg-red-950/40 p-4"
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-sm font-medium text-red-200">
+                Test failed — {testFailure.channelName}
+              </p>
+              <p className="mt-1 text-sm text-red-300/90">{testFailure.message}</p>
+              {testFailure.detail ? (
+                <p className="mt-2 font-mono text-xs text-zinc-500">
+                  {testFailure.detail}
+                </p>
+              ) : null}
+              <p className="mt-2 text-xs text-zinc-600">
+                Webhook URLs and secrets are never shown in error details.
+              </p>
+            </div>
+            <button
+              type="button"
+              className="rounded-lg border border-zinc-700 px-3 py-1.5 text-xs text-zinc-300 hover:border-zinc-500"
+              onClick={() => setTestFailure(null)}
+            >
+              Dismiss
+            </button>
+          </div>
+        </div>
+      ) : null}
 
       <section className="space-y-4">
         <h2 className="text-sm font-medium uppercase tracking-widest text-zinc-400">
@@ -384,6 +467,14 @@ export default function NotificationsPage() {
                 </div>
                 {canWrite ? (
                   <div className="flex gap-2">
+                    <button
+                      type="button"
+                      className="rounded-lg border border-zinc-700 px-3 py-1.5 text-xs text-zinc-300 hover:border-brand-500/50 disabled:opacity-50"
+                      disabled={testBusyId === ch.id}
+                      onClick={() => void testChannel(ch)}
+                    >
+                      {testBusyId === ch.id ? "Testing…" : "Test"}
+                    </button>
                     <button
                       type="button"
                       className="rounded-lg border border-zinc-700 px-3 py-1.5 text-xs text-zinc-300 hover:border-brand-500/50"

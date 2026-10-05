@@ -20,6 +20,7 @@ import (
 type NotificationsHandler struct {
 	Pool       *pgxpool.Pool
 	SecretsKey []byte
+	Notifier   *notify.Dispatcher
 }
 
 type channelSecretsRequest struct {
@@ -237,6 +238,50 @@ func (h *NotificationsHandler) DeleteChannel(w http.ResponseWriter, r *http.Requ
 	}
 	h.audit(r, "notification_channel.delete", "notification_channel", &id, nil)
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// TestChannel sends a one-shot test notification for a channel (RBAC: notifications:write).
+func (h *NotificationsHandler) TestChannel(w http.ResponseWriter, r *http.Request, id uuid.UUID) {
+	if h.Notifier == nil {
+		apperrors.WriteJSON(w, http.StatusServiceUnavailable, "misconfigured", "notification dispatcher not configured", middleware.RequestIDFromContext(r.Context()))
+		return
+	}
+	ch, err := store.GetNotificationChannel(r.Context(), h.Pool, id)
+	if err != nil {
+		if errors.Is(err, store.ErrNotFound) {
+			apperrors.WriteJSON(w, http.StatusNotFound, "not_found", "channel not found", middleware.RequestIDFromContext(r.Context()))
+			return
+		}
+		internalError(w, r)
+		return
+	}
+	err = h.Notifier.TestChannel(r.Context(), id)
+	if err != nil {
+		safe := notify.SafeError(err)
+		if errors.Is(err, store.ErrNotFound) {
+			apperrors.WriteJSON(w, http.StatusNotFound, "not_found", "channel not found", middleware.RequestIDFromContext(r.Context()))
+			return
+		}
+		h.audit(r, "notification_channel.test_failed", "notification_channel", &id, map[string]any{
+			"channel_name": ch.Name,
+			"channel_type": ch.ChannelType,
+			"error":        safe,
+		})
+		apperrors.WriteJSON(w, http.StatusBadGateway, "delivery_failed", safe, middleware.RequestIDFromContext(r.Context()))
+		return
+	}
+	h.audit(r, "notification_channel.test", "notification_channel", &id, map[string]any{
+		"channel_name": ch.Name,
+		"channel_type": ch.ChannelType,
+		"ok":           true,
+	})
+	writeJSON(w, http.StatusOK, map[string]any{
+		"ok":           true,
+		"channel_id":   id,
+		"channel_name": ch.Name,
+		"channel_type": ch.ChannelType,
+		"message":      "Test notification sent",
+	})
 }
 
 func (h *NotificationsHandler) ListRules(w http.ResponseWriter, r *http.Request) {

@@ -3,6 +3,7 @@ package notify
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"sync"
 	"time"
@@ -238,6 +239,38 @@ func (d *Dispatcher) send(ctx context.Context, ch store.NotificationChannel, ev 
 	default:
 		return errUnknownChannel(ch.ChannelType)
 	}
+}
+
+// TestChannel sends a single synchronous test notification for a channel.
+// It does not create a delivery row (no alert FK) and never returns secret material.
+func (d *Dispatcher) TestChannel(ctx context.Context, channelID uuid.UUID) error {
+	if d == nil || d.Pool == nil {
+		return errors.New("notification dispatcher not configured")
+	}
+	if len(d.SecretsKey) != 32 {
+		return errors.New("SECRETS_ENCRYPTION_KEY required for notification channels")
+	}
+	ch, err := store.GetNotificationChannel(ctx, d.Pool, channelID)
+	if err != nil {
+		return err
+	}
+	if !ch.Enabled {
+		return errors.New("channel is disabled")
+	}
+	if !ch.HasSecrets && ch.ChannelType != ChannelEmail {
+		return errors.New("channel has no secrets configured")
+	}
+	ev := AlertEvent{
+		AlertID:     uuid.Nil,
+		Title:       "Sentinel test notification",
+		Description: "This is a manual test from the Sentinel notifications UI.",
+		Severity:    "info",
+		Status:      "open",
+		EventCount:  1,
+		Trigger:     "channel.test",
+		OccurredAt:  time.Now().UTC(),
+	}
+	return d.send(ctx, ch, ev)
 }
 
 func errUnknownChannel(t string) error {

@@ -82,6 +82,20 @@ export type NotificationRule = {
   updated_at: string;
 };
 
+export type AuditLog = {
+  id: string;
+  actor_user_id?: string;
+  actor_email?: string;
+  actor_type: string;
+  action: string;
+  entity_type: string;
+  entity_id?: string;
+  metadata: Record<string, unknown> | unknown;
+  ip_address?: string;
+  user_agent?: string;
+  created_at: string;
+};
+
 export type Rule = {
   id: string;
   rule_id: string;

@@ -17,6 +17,11 @@ const nav = [
     label: "Notifications",
     perm: ["notifications", "read"] as const,
   },
+  {
+    href: "/audit-logs",
+    label: "Admin logs",
+    perm: ["audit_logs", "read"] as const,
+  },
 ];
 
 export function Sidebar() {
