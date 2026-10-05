@@ -1,4 +1,4 @@
-.PHONY: build test lint api-build api-test api-lint api-test-integration agent-build agent-test detection-test plugins-test db-migrate-up db-migrate-down db-migrate-status db-seed-dev db-test test-migrations run-api bootstrap-admin
+.PHONY: build test lint api-build api-test api-lint api-test-integration agent-build agent-test detection-test plugins-test db-migrate-up db-migrate-down db-migrate-status db-seed-dev db-test test-migrations run-api bootstrap-admin openapi-validate
 
 API_DIR := sentinel/api
 AGENT_DIR := sentinel/agent
@@ -36,6 +36,18 @@ plugins-test:
 api-lint:
 	@command -v golangci-lint >/dev/null 2>&1 || { echo "golangci-lint not installed; see https://golangci-lint.run/welcome/install/"; exit 1; }
 	cd $(API_DIR) && golangci-lint run ./...
+
+# Validate OpenAPI 3 when a linter is available (CI-friendly; skips cleanly if npx missing).
+openapi-validate:
+	@spec="$(API_DIR)/openapi/openapi.yaml"; \
+	if command -v npx >/dev/null 2>&1; then \
+	  npx --yes @redocly/cli@1.25.15 lint "$$spec" --skip-rule=no-unused-components || exit $$?; \
+	elif command -v docker >/dev/null 2>&1; then \
+	  docker run --rm -v "$(CURDIR)/$(API_DIR)/openapi:/spec" redocly/cli:1.25.15 lint /spec/openapi.yaml --skip-rule=no-unused-components || exit $$?; \
+	else \
+	  echo "openapi-validate: no npx/docker; running Go coverage test only"; \
+	fi
+	cd $(API_DIR) && go test ./openapi/ -count=1
 
 db-migrate-up:
 	@test -n "$$DATABASE_URL" || (echo "DATABASE_URL is required"; exit 1)

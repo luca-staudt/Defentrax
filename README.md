@@ -83,6 +83,7 @@ make lint
 ## Documentation
 
 - In-repo: [`sentinel/docs/`](sentinel/docs/)
+- API (OpenAPI): [`sentinel/docs/api.md`](sentinel/docs/api.md) · [`sentinel/api/openapi/openapi.yaml`](sentinel/api/openapi/openapi.yaml)
 - Plugins: [`sentinel/docs/plugins.md`](sentinel/docs/plugins.md)
 - API module: [`sentinel/api/README.md`](sentinel/api/README.md)
 

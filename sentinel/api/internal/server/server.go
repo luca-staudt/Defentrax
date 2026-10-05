@@ -19,6 +19,7 @@ import (
 	"github.com/luca-staudt/Sentinel/sentinel/api/internal/notify"
 	"github.com/luca-staudt/Sentinel/sentinel/api/internal/pluginruntime"
 	"github.com/luca-staudt/Sentinel/sentinel/api/internal/realtime"
+	"github.com/luca-staudt/Sentinel/sentinel/api/openapi"
 )
 
 // Server wraps the HTTP server and routing.
@@ -53,6 +54,10 @@ func NewWithOptions(log *slog.Logger, cfg config.Config, pool *pgxpool.Pool, log
 	rootMux.HandleFunc("GET /healthz", handlers.Health)
 	rootMux.HandleFunc("GET /readyz", readiness.Ready)
 	rootMux.HandleFunc("GET /api/v1", handlers.Version)
+	// OpenAPI artifacts are public and do not require a database.
+	rootMux.HandleFunc("GET /api/v1/openapi.yaml", openapi.Spec)
+	rootMux.HandleFunc("GET /api/v1/docs", openapi.UI)
+	rootMux.HandleFunc("GET /api/v1/docs/", openapi.UI)
 
 	apiMux := http.NewServeMux()
 	authH := &handlers.AuthHandler{Pool: pool, Config: cfg, Limiter: loginLimiter}

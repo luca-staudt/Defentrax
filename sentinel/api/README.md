@@ -18,6 +18,8 @@ Go HTTP service for Sentinel’s control plane: REST under `/api/v1`, future Web
 
 **Phase 12 scope:** Plugin system — stable SDK interfaces, allowlist/checksum/(optional) signature load policy, `plugin_configs`, enable/disable APIs (`plugins:read`/`plugins:write`), example `echo-parser`. See [`../docs/plugins.md`](../docs/plugins.md).
 
+**Phase 13 scope:** OpenAPI 3 for implemented `/api/v1` routes — [`openapi/openapi.yaml`](openapi/openapi.yaml), served at `GET /api/v1/openapi.yaml` with Swagger UI at `GET /api/v1/docs`. Operator overview: [`../docs/api.md`](../docs/api.md).
+
 ## Run locally
 
 From the repository root (requires `DATABASE_URL`, `SESSION_SECRET`, and migrations applied):
@@ -48,6 +50,8 @@ Alternatively, set the same `SENTINEL_BOOTSTRAP_*` variables before starting the
 |--------|------|------|-------------|
 | GET | `/healthz` | no | Liveness |
 | GET | `/readyz` | no | Readiness |
+| GET | `/api/v1/openapi.yaml` | no | OpenAPI 3 YAML |
+| GET | `/api/v1/docs` | no | Swagger UI |
 | POST | `/api/v1/auth/login` | no | Password login (TOTP challenge when enabled) |
 | POST | `/api/v1/auth/totp/verify` | no | Complete login with TOTP |
 | POST | `/api/v1/auth/recovery/verify` | no | Complete login with recovery code |

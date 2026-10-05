@@ -23,3 +23,8 @@ Further architecture and phase planning will be added here as phases land (see r
 ## Plugins
 
 - [plugins.md](plugins.md) — v1 plugin SDK, load policy, example plugin, API/RBAC (Phase 12)
+
+## API
+
+- [api.md](api.md) — REST overview, auth schemes, OpenAPI / Swagger UI (Phase 13)
+- Spec: [`../api/openapi/openapi.yaml`](../api/openapi/openapi.yaml) — also `GET /api/v1/openapi.yaml` and `GET /api/v1/docs`
