@@ -1,13 +1,14 @@
-.PHONY: build test lint api-build api-test api-lint api-test-integration agent-build agent-test detection-test db-migrate-up db-migrate-down db-migrate-status db-seed-dev db-test test-migrations run-api bootstrap-admin
+.PHONY: build test lint api-build api-test api-lint api-test-integration agent-build agent-test detection-test plugins-test db-migrate-up db-migrate-down db-migrate-status db-seed-dev db-test test-migrations run-api bootstrap-admin
 
 API_DIR := sentinel/api
 AGENT_DIR := sentinel/agent
 DETECTION_DIR := sentinel/detection
+PLUGINS_DIR := sentinel/plugins
 DB_DIR := sentinel/database
 
 build: api-build agent-build
 
-test: api-test agent-test detection-test db-test
+test: api-test agent-test detection-test plugins-test db-test
 
 lint: api-lint
 
@@ -28,6 +29,9 @@ agent-test:
 
 detection-test:
 	cd $(DETECTION_DIR) && go test ./...
+
+plugins-test:
+	cd $(PLUGINS_DIR) && go test ./...
 
 api-lint:
 	@command -v golangci-lint >/dev/null 2>&1 || { echo "golangci-lint not installed; see https://golangci-lint.run/welcome/install/"; exit 1; }

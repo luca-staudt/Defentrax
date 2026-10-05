@@ -45,6 +45,12 @@ type Config struct {
 	NotifyMaxAttempts int
 	NotifyBaseBackoff time.Duration
 	NotifyMaxBackoff  time.Duration
+
+	// Plugin load policy (Phase 12). Empty PluginDir disables discovery.
+	PluginDir              string
+	PluginAllowlist        string
+	PluginRequireSignature bool
+	PluginTrustedPublicKey string // base64 Ed25519 public key
 }
 
 // Load reads configuration from environment variables with secure defaults.
@@ -161,6 +167,13 @@ func Load() (Config, error) {
 		cfg.SecretsEncryptionKey = decoded
 	} else if len(cfg.TOTPEncryptionKey) == 32 {
 		cfg.SecretsEncryptionKey = cfg.TOTPEncryptionKey
+	}
+
+	cfg.PluginDir = strings.TrimSpace(os.Getenv("SENTINEL_PLUGIN_DIR"))
+	cfg.PluginAllowlist = strings.TrimSpace(os.Getenv("SENTINEL_PLUGIN_ALLOWLIST"))
+	cfg.PluginTrustedPublicKey = strings.TrimSpace(os.Getenv("SENTINEL_PLUGIN_TRUSTED_PUBLIC_KEY"))
+	if v := strings.TrimSpace(os.Getenv("SENTINEL_PLUGIN_REQUIRE_SIGNATURE")); v != "" {
+		cfg.PluginRequireSignature = v == "1" || strings.EqualFold(v, "true")
 	}
 
 	return cfg, nil

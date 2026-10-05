@@ -19,3 +19,7 @@ Further architecture and phase planning will be added here as phases land (see r
 
 - [agent.md](agent.md) — install, enrollment, permissions
 - [docker-monitoring.md](docker-monitoring.md) — optional Docker Engine monitoring (Phase 11)
+
+## Plugins
+
+- [plugins.md](plugins.md) — v1 plugin SDK, load policy, example plugin, API/RBAC (Phase 12)

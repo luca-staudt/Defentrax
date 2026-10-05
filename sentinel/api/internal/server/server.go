@@ -17,6 +17,7 @@ import (
 	"github.com/luca-staudt/Sentinel/sentinel/api/internal/handlers"
 	"github.com/luca-staudt/Sentinel/sentinel/api/internal/middleware"
 	"github.com/luca-staudt/Sentinel/sentinel/api/internal/notify"
+	"github.com/luca-staudt/Sentinel/sentinel/api/internal/pluginruntime"
 	"github.com/luca-staudt/Sentinel/sentinel/api/internal/realtime"
 )
 
@@ -32,6 +33,7 @@ type Options struct {
 	AlertHub   *realtime.Hub
 	Notifier   *notify.Dispatcher
 	SecretsKey []byte
+	Plugins    *pluginruntime.Runtime
 }
 
 // New constructs the API HTTP server with routes and middleware.
@@ -67,6 +69,7 @@ func NewWithOptions(log *slog.Logger, cfg config.Config, pool *pgxpool.Pool, log
 	if len(notifH.SecretsKey) == 0 {
 		notifH.SecretsKey = cfg.SecretsEncryptionKey
 	}
+	pluginsH := &handlers.PluginsHandler{Pool: pool, Runtime: opts.Plugins}
 	if opts.Detection != nil && opts.Detection.Runner != nil {
 		runner := opts.Detection.Runner
 		agentH.OnDetect = func(eventID, serverID, agentID uuid.UUID, occurredAt time.Time, source, category, severity, host, message string, fields []byte) {
@@ -267,6 +270,53 @@ func NewWithOptions(log *slog.Logger, cfg config.Config, pool *pgxpool.Pool, log
 			return
 		}
 		rulesH.Patch(w, r, id)
+	})))
+
+	apiMux.Handle("GET /api/v1/plugins", protectPerm(pool, cfg, "plugins", "read", http.HandlerFunc(pluginsH.List)))
+	apiMux.Handle("GET /api/v1/plugins/{id}", protectPerm(pool, cfg, "plugins", "read", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		id, err := uuid.Parse(r.PathValue("id"))
+		if err != nil {
+			requestID := middleware.RequestIDFromContext(r.Context())
+			apperrors.WriteJSON(w, http.StatusBadRequest, "invalid_id", "invalid plugin id", requestID)
+			return
+		}
+		pluginsH.Get(w, r, id)
+	})))
+	apiMux.Handle("PATCH /api/v1/plugins/{id}", protectPerm(pool, cfg, "plugins", "write", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		id, err := uuid.Parse(r.PathValue("id"))
+		if err != nil {
+			requestID := middleware.RequestIDFromContext(r.Context())
+			apperrors.WriteJSON(w, http.StatusBadRequest, "invalid_id", "invalid plugin id", requestID)
+			return
+		}
+		pluginsH.Patch(w, r, id)
+	})))
+	apiMux.Handle("GET /api/v1/plugins/{id}/configs", protectPerm(pool, cfg, "plugins", "read", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		id, err := uuid.Parse(r.PathValue("id"))
+		if err != nil {
+			requestID := middleware.RequestIDFromContext(r.Context())
+			apperrors.WriteJSON(w, http.StatusBadRequest, "invalid_id", "invalid plugin id", requestID)
+			return
+		}
+		pluginsH.ListConfigs(w, r, id)
+	})))
+	apiMux.Handle("PUT /api/v1/plugins/{id}/configs/{key}", protectPerm(pool, cfg, "plugins", "write", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		id, err := uuid.Parse(r.PathValue("id"))
+		if err != nil {
+			requestID := middleware.RequestIDFromContext(r.Context())
+			apperrors.WriteJSON(w, http.StatusBadRequest, "invalid_id", "invalid plugin id", requestID)
+			return
+		}
+		pluginsH.PutConfig(w, r, id, r.PathValue("key"))
+	})))
+	apiMux.Handle("DELETE /api/v1/plugins/{id}/configs/{key}", protectPerm(pool, cfg, "plugins", "write", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		id, err := uuid.Parse(r.PathValue("id"))
+		if err != nil {
+			requestID := middleware.RequestIDFromContext(r.Context())
+			apperrors.WriteJSON(w, http.StatusBadRequest, "invalid_id", "invalid plugin id", requestID)
+			return
+		}
+		pluginsH.DeleteConfig(w, r, id, r.PathValue("key"))
 	})))
 
 	apiMux.HandleFunc("/api/v1/", apiV1NotFound)

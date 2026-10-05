@@ -21,9 +21,13 @@ import (
 	"github.com/luca-staudt/Sentinel/sentinel/api/internal/detectionrun"
 	"github.com/luca-staudt/Sentinel/sentinel/api/internal/logging"
 	"github.com/luca-staudt/Sentinel/sentinel/api/internal/notify"
+	"github.com/luca-staudt/Sentinel/sentinel/api/internal/pluginruntime"
 	"github.com/luca-staudt/Sentinel/sentinel/api/internal/realtime"
 	"github.com/luca-staudt/Sentinel/sentinel/api/internal/server"
 	"github.com/luca-staudt/Sentinel/sentinel/detection"
+	"github.com/luca-staudt/Sentinel/sentinel/plugins/loader"
+
+	_ "github.com/luca-staudt/Sentinel/sentinel/plugins/examples/echo-parser" // register example plugin factory
 )
 
 func main() {
@@ -127,6 +131,30 @@ func main() {
 			Runner: runner,
 		}
 		opts.Detection = detectSvc
+
+		pluginDir := cfg.PluginDir
+		if pluginDir == "" {
+			pluginDir = pluginsDir()
+		}
+		pubKey, err := loader.ParsePublicKey(cfg.PluginTrustedPublicKey)
+		if err != nil {
+			log.Error("plugin public key invalid", "error", err)
+			os.Exit(1)
+		}
+		pol := loader.Policy{
+			RootDir:          pluginDir,
+			Allowlist:        loader.ParseAllowlist(cfg.PluginAllowlist),
+			RequireSignature: cfg.PluginRequireSignature,
+			TrustedPublicKey: pubKey,
+		}
+		pluginRT, err := pluginruntime.Bootstrap(ctx, log, pool, pol)
+		if err != nil {
+			log.Error("plugin runtime bootstrap failed", "error", err, "plugin_dir", pluginDir)
+			os.Exit(1)
+		}
+		defer pluginRT.Close(context.Background())
+		opts.Plugins = pluginRT
+		log.Info("plugin runtime ready", "plugin_dir", pluginDir, "allowlist", cfg.PluginAllowlist)
 	}
 
 	srv := server.NewWithOptions(log, cfg, pool, loginLimiter, ingestLimiter, opts)
@@ -174,6 +202,20 @@ func rulesDir() string {
 		}
 	}
 	return filepath.Join("..", "rules")
+}
+
+func pluginsDir() string {
+	candidates := []string{
+		filepath.Join("..", "plugins", "examples"),
+		filepath.Join("sentinel", "plugins", "examples"),
+		filepath.Join("plugins", "examples"),
+	}
+	for _, c := range candidates {
+		if st, err := os.Stat(c); err == nil && st.IsDir() {
+			return c
+		}
+	}
+	return filepath.Join("..", "plugins", "examples")
 }
 
 func runNotificationRetrier(log *slog.Logger, d *notify.Dispatcher) {

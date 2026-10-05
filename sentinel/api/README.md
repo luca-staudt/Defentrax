@@ -16,6 +16,8 @@ Go HTTP service for Sentinel’s control plane: REST under `/api/v1`, future Web
 
 **Phase 10 scope:** Notification channels (Discord/Slack/email/generic webhook) with AES-GCM secrets at rest; severity-threshold rules; retry/backoff; audit on delivery failures; wired to alert create/update/status-change; admin APIs under `/api/v1/notification-channels` and `/api/v1/notification-rules` (`notifications:read`/`notifications:write`).
 
+**Phase 12 scope:** Plugin system — stable SDK interfaces, allowlist/checksum/(optional) signature load policy, `plugin_configs`, enable/disable APIs (`plugins:read`/`plugins:write`), example `echo-parser`. See [`../docs/plugins.md`](../docs/plugins.md).
+
 ## Run locally
 
 From the repository root (requires `DATABASE_URL`, `SESSION_SECRET`, and migrations applied):

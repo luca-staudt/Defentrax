@@ -11,7 +11,7 @@ Sentinel is an open-source security monitoring and lightweight SIEM platform for
 | **Collection** | Go agent on hosts for auth logs, web servers, systemd, firewall, Docker |
 | **Control plane** | Go API — REST `/api/v1`, WebSockets, RBAC, ingestion, audit |
 | **Detection** | YAML rule engine with possibility-oriented alert wording |
-| **Operations** | Alert lifecycle, deduplication, notifications, plugins |
+| **Operations** | Alert lifecycle, deduplication, notifications, plugin SDK (v1) |
 | **Deploy** | Docker Compose, Kubernetes, Helm |
 
 Implementation is phased; see `sentinel/docs/` for secure-default notes and in-repo documentation stubs.
@@ -83,6 +83,7 @@ make lint
 ## Documentation
 
 - In-repo: [`sentinel/docs/`](sentinel/docs/)
+- Plugins: [`sentinel/docs/plugins.md`](sentinel/docs/plugins.md)
 - API module: [`sentinel/api/README.md`](sentinel/api/README.md)
 
 ## Repository
