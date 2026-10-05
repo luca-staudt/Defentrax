@@ -33,7 +33,7 @@ jobs:
           gitleaks detect --source . --config .gitleaks.toml --verbose --redact
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v7
         with:
           go-version: "1.22.x"
           cache-dependency-path: |
