@@ -21,6 +21,8 @@ type Config struct {
 	CollectEvery     time.Duration
 	AuthLogPath      string
 	UseJournald      bool
+	DockerEnabled    bool
+	DockerSocket     string
 }
 
 const defaultCredentialPath = "/var/lib/sentinel/agent/credentials.json"
@@ -50,6 +52,13 @@ func Load() (Config, error) {
 	if cfg.AuthLogPath == "" {
 		cfg.AuthLogPath = "/var/log/auth.log"
 	}
+	if v := strings.TrimSpace(os.Getenv("SENTINEL_DOCKER_ENABLED")); v == "1" || strings.EqualFold(v, "true") {
+		cfg.DockerEnabled = true
+	}
+	cfg.DockerSocket = strings.TrimSpace(os.Getenv("SENTINEL_DOCKER_SOCKET"))
+	if cfg.DockerSocket == "" {
+		cfg.DockerSocket = "/var/run/docker.sock"
+	}
 	cfg.HeartbeatEvery = durationEnv("SENTINEL_HEARTBEAT_INTERVAL", 30*time.Second)
 	cfg.CollectEvery = durationEnv("SENTINEL_COLLECT_INTERVAL", 60*time.Second)
 
@@ -75,6 +84,6 @@ func durationEnv(key string, def time.Duration) time.Duration {
 
 // String returns a log-safe summary (never includes tokens).
 func (c Config) String() string {
-	return fmt.Sprintf("api=%s tls_insecure=%v cred_path=%s journald=%v auth_log=%s",
-		c.APIBaseURL, c.TLSSkipVerify, c.CredentialPath, c.UseJournald, c.AuthLogPath)
+	return fmt.Sprintf("api=%s tls_insecure=%v cred_path=%s journald=%v auth_log=%s docker=%v docker_socket=%s",
+		c.APIBaseURL, c.TLSSkipVerify, c.CredentialPath, c.UseJournald, c.AuthLogPath, c.DockerEnabled, c.DockerSocket)
 }

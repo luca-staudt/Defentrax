@@ -1,0 +1,20 @@
+{
+  "Id": "d00dd00dd00dd00dd00dd00dd00dd00d",
+  "Name": "/rootfs-mount",
+  "Config": {"Image": "ubuntu:22.04"},
+  "HostConfig": {
+    "Privileged": false,
+    "NetworkMode": "bridge",
+    "PidMode": "",
+    "Binds": ["/:/host:ro"]
+  },
+  "Mounts": [
+    {
+      "Type": "bind",
+      "Source": "/",
+      "Destination": "/host",
+      "Mode": "ro",
+      "RW": false
+    }
+  ]
+}

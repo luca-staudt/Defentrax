@@ -1,12 +1,13 @@
-# Sentinel Agent (Phase 5)
+# Sentinel Agent
 
-The Sentinel agent runs on monitored Linux hosts, enrolls with the control plane, sends heartbeats, and uploads normalized auth/SSH events.
+The Sentinel agent runs on monitored Linux hosts, enrolls with the control plane, sends heartbeats, and uploads normalized security events (auth/SSH by default; optional Docker Engine events).
 
 ## Requirements
 
 - Linux for live auth log collection (`/var/log/auth.log` or journald)
 - Network egress to the Sentinel API over **HTTPS** (TLS 1.2+)
 - Read access to auth logs (typically membership in `adm` or `systemd-journal` — no root required)
+- **Optional Docker monitoring:** read access to the Docker Engine API socket (see [Docker monitoring](docker-monitoring.md))
 
 ## Install / run
 
@@ -29,6 +30,8 @@ go build -o sentinel-agent ./cmd/sentinel-agent
 | `SENTINEL_TLS_INSECURE` | no | **`true` only for local dev** — skips TLS certificate verification |
 | `SENTINEL_AUTH_LOG_PATH` | no | Default `/var/log/auth.log` |
 | `SENTINEL_USE_JOURNALD` | no | `true` to read via `journalctl` instead of a file |
+| `SENTINEL_DOCKER_ENABLED` | no | `true` to enable observe-only Docker event collection (default off) |
+| `SENTINEL_DOCKER_SOCKET` | no | Docker Engine socket path (default `/var/run/docker.sock`) |
 | `SENTINEL_HEARTBEAT_INTERVAL` | no | Default `30s` |
 | `SENTINEL_COLLECT_INTERVAL` | no | Default `60s` |
 
@@ -54,6 +57,16 @@ Secrets are **never** written to logs; the agent redacts `senr_`, `sagt_`, and `
 
 - **File mode:** `/var/log/auth.log` is often `640 root:adm` — add the agent user to group `adm`.
 - **Journald:** grant `systemd-journal` group or ACLs so `journalctl -u ssh/sshd` works without root.
+- **Docker (optional):** add the agent user to group `docker` so it can read `/var/run/docker.sock` (mode `660`). Do **not** run the agent as root only for Docker. Full least-privilege guidance: [docker-monitoring.md](docker-monitoring.md).
+
+## Collectors
+
+| Collector | Default | Output `source` |
+|-----------|---------|-----------------|
+| Auth / SSH log | on | `authlog` |
+| Docker Engine events | off (`SENTINEL_DOCKER_ENABLED`) | `docker` |
+
+Docker collection is **observe-only** (events + inspect). The agent does not isolate, kill, or delete containers.
 
 ## API endpoints (agent-scoped)
 

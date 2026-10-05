@@ -1,0 +1,14 @@
+id: docker.possible-host-network
+name: Possible container using host network
+description: A container was started with network_mode=host, which shares the host network stack and may increase exposure if unexpected.
+severity: medium
+version: 1
+condition:
+  source: docker
+  category: container
+  event_type: container_start
+  fields:
+    host_network: "true"
+action:
+  title: Possible host-network container on {{host}}
+  description: Container {{container_name}} (id {{container_id}}) started with host networking on {{host}}. Confirm this deployment matches policy.

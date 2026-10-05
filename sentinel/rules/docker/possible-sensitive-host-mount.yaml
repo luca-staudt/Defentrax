@@ -1,0 +1,14 @@
+id: docker.possible-sensitive-host-mount
+name: Possible sensitive host path mount
+description: A container bind-mounts a sensitive host path (for example /, /etc, /proc, /sys, or /root), which may allow broad host access if unexpected.
+severity: high
+version: 1
+condition:
+  source: docker
+  category: container
+  event_type: container_start
+  fields:
+    sensitive_mount: "true"
+action:
+  title: Possible sensitive host mount on {{host}}
+  description: Container {{container_name}} (id {{container_id}}) mounted a sensitive host path ({{mount_sources}}) on {{host}}. Review whether the bind mount is required.

@@ -26,6 +26,9 @@ func TestLoadRulesFromDir(t *testing.T) {
 		"linux.possible-sudo-elevation",
 		"linux.possible-failed-login",
 		"docker.possible-privileged-container",
+		"docker.possible-host-network",
+		"docker.possible-docker-socket-mount",
+		"docker.possible-sensitive-host-mount",
 	} {
 		if _, ok := ids[want]; !ok {
 			t.Fatalf("missing shipped rule %q", want)

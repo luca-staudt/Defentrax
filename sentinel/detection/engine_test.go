@@ -200,6 +200,83 @@ func TestDockerPrivilegedNegative(t *testing.T) {
 	}
 }
 
+func TestDockerHostNetworkPositive(t *testing.T) {
+	rule := loadRule(t, "docker.possible-host-network")
+	eng := detection.NewEngine(nil)
+	eng.SetRules([]detection.Rule{rule}, map[string]bool{rule.ID: true})
+	ev := detection.Event{
+		ID:       uuid.New(),
+		ServerID: uuid.New(),
+		Source:   "docker",
+		Category: "container",
+		Host:     "node-a",
+		Fields: map[string]any{
+			"event_type":     "container_start",
+			"host_network":   "true",
+			"container_name": "edge",
+			"container_id":   "abc",
+		},
+	}
+	m, err := eng.Evaluate(context.Background(), ev)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(m) != 1 {
+		t.Fatalf("expected match, got %d", len(m))
+	}
+}
+
+func TestDockerSocketMountPositive(t *testing.T) {
+	rule := loadRule(t, "docker.possible-docker-socket-mount")
+	eng := detection.NewEngine(nil)
+	eng.SetRules([]detection.Rule{rule}, map[string]bool{rule.ID: true})
+	ev := detection.Event{
+		ID:       uuid.New(),
+		ServerID: uuid.New(),
+		Source:   "docker",
+		Category: "container",
+		Fields: map[string]any{
+			"event_type":          "container_start",
+			"docker_socket_mount": "true",
+			"container_name":      "tooling",
+			"container_id":        "def",
+		},
+	}
+	m, err := eng.Evaluate(context.Background(), ev)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(m) != 1 {
+		t.Fatalf("expected match, got %d", len(m))
+	}
+}
+
+func TestDockerSensitiveMountPositive(t *testing.T) {
+	rule := loadRule(t, "docker.possible-sensitive-host-mount")
+	eng := detection.NewEngine(nil)
+	eng.SetRules([]detection.Rule{rule}, map[string]bool{rule.ID: true})
+	ev := detection.Event{
+		ID:       uuid.New(),
+		ServerID: uuid.New(),
+		Source:   "docker",
+		Category: "container",
+		Fields: map[string]any{
+			"event_type":      "container_start",
+			"sensitive_mount": "true",
+			"mount_sources":   "/",
+			"container_name":  "rootfs",
+			"container_id":    "ghi",
+		},
+	}
+	m, err := eng.Evaluate(context.Background(), ev)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(m) != 1 {
+		t.Fatalf("expected match, got %d", len(m))
+	}
+}
+
 func TestSudoPositive(t *testing.T) {
 	rule := loadRule(t, "linux.possible-sudo-elevation")
 	eng := detection.NewEngine(nil)

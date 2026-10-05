@@ -9,9 +9,11 @@ import (
 
 	agentapi "github.com/luca-staudt/Sentinel/sentinel/agent/internal/api"
 	"github.com/luca-staudt/Sentinel/sentinel/agent/internal/collector/authlog"
+	dockercol "github.com/luca-staudt/Sentinel/sentinel/agent/internal/collector/docker"
 	"github.com/luca-staudt/Sentinel/sentinel/agent/internal/config"
 	"github.com/luca-staudt/Sentinel/sentinel/agent/internal/credentials"
 	agentlog "github.com/luca-staudt/Sentinel/sentinel/agent/internal/logging"
+	"github.com/luca-staudt/Sentinel/sentinel/pkg/event"
 )
 
 func main() {
@@ -59,6 +61,17 @@ func main() {
 	}
 	var fileOffset int64
 
+	var dockerCollector *dockercol.Collector
+	if cfg.DockerEnabled {
+		dockerCollector = dockercol.NewCollector(dockercol.NewClient(cfg.DockerSocket), cfg.AgentName)
+		go func() {
+			if err := dockerCollector.Run(ctx); err != nil && ctx.Err() == nil {
+				log.Warn("docker collector stopped", "err", err)
+			}
+		}()
+		log.Info("docker monitoring enabled (observe-only)", "socket", cfg.DockerSocket)
+	}
+
 	heartbeatTicker := time.NewTicker(cfg.HeartbeatEvery)
 	collectTicker := time.NewTicker(cfg.CollectEvery)
 	defer heartbeatTicker.Stop()
@@ -70,6 +83,16 @@ func main() {
 			return
 		}
 		log.Debug("heartbeat ok")
+	}
+	ingest := func(events []event.CanonicalEvent, source string) {
+		if len(events) == 0 {
+			return
+		}
+		if err := client.IngestEvents(events); err != nil {
+			log.Warn("ingest events", "err", err, "count", len(events), "source", source)
+			return
+		}
+		log.Info("ingested events", "count", len(events), "source", source)
 	}
 	sendHeartbeat()
 
@@ -84,19 +107,15 @@ func main() {
 			events, off, err := collector.CollectTail(fileOffset)
 			if err != nil {
 				log.Warn("collect auth events", "err", err)
-				continue
+			} else {
+				if !cfg.UseJournald {
+					fileOffset = off
+				}
+				ingest(events, "authlog")
 			}
-			if !cfg.UseJournald {
-				fileOffset = off
+			if dockerCollector != nil {
+				ingest(dockerCollector.Drain(), "docker")
 			}
-			if len(events) == 0 {
-				continue
-			}
-			if err := client.IngestEvents(events); err != nil {
-				log.Warn("ingest events", "err", err, "count", len(events))
-				continue
-			}
-			log.Info("ingested events", "count", len(events))
 		}
 	}
 }

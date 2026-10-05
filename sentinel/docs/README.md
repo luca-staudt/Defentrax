@@ -14,3 +14,8 @@ Operator and developer documentation living alongside the codebase.
 - Containers should run as non-root (enforced in deployment phases).
 
 Further architecture and phase planning will be added here as phases land (see repository root `README.md`).
+
+## Agent
+
+- [agent.md](agent.md) — install, enrollment, permissions
+- [docker-monitoring.md](docker-monitoring.md) — optional Docker Engine monitoring (Phase 11)

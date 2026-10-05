@@ -1,0 +1,14 @@
+id: docker.possible-docker-socket-mount
+name: Possible Docker socket mount
+description: A container mounts the Docker engine socket, which typically grants control equivalent to root on the host if the runtime is reachable inside the container.
+severity: high
+version: 1
+condition:
+  source: docker
+  category: container
+  event_type: container_start
+  fields:
+    docker_socket_mount: "true"
+action:
+  title: Possible Docker socket mount on {{host}}
+  description: Container {{container_name}} (id {{container_id}}) appears to mount docker.sock on {{host}}. Confirm this is an approved tooling pattern.
