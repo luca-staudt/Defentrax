@@ -11,6 +11,8 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/luca-staudt/Sentinel/sentinel/api/internal/auth/ratelimit"
+	"github.com/luca-staudt/Sentinel/sentinel/api/internal/bootstrap"
 	"github.com/luca-staudt/Sentinel/sentinel/api/internal/config"
 	"github.com/luca-staudt/Sentinel/sentinel/api/internal/db"
 	"github.com/luca-staudt/Sentinel/sentinel/api/internal/logging"
@@ -38,9 +40,26 @@ func main() {
 		defer p.Close()
 		pool = p
 		log.Info("database connected")
+
+		if created, err := bootstrap.EnsureFirstAdmin(ctx, pool); err != nil {
+			log.Error("bootstrap admin failed", "error", err)
+			os.Exit(1)
+		} else if created {
+			log.Info("bootstrap admin user created from environment")
+		}
 	}
 
-	srv := server.New(log, cfg, pool)
+	limiter, closeLimiter, err := ratelimit.NewFromConfig(cfg.RedisURL, cfg.LoginRateLimitMax, cfg.LoginRateLimitWindow)
+	if err != nil {
+		log.Error("rate limiter init failed", "error", err)
+		os.Exit(1)
+	}
+	defer func() { _ = closeLimiter() }()
+	if cfg.RedisURL == "" {
+		log.Info("login rate limiting uses in-memory store (set REDIS_URL for multi-instance)")
+	}
+
+	srv := server.New(log, cfg, pool, limiter)
 
 	errCh := make(chan error, 1)
 	go func() {

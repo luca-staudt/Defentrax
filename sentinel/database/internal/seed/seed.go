@@ -60,6 +60,7 @@ func RunDev(ctx context.Context, pool *pgxpool.Pool) error {
 		{"servers", "write", "Manage servers and agents"},
 		{"rules", "write", "Manage detection rules"},
 		{"audit_logs", "read", "View audit trail"},
+		{"api_keys", "write", "Manage personal API keys"},
 	}
 	for _, p := range perms {
 		_, err := tx.Exec(ctx, `

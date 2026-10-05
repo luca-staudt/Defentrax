@@ -1,10 +1,12 @@
 package config
 
 import (
+	"encoding/base64"
 	"fmt"
 	"os"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // Config holds API server settings loaded from the environment.
@@ -13,6 +15,18 @@ type Config struct {
 	Port        int
 	LogLevel    string
 	DatabaseURL string
+
+	SessionSecret     []byte
+	SessionCookieName string
+	SessionTTL        time.Duration
+	CookieSecure      bool
+
+	RedisURL string
+
+	TOTPEncryptionKey []byte
+
+	LoginRateLimitMax    int
+	LoginRateLimitWindow time.Duration
 }
 
 // Load reads configuration from environment variables with secure defaults.
@@ -21,6 +35,8 @@ func Load() (Config, error) {
 		Env:         strings.TrimSpace(getEnv("APP_ENV", "development")),
 		LogLevel:    strings.TrimSpace(getEnv("LOG_LEVEL", "info")),
 		DatabaseURL: strings.TrimSpace(os.Getenv("DATABASE_URL")),
+		SessionCookieName: strings.TrimSpace(getEnv("SESSION_COOKIE_NAME", "sentinel_session")),
+		RedisURL:          strings.TrimSpace(os.Getenv("REDIS_URL")),
 	}
 
 	portStr := strings.TrimSpace(getEnv("API_PORT", "8080"))
@@ -29,6 +45,47 @@ func Load() (Config, error) {
 		return Config{}, fmt.Errorf("invalid API_PORT %q: must be 1-65535", portStr)
 	}
 	cfg.Port = port
+
+	ttlHours, err := strconv.Atoi(getEnv("SESSION_TTL_HOURS", "24"))
+	if err != nil || ttlHours < 1 {
+		return Config{}, fmt.Errorf("invalid SESSION_TTL_HOURS")
+	}
+	cfg.SessionTTL = time.Duration(ttlHours) * time.Hour
+
+	cfg.CookieSecure = cfg.Env != "development"
+	if v := strings.TrimSpace(os.Getenv("COOKIE_SECURE")); v != "" {
+		cfg.CookieSecure = v == "1" || strings.EqualFold(v, "true")
+	}
+
+	cfg.LoginRateLimitMax, err = strconv.Atoi(getEnv("LOGIN_RATE_LIMIT_MAX", "10"))
+	if err != nil || cfg.LoginRateLimitMax < 1 {
+		return Config{}, fmt.Errorf("invalid LOGIN_RATE_LIMIT_MAX")
+	}
+	windowSec, err := strconv.Atoi(getEnv("LOGIN_RATE_LIMIT_WINDOW_SEC", "60"))
+	if err != nil || windowSec < 1 {
+		return Config{}, fmt.Errorf("invalid LOGIN_RATE_LIMIT_WINDOW_SEC")
+	}
+	cfg.LoginRateLimitWindow = time.Duration(windowSec) * time.Second
+
+	if cfg.DatabaseURL != "" {
+		sec := strings.TrimSpace(os.Getenv("SESSION_SECRET"))
+		if sec == "" {
+			return Config{}, fmt.Errorf("SESSION_SECRET is required when DATABASE_URL is set")
+		}
+		decoded, err := base64.StdEncoding.DecodeString(sec)
+		if err != nil || len(decoded) < 32 {
+			return Config{}, fmt.Errorf("SESSION_SECRET must be base64 encoding at least 32 bytes")
+		}
+		cfg.SessionSecret = decoded
+	}
+
+	if k := strings.TrimSpace(os.Getenv("TOTP_ENCRYPTION_KEY")); k != "" {
+		decoded, err := base64.StdEncoding.DecodeString(k)
+		if err != nil || len(decoded) != 32 {
+			return Config{}, fmt.Errorf("TOTP_ENCRYPTION_KEY must be base64 encoding exactly 32 bytes")
+		}
+		cfg.TOTPEncryptionKey = decoded
+	}
 
 	return cfg, nil
 }

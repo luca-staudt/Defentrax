@@ -2,33 +2,59 @@
 
 Go HTTP service for Sentinel’s control plane: REST under `/api/v1`, future WebSockets, authentication, ingestion, and audit (phased delivery).
 
-**Phase 3 scope:** Phase 2 foundation plus PostgreSQL readiness checks when `DATABASE_URL` is set.
+**Phase 4 scope:** Argon2id passwords, server-side sessions, RBAC middleware, TOTP 2FA, API keys, audit logging, login rate limits.
 
 ## Run locally
 
-From the repository root:
+From the repository root (requires `DATABASE_URL`, `SESSION_SECRET`, and migrations applied):
 
 ```bash
+make db-migrate-up
+make bootstrap-admin   # or set SENTINEL_BOOTSTRAP_* env on first API start
 make run-api
 ```
 
-Or from this directory:
+## Bootstrap first admin
+
+When the `users` table is empty:
 
 ```bash
-go run ./cmd/api
+export DATABASE_URL=...
+export SENTINEL_BOOTSTRAP_ADMIN_EMAIL=admin@example.com
+export SENTINEL_BOOTSTRAP_ADMIN_PASSWORD='choose-a-long-password'
+make bootstrap-admin
 ```
 
-Environment variables are documented in the repository root `.env.example`.
+Alternatively, set the same `SENTINEL_BOOTSTRAP_*` variables before starting the API once; they are ignored after any user exists.
 
-## Endpoints
+## Endpoints (Phase 4)
 
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/healthz` | Liveness |
-| GET | `/readyz` | Readiness — pings PostgreSQL when `DATABASE_URL` is configured |
-| GET | `/api/v1` | API version metadata |
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/healthz` | no | Liveness |
+| GET | `/readyz` | no | Readiness |
+| POST | `/api/v1/auth/login` | no | Password login (TOTP challenge when enabled) |
+| POST | `/api/v1/auth/totp/verify` | no | Complete login with TOTP |
+| POST | `/api/v1/auth/recovery/verify` | no | Complete login with recovery code |
+| POST | `/api/v1/auth/logout` | session | End session |
+| GET | `/api/v1/auth/me` | session | Current user |
+| POST | `/api/v1/auth/totp/enroll` | session | Start 2FA enrollment |
+| POST | `/api/v1/auth/totp/confirm` | session | Confirm 2FA with TOTP code |
+| POST | `/api/v1/auth/totp/disable` | session | Disable 2FA |
+| GET/POST | `/api/v1/users` | RBAC | List/create users |
+| PUT | `/api/v1/users/{id}/roles` | RBAC | Change roles (audited) |
+| GET/POST | `/api/v1/users/me/api-keys` | RBAC | List/create API keys |
+| DELETE | `/api/v1/users/me/api-keys/{id}` | RBAC | Revoke API key |
+
+## Tests
+
+```bash
+make api-test
+make api-test-integration   # requires PostgreSQL (TEST_DATABASE_URL)
+```
 
 ## Secure defaults
 
-- No default admin credentials or API keys are created by this module.
-- Do not commit `.env` or put secrets in logs.
+- No default admin credentials in the repository.
+- Session and API tokens are stored hashed; responses never include password hashes or raw tokens (except one-time API key on create).
+- Login rate limiting uses Redis when `REDIS_URL` is set; otherwise an in-memory limiter per process.

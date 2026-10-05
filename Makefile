@@ -1,4 +1,4 @@
-.PHONY: build test lint api-build api-test api-lint db-migrate-up db-migrate-down db-migrate-status db-seed-dev db-test test-migrations run-api
+.PHONY: build test lint api-build api-test api-lint api-test-integration db-migrate-up db-migrate-down db-migrate-status db-seed-dev db-test test-migrations run-api bootstrap-admin
 
 API_DIR := sentinel/api
 DB_DIR := sentinel/database
@@ -14,6 +14,9 @@ api-build:
 
 api-test:
 	cd $(API_DIR) && go test ./...
+
+api-test-integration:
+	cd $(API_DIR) && go test -tags=integration ./internal/integration/...
 
 api-lint:
 	@command -v golangci-lint >/dev/null 2>&1 || { echo "golangci-lint not installed; see https://golangci-lint.run/welcome/install/"; exit 1; }
@@ -43,3 +46,7 @@ test-migrations:
 
 run-api:
 	cd $(API_DIR) && go run ./cmd/api
+
+bootstrap-admin:
+	@test -n "$$DATABASE_URL" || (echo "DATABASE_URL is required"; exit 1)
+	cd $(API_DIR) && go run ./cmd/bootstrap-admin
