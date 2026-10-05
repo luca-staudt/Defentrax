@@ -40,6 +40,9 @@ func New(log *slog.Logger, cfg config.Config, pool *pgxpool.Pool, limiter rateli
 	authH := &handlers.AuthHandler{Pool: pool, Config: cfg, Limiter: limiter}
 	usersH := &handlers.UsersHandler{Pool: pool}
 	keysH := &handlers.APIKeysHandler{Pool: pool}
+	serversH := &handlers.ServersHandler{Pool: pool}
+	agentH := &handlers.AgentHandler{Pool: pool}
+	agentAuth := middleware.AuthenticateAgent(pool)
 
 	// Public auth endpoints (no session required).
 	apiMux.HandleFunc("POST /api/v1/auth/login", authH.Login)
@@ -67,6 +70,22 @@ func New(log *slog.Logger, cfg config.Config, pool *pgxpool.Pool, limiter rateli
 
 	apiMux.Handle("GET /api/v1/users/me/api-keys", protectPerm(pool, cfg, "api_keys", "write", http.HandlerFunc(keysH.List)))
 	apiMux.Handle("POST /api/v1/users/me/api-keys", protectPerm(pool, cfg, "api_keys", "write", http.HandlerFunc(keysH.Create)))
+	apiMux.HandleFunc("POST /api/v1/agent/enroll", agentH.Enroll)
+	apiMux.Handle("POST /api/v1/agent/heartbeat", agentAuth(http.HandlerFunc(agentH.Heartbeat)))
+	apiMux.Handle("POST /api/v1/agent/events", agentAuth(http.HandlerFunc(agentH.IngestEvents)))
+
+	apiMux.Handle("GET /api/v1/servers", protectPerm(pool, cfg, "servers", "write", http.HandlerFunc(serversH.List)))
+	apiMux.Handle("POST /api/v1/servers", protectPerm(pool, cfg, "servers", "write", http.HandlerFunc(serversH.Create)))
+	apiMux.Handle("POST /api/v1/servers/{id}/enrollment-tokens", protectPerm(pool, cfg, "servers", "write", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		id, err := uuid.Parse(r.PathValue("id"))
+		if err != nil {
+			requestID := middleware.RequestIDFromContext(r.Context())
+			apperrors.WriteJSON(w, http.StatusBadRequest, "invalid_id", "invalid server id", requestID)
+			return
+		}
+		serversH.CreateEnrollmentToken(w, r, id)
+	})))
+
 	apiMux.Handle("DELETE /api/v1/users/me/api-keys/{id}", protectPerm(pool, cfg, "api_keys", "write", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		id, err := uuid.Parse(r.PathValue("id"))
 		if err != nil {

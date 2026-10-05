@@ -4,6 +4,8 @@ Go HTTP service for Sentinel’s control plane: REST under `/api/v1`, future Web
 
 **Phase 4 scope:** Argon2id passwords, server-side sessions, RBAC middleware, TOTP 2FA, API keys, audit logging, login rate limits.
 
+**Phase 5 scope:** Agent enrollment tokens, agent bearer auth, heartbeat, minimal event ingestion, server/enrollment admin APIs.
+
 ## Run locally
 
 From the repository root (requires `DATABASE_URL`, `SESSION_SECRET`, and migrations applied):
@@ -45,6 +47,11 @@ Alternatively, set the same `SENTINEL_BOOTSTRAP_*` variables before starting the
 | PUT | `/api/v1/users/{id}/roles` | RBAC | Change roles (audited) |
 | GET/POST | `/api/v1/users/me/api-keys` | RBAC | List/create API keys |
 | DELETE | `/api/v1/users/me/api-keys/{id}` | RBAC | Revoke API key |
+| GET/POST | `/api/v1/servers` | `servers:write` | List/create servers |
+| POST | `/api/v1/servers/{id}/enrollment-tokens` | `servers:write` | Create one-time `senr_…` enrollment token |
+| POST | `/api/v1/agent/enroll` | enrollment token (body) | Register agent; returns one-time `sagt_…` |
+| POST | `/api/v1/agent/heartbeat` | agent bearer | Update `last_heartbeat_at` / status |
+| POST | `/api/v1/agent/events` | agent bearer | Ingest validated events (batch ≤100) |
 
 ## Tests
 

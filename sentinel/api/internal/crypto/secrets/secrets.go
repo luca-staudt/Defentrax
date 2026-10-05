@@ -60,3 +60,37 @@ func APIKeyMaterial() (full string, prefix string, hash string, err error) {
 	hash = HashToken(full)
 	return full, prefix, hash, nil
 }
+
+// EnrollmentTokenMaterial generates a one-time agent enrollment secret.
+func EnrollmentTokenMaterial() (full string, prefix string, hash string, err error) {
+	raw, err := RandomToken(32)
+	if err != nil {
+		return "", "", "", err
+	}
+	full = fmt.Sprintf("senr_%s", raw)
+	prefix = Prefix(full, 12)
+	hash = HashToken(full)
+	return full, prefix, hash, nil
+}
+
+// LooksLikeEnrollmentToken reports whether s has the expected enrollment prefix.
+func LooksLikeEnrollmentToken(s string) bool {
+	return strings.HasPrefix(s, "senr_") && len(s) > len("senr_")+8
+}
+
+// LooksLikeAgentToken reports whether s has the expected agent bearer prefix.
+func LooksLikeAgentToken(s string) bool {
+	return strings.HasPrefix(s, "sagt_") && len(s) > len("sagt_")+8
+}
+
+// AgentTokenMaterial generates a long-lived agent bearer credential.
+func AgentTokenMaterial() (full string, prefix string, hash string, err error) {
+	raw, err := RandomToken(32)
+	if err != nil {
+		return "", "", "", err
+	}
+	full = fmt.Sprintf("sagt_%s", raw)
+	prefix = Prefix(full, 12)
+	hash = HashToken(full)
+	return full, prefix, hash, nil
+}
