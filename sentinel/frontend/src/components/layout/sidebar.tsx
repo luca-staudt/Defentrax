@@ -12,6 +12,11 @@ const nav = [
   { href: "/events", label: "Events", perm: ["events", "read"] as const },
   { href: "/servers", label: "Servers", perm: ["servers", "write"] as const },
   { href: "/rules", label: "Rules", perm: ["rules", "read"] as const },
+  {
+    href: "/notifications",
+    label: "Notifications",
+    perm: ["notifications", "read"] as const,
+  },
 ];
 
 export function Sidebar() {

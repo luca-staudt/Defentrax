@@ -33,12 +33,13 @@ export async function apiFetch<T>(
     return undefined as T;
   }
 
-  const body = (await res.json().catch(() => ({}))) as T & ApiError;
+  const body = (await res.json().catch(() => ({}))) as T &
+    ApiError & { message?: string; code?: string };
   if (!res.ok) {
     throw new ApiRequestError(
       res.status,
-      body.error?.message || res.statusText,
-      body.error?.code,
+      body.error?.message || body.message || res.statusText,
+      body.error?.code || body.code,
     );
   }
   return body;
