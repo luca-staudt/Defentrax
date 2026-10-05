@@ -24,7 +24,7 @@ type Server struct {
 }
 
 // New constructs the API HTTP server with routes and middleware.
-func New(log *slog.Logger, cfg config.Config, pool *pgxpool.Pool, limiter ratelimit.Limiter) *Server {
+func New(log *slog.Logger, cfg config.Config, pool *pgxpool.Pool, loginLimiter, ingestLimiter ratelimit.Limiter) *Server {
 	rootMux := http.NewServeMux()
 
 	readiness := handlers.Readiness{
@@ -37,11 +37,11 @@ func New(log *slog.Logger, cfg config.Config, pool *pgxpool.Pool, limiter rateli
 	rootMux.HandleFunc("GET /api/v1", handlers.Version)
 
 	apiMux := http.NewServeMux()
-	authH := &handlers.AuthHandler{Pool: pool, Config: cfg, Limiter: limiter}
+	authH := &handlers.AuthHandler{Pool: pool, Config: cfg, Limiter: loginLimiter}
 	usersH := &handlers.UsersHandler{Pool: pool}
 	keysH := &handlers.APIKeysHandler{Pool: pool}
 	serversH := &handlers.ServersHandler{Pool: pool}
-	agentH := &handlers.AgentHandler{Pool: pool}
+	agentH := &handlers.AgentHandler{Pool: pool, Config: cfg, IngestLimiter: ingestLimiter}
 	agentAuth := middleware.AuthenticateAgent(pool)
 
 	// Public auth endpoints (no session required).

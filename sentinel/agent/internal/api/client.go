@@ -66,6 +66,20 @@ func (c *Client) Heartbeat(version string) error {
 }
 
 func (c *Client) IngestEvents(events []event.CanonicalEvent) error {
+	const batchSize = event.MaxBatchSize
+	for start := 0; start < len(events); start += batchSize {
+		end := start + batchSize
+		if end > len(events) {
+			end = len(events)
+		}
+		if err := c.ingestBatch(events[start:end]); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (c *Client) ingestBatch(events []event.CanonicalEvent) error {
 	body, _ := json.Marshal(map[string]any{"events": events})
 	_, err := postJSON[map[string]any](c, "/api/v1/agent/events", body, c.token)
 	return err

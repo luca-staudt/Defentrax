@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 	"time"
@@ -12,15 +11,19 @@ import (
 
 	"github.com/luca-staudt/Sentinel/sentinel/api/internal/apperrors"
 	"github.com/luca-staudt/Sentinel/sentinel/api/internal/auth/agentctx"
+	"github.com/luca-staudt/Sentinel/sentinel/api/internal/auth/ratelimit"
+	"github.com/luca-staudt/Sentinel/sentinel/api/internal/config"
 	"github.com/luca-staudt/Sentinel/sentinel/api/internal/crypto/secrets"
 	"github.com/luca-staudt/Sentinel/sentinel/api/internal/middleware"
 	"github.com/luca-staudt/Sentinel/sentinel/api/internal/store"
 	"github.com/luca-staudt/Sentinel/sentinel/pkg/event"
 )
 
-// AgentHandler serves agent enrollment, heartbeat, and minimal event ingestion.
+// AgentHandler serves agent enrollment, heartbeat, and event ingestion.
 type AgentHandler struct {
-	Pool *pgxpool.Pool
+	Pool          *pgxpool.Pool
+	Config        config.Config
+	IngestLimiter ratelimit.Limiter
 }
 
 type enrollRequest struct {
@@ -124,74 +127,3 @@ func (h *AgentHandler) Heartbeat(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"status": "ok", "agent_id": a.ID})
 }
 
-func (h *AgentHandler) IngestEvents(w http.ResponseWriter, r *http.Request) {
-	a, ok := agentctx.FromContext(r.Context())
-	if !ok {
-		apperrors.WriteJSON(w, http.StatusUnauthorized, "unauthorized", "agent authentication required", middleware.RequestIDFromContext(r.Context()))
-		return
-	}
-	var req ingestEventsRequest
-	if err := decodeJSON(r, &req); err != nil || len(req.Events) == 0 {
-		badRequest(w, r, "invalid_input", "events array required")
-		return
-	}
-	if len(req.Events) > 100 {
-		badRequest(w, r, "invalid_input", "too many events in batch (max 100)")
-		return
-	}
-	accepted := 0
-	duplicates := 0
-	for _, ev := range req.Events {
-		if err := validateCanonicalEvent(ev); err != nil {
-			badRequest(w, r, "invalid_event", err.Error())
-			return
-		}
-		raw, _ := json.Marshal(ev.Raw)
-		if len(raw) == 0 {
-			raw = []byte("{}")
-		}
-		fields, _ := json.Marshal(ev.Fields)
-		if len(fields) == 0 {
-			fields = []byte("{}")
-		}
-		id, err := store.InsertEvent(r.Context(), h.Pool, a.ID, a.ServerID, ev.IngestID, ev.OccurredAt.UTC(), ev.Source, ev.Category, ev.Severity, ev.Host, ev.Message, ev.Fingerprint, raw, fields)
-		if err != nil {
-			internalError(w, r)
-			return
-		}
-		if id == uuid.Nil {
-			duplicates++
-			continue
-		}
-		accepted++
-	}
-	writeJSON(w, http.StatusAccepted, map[string]any{
-		"accepted":   accepted,
-		"duplicates": duplicates,
-	})
-}
-
-func validateCanonicalEvent(ev event.CanonicalEvent) error {
-	if ev.IngestID == "" || len(ev.IngestID) > 128 {
-		return errors.New("ingest_id required (max 128 chars)")
-	}
-	if ev.Source == "" || len(ev.Source) > 64 {
-		return errors.New("source required (max 64 chars)")
-	}
-	if ev.Message == "" || len(ev.Message) > 8192 {
-		return errors.New("message required (max 8192 chars)")
-	}
-	if ev.OccurredAt.IsZero() {
-		return errors.New("occurred_at required")
-	}
-	sev := ev.Severity
-	if sev == "" {
-		sev = "info"
-	}
-	switch sev {
-	case "info", "low", "medium", "high", "critical":
-	default:
-		return errors.New("invalid severity")
-	}
-	return nil
-}

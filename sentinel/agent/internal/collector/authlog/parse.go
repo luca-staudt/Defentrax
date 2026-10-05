@@ -1,8 +1,6 @@
 package authlog
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"regexp"
 	"strings"
@@ -41,7 +39,7 @@ func ParseLine(line string, defaultHost string, now time.Time) (event.CanonicalE
 		fields["src_ip"] = m[2]
 		fields["src_port"] = m[3]
 		fields["result"] = "failed"
-		fp := fingerprint("auth.ssh.failed_password", m[1], m[2], msg)
+		fp := event.Fingerprint("auth.ssh.failed_password", m[1], m[2], msg)
 		return event.CanonicalEvent{
 			IngestID:    fp,
 			OccurredAt:  occurredAt,
@@ -61,7 +59,7 @@ func ParseLine(line string, defaultHost string, now time.Time) (event.CanonicalE
 		fields["src_port"] = m[3]
 		fields["result"] = "success"
 		fields["method"] = "publickey"
-		fp := fingerprint("auth.ssh.accepted_publickey", m[1], m[2], msg)
+		fp := event.Fingerprint("auth.ssh.accepted_publickey", m[1], m[2], msg)
 		return event.CanonicalEvent{
 			IngestID:    fp,
 			OccurredAt:  occurredAt,
@@ -81,7 +79,7 @@ func ParseLine(line string, defaultHost string, now time.Time) (event.CanonicalE
 		fields["src_port"] = m[3]
 		fields["result"] = "success"
 		fields["method"] = "password"
-		fp := fingerprint("auth.ssh.accepted_password", m[1], m[2], msg)
+		fp := event.Fingerprint("auth.ssh.accepted_password", m[1], m[2], msg)
 		return event.CanonicalEvent{
 			IngestID:    fp,
 			OccurredAt:  occurredAt,
@@ -120,11 +118,6 @@ func splitSyslogTimestamp(line string) (time.Time, string, bool) {
 	year := time.Now().Year()
 	t = time.Date(year, t.Month(), t.Day(), t.Hour(), t.Minute(), t.Second(), 0, time.Local)
 	return t, rest, true
-}
-
-func fingerprint(parts ...string) string {
-	h := sha256.Sum256([]byte(strings.Join(parts, "|")))
-	return hex.EncodeToString(h[:16])
 }
 
 func mustRaw(m map[string]any) json.RawMessage {

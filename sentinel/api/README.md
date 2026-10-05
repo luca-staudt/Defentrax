@@ -4,7 +4,9 @@ Go HTTP service for Sentinel’s control plane: REST under `/api/v1`, future Web
 
 **Phase 4 scope:** Argon2id passwords, server-side sessions, RBAC middleware, TOTP 2FA, API keys, audit logging, login rate limits.
 
-**Phase 5 scope:** Agent enrollment tokens, agent bearer auth, heartbeat, minimal event ingestion, server/enrollment admin APIs.
+**Phase 5 scope:** Agent enrollment tokens, agent bearer auth, heartbeat, server/enrollment admin APIs.
+
+**Phase 6 scope:** Batch event ingestion (`POST /api/v1/agent/events`), validation/normalization, idempotency, per-agent rate limits, batch DB insert.
 
 ## Run locally
 

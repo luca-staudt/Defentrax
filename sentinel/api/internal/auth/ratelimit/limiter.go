@@ -49,17 +49,21 @@ func (m *Memory) Allow(_ context.Context, key string) (bool, error) {
 
 // Redis implements fixed-window counter using INCR + EXPIRE.
 type Redis struct {
-	client *redis.Client
-	max    int
-	window time.Duration
+	client    *redis.Client
+	max       int
+	window    time.Duration
+	keyPrefix string
 }
 
-func NewRedis(client *redis.Client, max int, window time.Duration) *Redis {
-	return &Redis{client: client, max: max, window: window}
+func NewRedis(client *redis.Client, max int, window time.Duration, keyPrefix string) *Redis {
+	if keyPrefix == "" {
+		keyPrefix = "sentinel:rl:"
+	}
+	return &Redis{client: client, max: max, window: window, keyPrefix: keyPrefix}
 }
 
 func (r *Redis) Allow(ctx context.Context, key string) (bool, error) {
-	k := "sentinel:login:" + key
+	k := r.keyPrefix + key
 	n, err := r.client.Incr(ctx, k).Result()
 	if err != nil {
 		return false, err
@@ -70,7 +74,7 @@ func (r *Redis) Allow(ctx context.Context, key string) (bool, error) {
 	return n <= int64(r.max), nil
 }
 
-func NewFromConfig(redisURL string, max int, window time.Duration) (Limiter, func() error, error) {
+func NewFromConfig(redisURL string, max int, window time.Duration, redisKeyPrefix string) (Limiter, func() error, error) {
 	if redisURL == "" {
 		return NewMemory(max, window), func() error { return nil }, nil
 	}
@@ -85,5 +89,5 @@ func NewFromConfig(redisURL string, max int, window time.Duration) (Limiter, fun
 		_ = client.Close()
 		return NewMemory(max, window), func() error { return nil }, nil
 	}
-	return NewRedis(client, max, window), client.Close, nil
+	return NewRedis(client, max, window, redisKeyPrefix), client.Close, nil
 }

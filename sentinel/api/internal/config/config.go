@@ -27,6 +27,12 @@ type Config struct {
 
 	LoginRateLimitMax    int
 	LoginRateLimitWindow time.Duration
+
+	IngestRateLimitMax    int
+	IngestRateLimitWindow time.Duration
+	IngestMaxBatchSize    int
+	IngestMaxBodyBytes    int64
+	IngestDBTimeout       time.Duration
 }
 
 // Load reads configuration from environment variables with secure defaults.
@@ -66,6 +72,31 @@ func Load() (Config, error) {
 		return Config{}, fmt.Errorf("invalid LOGIN_RATE_LIMIT_WINDOW_SEC")
 	}
 	cfg.LoginRateLimitWindow = time.Duration(windowSec) * time.Second
+
+	cfg.IngestRateLimitMax, err = strconv.Atoi(getEnv("INGEST_RATE_LIMIT_MAX", "120"))
+	if err != nil || cfg.IngestRateLimitMax < 1 {
+		return Config{}, fmt.Errorf("invalid INGEST_RATE_LIMIT_MAX")
+	}
+	ingestWindowSec, err := strconv.Atoi(getEnv("INGEST_RATE_LIMIT_WINDOW_SEC", "60"))
+	if err != nil || ingestWindowSec < 1 {
+		return Config{}, fmt.Errorf("invalid INGEST_RATE_LIMIT_WINDOW_SEC")
+	}
+	cfg.IngestRateLimitWindow = time.Duration(ingestWindowSec) * time.Second
+
+	cfg.IngestMaxBatchSize, err = strconv.Atoi(getEnv("INGEST_MAX_BATCH_SIZE", "100"))
+	if err != nil || cfg.IngestMaxBatchSize < 1 || cfg.IngestMaxBatchSize > 500 {
+		return Config{}, fmt.Errorf("invalid INGEST_MAX_BATCH_SIZE (1-500)")
+	}
+	ingestBody, err := strconv.ParseInt(getEnv("INGEST_MAX_BODY_BYTES", "4194304"), 10, 64)
+	if err != nil || ingestBody < 65536 {
+		return Config{}, fmt.Errorf("invalid INGEST_MAX_BODY_BYTES")
+	}
+	cfg.IngestMaxBodyBytes = ingestBody
+	ingestDBSec, err := strconv.Atoi(getEnv("INGEST_DB_TIMEOUT_SEC", "15"))
+	if err != nil || ingestDBSec < 1 {
+		return Config{}, fmt.Errorf("invalid INGEST_DB_TIMEOUT_SEC")
+	}
+	cfg.IngestDBTimeout = time.Duration(ingestDBSec) * time.Second
 
 	if cfg.DatabaseURL != "" {
 		sec := strings.TrimSpace(os.Getenv("SESSION_SECRET"))

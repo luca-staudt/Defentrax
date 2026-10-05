@@ -49,17 +49,24 @@ func main() {
 		}
 	}
 
-	limiter, closeLimiter, err := ratelimit.NewFromConfig(cfg.RedisURL, cfg.LoginRateLimitMax, cfg.LoginRateLimitWindow)
+	loginLimiter, closeLogin, err := ratelimit.NewFromConfig(cfg.RedisURL, cfg.LoginRateLimitMax, cfg.LoginRateLimitWindow, "sentinel:login:")
 	if err != nil {
 		log.Error("rate limiter init failed", "error", err)
 		os.Exit(1)
 	}
-	defer func() { _ = closeLimiter() }()
+	defer func() { _ = closeLogin() }()
+
+	ingestLimiter, closeIngest, err := ratelimit.NewFromConfig(cfg.RedisURL, cfg.IngestRateLimitMax, cfg.IngestRateLimitWindow, "sentinel:ingest:")
+	if err != nil {
+		log.Error("ingest rate limiter init failed", "error", err)
+		os.Exit(1)
+	}
+	defer func() { _ = closeIngest() }()
 	if cfg.RedisURL == "" {
-		log.Info("login rate limiting uses in-memory store (set REDIS_URL for multi-instance)")
+		log.Info("rate limiting uses in-memory store (set REDIS_URL for multi-instance)")
 	}
 
-	srv := server.New(log, cfg, pool, limiter)
+	srv := server.New(log, cfg, pool, loginLimiter, ingestLimiter)
 
 	errCh := make(chan error, 1)
 	go func() {
