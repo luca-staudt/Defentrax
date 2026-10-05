@@ -36,7 +36,7 @@ Details: [security.md](security.md).
 2. Agent enrolls, stores credentials (`0600`), heartbeats, and uploads events.
 3. API inserts events (idempotent where fingerprinting applies), then the **detection worker** evaluates enabled rules.
 4. Matching rules create or refresh **alerts** (dedup cooldown); WebSocket clients get updates; notification rules may fire.
-5. Sensitive actions write **audit_logs** rows (list API not yet exposed).
+5. Sensitive actions write **audit_logs** rows (listable via `GET /api/v1/audit-logs` with `audit_logs:read`).
 
 ## Module layout
 

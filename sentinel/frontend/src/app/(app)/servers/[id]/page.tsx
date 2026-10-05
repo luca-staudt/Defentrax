@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { FormEvent, useCallback, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { EmptyState } from "@/components/ui/empty-state";
 import { LoadingBlock } from "@/components/ui/loading-block";
 import { apiFetch, ApiRequestError } from "@/lib/api/client";
+import { copyText } from "@/lib/clipboard";
 import type { EnrollmentToken } from "@/lib/types";
 
 type Agent = {
@@ -44,6 +45,8 @@ export default function ServerDetailPage() {
   const [issueError, setIssueError] = useState<string | null>(null);
   const [issued, setIssued] = useState<EnrollmentToken | null>(null);
   const [copied, setCopied] = useState(false);
+  const [copyHint, setCopyHint] = useState<string | null>(null);
+  const tokenRef = useRef<HTMLElement>(null);
 
   const load = useCallback(async () => {
     try {
@@ -64,6 +67,7 @@ export default function ServerDetailPage() {
   async function onIssue(e: FormEvent) {
     e.preventDefault();
     setIssueError(null);
+    setCopyHint(null);
     setIssued(null);
     setIssuing(true);
     try {
@@ -90,13 +94,14 @@ export default function ServerDetailPage() {
 
   async function copyToken() {
     if (!issued?.token) return;
-    try {
-      await navigator.clipboard.writeText(issued.token);
+    setCopyHint(null);
+    const result = await copyText(issued.token, tokenRef.current);
+    if (result.ok) {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    } catch {
-      setIssueError("Clipboard copy failed — select the token manually");
+      return;
     }
+    setCopyHint(result.message);
   }
 
   if (loading) return <LoadingBlock />;
@@ -165,13 +170,21 @@ export default function ServerDetailPage() {
             <p className="text-xs uppercase tracking-widest text-brand-300">
               Copy now — will not be shown again
             </p>
-            <code className="mt-2 block break-all text-sm text-white">{issued.token}</code>
+            <code
+              ref={tokenRef}
+              className="mt-2 block break-all text-sm text-white select-all"
+            >
+              {issued.token}
+            </code>
             <p className="mt-2 text-xs text-zinc-500">
               Expires {issued.expires_at} · prefix {issued.token_prefix}
             </p>
             <button type="button" className={`${btnGhost} mt-3`} onClick={() => void copyToken()}>
               {copied ? "Copied" : "Copy token"}
             </button>
+            {copyHint ? (
+              <p className="mt-2 text-sm text-amber-300">{copyHint}</p>
+            ) : null}
             <pre className="mt-4 overflow-x-auto rounded bg-black/50 p-3 text-xs text-zinc-400">
 {`# On the monitored host:
 export SENTINEL_API_URL=http://YOUR_SENTINEL_HOST:8080

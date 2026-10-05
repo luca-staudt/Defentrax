@@ -3,6 +3,7 @@ package notify
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"sync"
 	"time"
@@ -238,6 +239,24 @@ func (d *Dispatcher) send(ctx context.Context, ch store.NotificationChannel, ev 
 	default:
 		return errUnknownChannel(ch.ChannelType)
 	}
+}
+
+// SendTest delivers a synthetic alert once to a channel (no delivery row, no retry).
+func (d *Dispatcher) SendTest(ctx context.Context, ch store.NotificationChannel) error {
+	if d == nil {
+		return fmt.Errorf("notification dispatcher unavailable")
+	}
+	ev := AlertEvent{
+		AlertID:     uuid.New(),
+		Title:       "Sentinel test notification",
+		Description: "This is a test message from the Sentinel notifications UI.",
+		Severity:    SeverityInfo,
+		Status:      "open",
+		EventCount:  1,
+		Trigger:     "channel.test",
+		OccurredAt:  time.Now().UTC(),
+	}
+	return d.send(ctx, ch, ev)
 }
 
 func errUnknownChannel(t string) error {

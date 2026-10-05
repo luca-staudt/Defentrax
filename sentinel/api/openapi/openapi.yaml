@@ -8,7 +8,6 @@ info:
     `sentinel/api/internal/server/server.go`). It does **not** invent endpoints.
 
     **Not exposed as REST (yet):**
-    - No `GET /api/v1/audit` — audit rows are written server-side; there is no list API.
     - No standalone `GET /api/v1/agents` — agents appear nested under `GET /api/v1/servers/{id}`.
     - No `/api/v1/metrics` — use `GET /api/v1/dashboard/stats`.
 
@@ -45,7 +44,7 @@ tags:
   - name: Plugins
     description: Plugin registry and configs
   - name: Audit
-    description: Audit is write-side only today (no list endpoint)
+    description: Audit log list/detail (`audit_logs:read`)
 
 paths:
   /healthz:
@@ -1183,6 +1182,53 @@ paths:
         "404":
           $ref: "#/components/responses/Error"
 
+  /api/v1/notification-channels/{id}/test:
+    post:
+      tags: [Notifications]
+      operationId: testNotificationChannel
+      summary: Send a test notification to a channel
+      description: |
+        Requires permission `notifications:write`.
+        Uses the same delivery path as live alerts (webhook/SMTP) with a synthetic payload.
+        On failure returns a safe error message (URLs/secrets redacted) in the standard error envelope.
+      security:
+        - SessionCookie: []
+        - BearerApiKey: []
+      parameters:
+        - $ref: "#/components/parameters/PathUUID"
+      responses:
+        "200":
+          description: Test delivered
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok, message, channel_id, channel_type, channel_name]
+                properties:
+                  ok:
+                    type: boolean
+                  message:
+                    type: string
+                  channel_id:
+                    type: string
+                    format: uuid
+                  channel_type:
+                    type: string
+                  channel_name:
+                    type: string
+        "400":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "502":
+          description: Delivery failed (safe error detail in message)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "503":
+          $ref: "#/components/responses/Error"
+
   /api/v1/notification-rules:
     get:
       tags: [Notifications]
@@ -1285,6 +1331,105 @@ paths:
       responses:
         "204":
           description: Deleted
+        "404":
+          $ref: "#/components/responses/Error"
+
+  /api/v1/audit-logs:
+    get:
+      tags: [Audit]
+      operationId: listAuditLogs
+      summary: List audit logs
+      description: |
+        Requires permission `audit_logs:read` (ADMIN and SECURITY_ANALYST).
+        Newest first. Filters: `action`, `user` (actor email substring), `actor_user_id`,
+        `q` (action/entity/email search), `since`/`until` (RFC3339), `limit`/`offset`.
+      security:
+        - SessionCookie: []
+        - BearerApiKey: []
+      parameters:
+        - name: action
+          in: query
+          schema:
+            type: string
+          description: Exact action match (e.g. auth.login)
+        - name: user
+          in: query
+          schema:
+            type: string
+          description: Actor email substring (ILIKE)
+        - name: actor_user_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: q
+          in: query
+          schema:
+            type: string
+          description: Search action, entity_type, or actor email
+        - name: since
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: until
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 50
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        "200":
+          description: Paginated audit logs
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [audit_logs, total, limit, offset]
+                properties:
+                  audit_logs:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/AuditLog"
+                  total:
+                    type: integer
+                  limit:
+                    type: integer
+                  offset:
+                    type: integer
+        "400":
+          $ref: "#/components/responses/Error"
+
+  /api/v1/audit-logs/{id}:
+    get:
+      tags: [Audit]
+      operationId: getAuditLog
+      summary: Get one audit log
+      description: "Requires permission `audit_logs:read`."
+      security:
+        - SessionCookie: []
+        - BearerApiKey: []
+      parameters:
+        - $ref: "#/components/parameters/PathUUID"
+      responses:
+        "200":
+          description: Audit log
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuditLog"
         "404":
           $ref: "#/components/responses/Error"
 
@@ -1513,6 +1658,41 @@ components:
           type: string
         request_id:
           type: string
+
+    AuditLog:
+      type: object
+      required: [id, actor_type, action, entity_type, metadata, created_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        actor_user_id:
+          type: string
+          format: uuid
+        actor_email:
+          type: string
+        actor_type:
+          type: string
+          enum: [user, system, agent, api_key]
+        action:
+          type: string
+          example: auth.login
+        entity_type:
+          type: string
+          example: session
+        entity_id:
+          type: string
+          format: uuid
+        metadata:
+          type: object
+          additionalProperties: true
+        ip_address:
+          type: string
+        user_agent:
+          type: string
+        created_at:
+          type: string
+          format: date-time
 
     ReadyResponse:
       type: object

@@ -20,6 +20,7 @@ import (
 type NotificationsHandler struct {
 	Pool       *pgxpool.Pool
 	SecretsKey []byte
+	Dispatcher *notify.Dispatcher
 }
 
 type channelSecretsRequest struct {
@@ -237,6 +238,64 @@ func (h *NotificationsHandler) DeleteChannel(w http.ResponseWriter, r *http.Requ
 	}
 	h.audit(r, "notification_channel.delete", "notification_channel", &id, nil)
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// TestChannel sends a synthetic notification via the existing dispatch send path.
+// Requires notifications:write. Returns a safe error message (URLs redacted) on failure.
+func (h *NotificationsHandler) TestChannel(w http.ResponseWriter, r *http.Request, id uuid.UUID) {
+	if len(h.SecretsKey) != 32 {
+		apperrors.WriteJSON(w, http.StatusServiceUnavailable, "misconfigured", "SECRETS_ENCRYPTION_KEY (or TOTP_ENCRYPTION_KEY) required for notification channels", middleware.RequestIDFromContext(r.Context()))
+		return
+	}
+	if h.Dispatcher == nil {
+		apperrors.WriteJSON(w, http.StatusServiceUnavailable, "misconfigured", "notification dispatcher unavailable", middleware.RequestIDFromContext(r.Context()))
+		return
+	}
+	ch, err := store.GetNotificationChannel(r.Context(), h.Pool, id)
+	if err != nil {
+		if errors.Is(err, store.ErrNotFound) {
+			apperrors.WriteJSON(w, http.StatusNotFound, "not_found", "channel not found", middleware.RequestIDFromContext(r.Context()))
+			return
+		}
+		internalError(w, r)
+		return
+	}
+	if ch.ChannelType != notify.ChannelEmail && !ch.HasSecrets {
+		apperrors.WriteJSON(w, http.StatusBadRequest, "missing_secrets", "channel has no secrets configured (webhook URL or SMTP credentials required)", middleware.RequestIDFromContext(r.Context()))
+		return
+	}
+
+	err = h.Dispatcher.SendTest(r.Context(), ch)
+	if err != nil {
+		safe := notify.SafeError(err)
+		if len(safe) > 800 {
+			safe = safe[:800] + "…"
+		}
+		if notify.ContainsWebhookLeak(safe) {
+			safe = "delivery failed (details redacted)"
+		}
+		h.audit(r, "notification_channel.test", "notification_channel", &ch.ID, map[string]any{
+			"channel_type": ch.ChannelType,
+			"channel_name": ch.Name,
+			"ok":           false,
+			"error":        safe,
+		})
+		apperrors.WriteJSON(w, http.StatusBadGateway, "delivery_failed", safe, middleware.RequestIDFromContext(r.Context()))
+		return
+	}
+
+	h.audit(r, "notification_channel.test", "notification_channel", &ch.ID, map[string]any{
+		"channel_type": ch.ChannelType,
+		"channel_name": ch.Name,
+		"ok":           true,
+	})
+	writeJSON(w, http.StatusOK, map[string]any{
+		"ok":           true,
+		"message":      "Test notification sent",
+		"channel_id":   ch.ID,
+		"channel_type": ch.ChannelType,
+		"channel_name": ch.Name,
+	})
 }
 
 func (h *NotificationsHandler) ListRules(w http.ResponseWriter, r *http.Request) {
