@@ -5,7 +5,7 @@ import (
 
 	"golang.org/x/crypto/bcrypt"
 
-	"github.com/luca-staudt/Sentinel/sentinel/api/internal/crypto/password"
+	"github.com/luca-staudt/Defentrax/sentinel/api/internal/crypto/password"
 )
 
 func TestHashAndVerify(t *testing.T) {

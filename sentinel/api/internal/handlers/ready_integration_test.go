@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/luca-staudt/Sentinel/sentinel/api/internal/db"
+	"github.com/luca-staudt/Defentrax/sentinel/api/internal/db"
 )
 
 func TestReadyzWithLiveDatabase(t *testing.T) {

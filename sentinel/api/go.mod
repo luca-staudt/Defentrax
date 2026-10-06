@@ -1,22 +1,22 @@
-module github.com/luca-staudt/Sentinel/sentinel/api
+module github.com/luca-staudt/Defentrax/sentinel/api
 
 go 1.22
 
-replace github.com/luca-staudt/Sentinel/sentinel/pkg/event => ../pkg/event
+replace github.com/luca-staudt/Defentrax/sentinel/pkg/event => ../pkg/event
 
-replace github.com/luca-staudt/Sentinel/sentinel/pkg/version => ../pkg/version
+replace github.com/luca-staudt/Defentrax/sentinel/pkg/version => ../pkg/version
 
-replace github.com/luca-staudt/Sentinel/sentinel/detection => ../detection
+replace github.com/luca-staudt/Defentrax/sentinel/detection => ../detection
 
-replace github.com/luca-staudt/Sentinel/sentinel/plugins => ../plugins
+replace github.com/luca-staudt/Defentrax/sentinel/plugins => ../plugins
 
 require (
 	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v5 v5.7.4
-	github.com/luca-staudt/Sentinel/sentinel/detection v0.0.0
-	github.com/luca-staudt/Sentinel/sentinel/pkg/event v0.0.0
-	github.com/luca-staudt/Sentinel/sentinel/pkg/version v0.0.0
-	github.com/luca-staudt/Sentinel/sentinel/plugins v0.0.0
+	github.com/luca-staudt/Defentrax/sentinel/detection v0.0.0
+	github.com/luca-staudt/Defentrax/sentinel/pkg/event v0.0.0
+	github.com/luca-staudt/Defentrax/sentinel/pkg/version v0.0.0
+	github.com/luca-staudt/Defentrax/sentinel/plugins v0.0.0
 	github.com/pquerna/otp v1.4.0
 	github.com/redis/go-redis/v9 v9.7.0
 	golang.org/x/crypto v0.31.0

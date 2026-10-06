@@ -9,14 +9,14 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/luca-staudt/Sentinel/sentinel/api/internal/apperrors"
-	"github.com/luca-staudt/Sentinel/sentinel/api/internal/auth/agentctx"
-	"github.com/luca-staudt/Sentinel/sentinel/api/internal/auth/ratelimit"
-	"github.com/luca-staudt/Sentinel/sentinel/api/internal/config"
-	"github.com/luca-staudt/Sentinel/sentinel/api/internal/crypto/secrets"
-	"github.com/luca-staudt/Sentinel/sentinel/api/internal/middleware"
-	"github.com/luca-staudt/Sentinel/sentinel/api/internal/store"
-	"github.com/luca-staudt/Sentinel/sentinel/pkg/event"
+	"github.com/luca-staudt/Defentrax/sentinel/api/internal/apperrors"
+	"github.com/luca-staudt/Defentrax/sentinel/api/internal/auth/agentctx"
+	"github.com/luca-staudt/Defentrax/sentinel/api/internal/auth/ratelimit"
+	"github.com/luca-staudt/Defentrax/sentinel/api/internal/config"
+	"github.com/luca-staudt/Defentrax/sentinel/api/internal/crypto/secrets"
+	"github.com/luca-staudt/Defentrax/sentinel/api/internal/middleware"
+	"github.com/luca-staudt/Defentrax/sentinel/api/internal/store"
+	"github.com/luca-staudt/Defentrax/sentinel/pkg/event"
 )
 
 // DetectionEnqueue queues a persisted event for asynchronous rule evaluation.

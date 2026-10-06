@@ -8,11 +8,11 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/luca-staudt/Sentinel/sentinel/api/internal/apperrors"
-	"github.com/luca-staudt/Sentinel/sentinel/api/internal/auth/principal"
-	"github.com/luca-staudt/Sentinel/sentinel/api/internal/config"
-	"github.com/luca-staudt/Sentinel/sentinel/api/internal/middleware"
-	"github.com/luca-staudt/Sentinel/sentinel/api/internal/realtime"
+	"github.com/luca-staudt/Defentrax/sentinel/api/internal/apperrors"
+	"github.com/luca-staudt/Defentrax/sentinel/api/internal/auth/principal"
+	"github.com/luca-staudt/Defentrax/sentinel/api/internal/config"
+	"github.com/luca-staudt/Defentrax/sentinel/api/internal/middleware"
+	"github.com/luca-staudt/Defentrax/sentinel/api/internal/realtime"
 )
 
 var wsUpgrader = websocket.Upgrader{

@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/luca-staudt/Sentinel/sentinel/api/internal/alerts"
+	"github.com/luca-staudt/Defentrax/sentinel/api/internal/alerts"
 )
 
 func TestValidateTransitionAllowed(t *testing.T) {

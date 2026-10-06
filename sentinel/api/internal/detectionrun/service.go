@@ -6,8 +6,8 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/luca-staudt/Sentinel/sentinel/api/internal/store"
-	"github.com/luca-staudt/Sentinel/sentinel/detection"
+	"github.com/luca-staudt/Defentrax/sentinel/api/internal/store"
+	"github.com/luca-staudt/Defentrax/sentinel/detection"
 )
 
 // Service wires the detection engine, rule catalog, and async worker.

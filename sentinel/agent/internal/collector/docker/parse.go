@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/luca-staudt/Sentinel/sentinel/pkg/event"
+	"github.com/luca-staudt/Defentrax/sentinel/pkg/event"
 )
 
 // ParseEngineEvent converts one Docker Engine event JSON object into a canonical

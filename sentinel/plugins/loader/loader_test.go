@@ -6,9 +6,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	_ "github.com/luca-staudt/Sentinel/sentinel/plugins/examples/echo-parser"
-	"github.com/luca-staudt/Sentinel/sentinel/plugins/loader"
-	"github.com/luca-staudt/Sentinel/sentinel/plugins/sdk"
+	_ "github.com/luca-staudt/Defentrax/sentinel/plugins/examples/echo-parser"
+	"github.com/luca-staudt/Defentrax/sentinel/plugins/loader"
+	"github.com/luca-staudt/Defentrax/sentinel/plugins/sdk"
 )
 
 func TestInstantiateEchoParser(t *testing.T) {

@@ -9,7 +9,7 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/luca-staudt/Sentinel/sentinel/pkg/event"
+	"github.com/luca-staudt/Defentrax/sentinel/pkg/event"
 )
 
 // Collector reads SSH/auth-related lines from auth.log or journald.

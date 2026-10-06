@@ -5,7 +5,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/luca-staudt/Sentinel/sentinel/api/internal/apperrors"
+	"github.com/luca-staudt/Defentrax/sentinel/api/internal/apperrors"
 )
 
 // OriginGuard rejects cookie-authenticated mutating requests whose Origin/Referer

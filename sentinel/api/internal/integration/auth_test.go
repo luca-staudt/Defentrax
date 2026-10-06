@@ -14,12 +14,12 @@ import (
 
 	"github.com/pquerna/otp/totp"
 
-	"github.com/luca-staudt/Sentinel/sentinel/api/internal/auth/ratelimit"
-	authtotp "github.com/luca-staudt/Sentinel/sentinel/api/internal/auth/totp"
-	"github.com/luca-staudt/Sentinel/sentinel/api/internal/crypto/password"
-	"github.com/luca-staudt/Sentinel/sentinel/api/internal/server"
-	"github.com/luca-staudt/Sentinel/sentinel/api/internal/store"
-	"github.com/luca-staudt/Sentinel/sentinel/api/internal/testutil"
+	"github.com/luca-staudt/Defentrax/sentinel/api/internal/auth/ratelimit"
+	authtotp "github.com/luca-staudt/Defentrax/sentinel/api/internal/auth/totp"
+	"github.com/luca-staudt/Defentrax/sentinel/api/internal/crypto/password"
+	"github.com/luca-staudt/Defentrax/sentinel/api/internal/server"
+	"github.com/luca-staudt/Defentrax/sentinel/api/internal/store"
+	"github.com/luca-staudt/Defentrax/sentinel/api/internal/testutil"
 )
 
 func TestAuthFlowIntegration(t *testing.T) {

@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/luca-staudt/Sentinel/sentinel/api/openapi"
+	"github.com/luca-staudt/Defentrax/sentinel/api/openapi"
 )
 
 // implementedPaths is the inventory of HTTP routes registered in

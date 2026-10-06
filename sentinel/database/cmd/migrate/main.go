@@ -7,7 +7,7 @@ import (
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 
-	"github.com/luca-staudt/Sentinel/sentinel/database/internal/migrate"
+	"github.com/luca-staudt/Defentrax/sentinel/database/internal/migrate"
 )
 
 func main() {

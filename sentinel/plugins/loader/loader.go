@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/luca-staudt/Sentinel/sentinel/plugins/sdk"
+	"github.com/luca-staudt/Defentrax/sentinel/plugins/sdk"
 )
 
 // Candidate is a discovered, policy-verified plugin ready for registry instantiation.

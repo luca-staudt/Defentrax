@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/luca-staudt/Sentinel/sentinel/pkg/version"
+	"github.com/luca-staudt/Defentrax/sentinel/pkg/version"
 )
 
 // Config holds agent runtime settings (env + optional file overrides via SENTINEL_AGENT_*).

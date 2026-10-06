@@ -10,13 +10,13 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	alertsvc "github.com/luca-staudt/Sentinel/sentinel/api/internal/alerts"
-	"github.com/luca-staudt/Sentinel/sentinel/api/internal/apperrors"
-	"github.com/luca-staudt/Sentinel/sentinel/api/internal/auth/principal"
-	"github.com/luca-staudt/Sentinel/sentinel/api/internal/middleware"
-	"github.com/luca-staudt/Sentinel/sentinel/api/internal/notify"
-	"github.com/luca-staudt/Sentinel/sentinel/api/internal/realtime"
-	"github.com/luca-staudt/Sentinel/sentinel/api/internal/store"
+	alertsvc "github.com/luca-staudt/Defentrax/sentinel/api/internal/alerts"
+	"github.com/luca-staudt/Defentrax/sentinel/api/internal/apperrors"
+	"github.com/luca-staudt/Defentrax/sentinel/api/internal/auth/principal"
+	"github.com/luca-staudt/Defentrax/sentinel/api/internal/middleware"
+	"github.com/luca-staudt/Defentrax/sentinel/api/internal/notify"
+	"github.com/luca-staudt/Defentrax/sentinel/api/internal/realtime"
+	"github.com/luca-staudt/Defentrax/sentinel/api/internal/store"
 )
 
 // AlertsHandler serves /api/v1/alerts/*.

@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 
-	"github.com/luca-staudt/Sentinel/sentinel/database/migrations"
+	"github.com/luca-staudt/Defentrax/sentinel/database/migrations"
 	"github.com/pressly/goose/v3"
 )
 

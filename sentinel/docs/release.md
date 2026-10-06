@@ -29,7 +29,7 @@ make release-check
 Optional link-time override for binaries:
 
 ```text
--X github.com/luca-staudt/Sentinel/sentinel/pkg/version.buildVersion=0.1.0
+-X github.com/luca-staudt/Defentrax/sentinel/pkg/version.buildVersion=0.1.0
 ```
 
 ## Preconditions

@@ -7,7 +7,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/luca-staudt/Sentinel/sentinel/api/internal/db"
+	"github.com/luca-staudt/Defentrax/sentinel/api/internal/db"
 )
 
 // Readiness performs dependency checks for GET /readyz.

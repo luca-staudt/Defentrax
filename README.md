@@ -83,7 +83,7 @@ Expected captures: login, dashboard, alert detail, rules list.
 **Requirements:** Docker Engine 24+ with Compose plugin.
 
 ```bash
-git clone https://github.com/luca-staudt/Sentinel.git
+git clone https://github.com/luca-staudt/Defentrax.git
 cd Sentinel
 cp .env.example .env
 
@@ -187,4 +187,4 @@ See [`CONTRIBUTING.md`](CONTRIBUTING.md) and the [Code of Conduct](CODE_OF_CONDU
 
 ## Repository
 
-[github.com/luca-staudt/Sentinel](https://github.com/luca-staudt/Sentinel)
+[github.com/luca-staudt/Defentrax](https://github.com/luca-staudt/Defentrax)

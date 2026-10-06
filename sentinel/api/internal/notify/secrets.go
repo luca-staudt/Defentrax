@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/luca-staudt/Sentinel/sentinel/api/internal/crypto/encrypt"
+	"github.com/luca-staudt/Defentrax/sentinel/api/internal/crypto/encrypt"
 )
 
 // ChannelSecrets holds sensitive channel credentials. Never serialize into API responses or logs.

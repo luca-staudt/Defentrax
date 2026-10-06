@@ -5,7 +5,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/luca-staudt/Sentinel/sentinel/detection"
+	"github.com/luca-staudt/Defentrax/sentinel/detection"
 )
 
 func TestAlertDedupKeyStable(t *testing.T) {

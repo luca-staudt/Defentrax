@@ -3,7 +3,7 @@ package sdk
 import (
 	"context"
 
-	"github.com/luca-staudt/Sentinel/sentinel/pkg/event"
+	"github.com/luca-staudt/Defentrax/sentinel/pkg/event"
 )
 
 // Metadata describes a loaded plugin instance.

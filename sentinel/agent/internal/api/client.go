@@ -11,7 +11,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/luca-staudt/Sentinel/sentinel/pkg/event"
+	"github.com/luca-staudt/Defentrax/sentinel/pkg/event"
 )
 
 // Client talks to the Sentinel control-plane API.

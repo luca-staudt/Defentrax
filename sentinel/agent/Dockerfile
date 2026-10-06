@@ -23,7 +23,7 @@ ARG SENTINEL_VERSION=
 RUN VER="${SENTINEL_VERSION:-$(tr -d '[:space:]' < /src/VERSION)}" && \
     CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
     go build -trimpath \
-      -ldflags="-s -w -X github.com/luca-staudt/Sentinel/sentinel/pkg/version.buildVersion=${VER}" \
+      -ldflags="-s -w -X github.com/luca-staudt/Defentrax/sentinel/pkg/version.buildVersion=${VER}" \
       -o /out/sentinel-agent ./cmd/sentinel-agent
 
 FROM alpine:3.20 AS runtime

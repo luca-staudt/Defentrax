@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/luca-staudt/Sentinel/sentinel/pkg/event"
+	"github.com/luca-staudt/Defentrax/sentinel/pkg/event"
 )
 
 // Collector streams Docker Engine events and converts them to canonical events.

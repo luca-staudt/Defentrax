@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/luca-staudt/Sentinel/sentinel/api/internal/auth/ratelimit"
-	"github.com/luca-staudt/Sentinel/sentinel/api/internal/config"
-	"github.com/luca-staudt/Sentinel/sentinel/api/internal/server"
+	"github.com/luca-staudt/Defentrax/sentinel/api/internal/auth/ratelimit"
+	"github.com/luca-staudt/Defentrax/sentinel/api/internal/config"
+	"github.com/luca-staudt/Defentrax/sentinel/api/internal/server"
 )
 
 func TestHandlerSetsSecurityHeaders(t *testing.T) {

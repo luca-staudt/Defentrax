@@ -3,7 +3,7 @@ package handlers
 import (
 	"net/http"
 
-	"github.com/luca-staudt/Sentinel/sentinel/pkg/version"
+	"github.com/luca-staudt/Defentrax/sentinel/pkg/version"
 )
 
 // Version handles GET /api/v1 — minimal version metadata for the API mount.

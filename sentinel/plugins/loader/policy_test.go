@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/luca-staudt/Sentinel/sentinel/plugins/loader"
-	"github.com/luca-staudt/Sentinel/sentinel/plugins/sdk"
+	"github.com/luca-staudt/Defentrax/sentinel/plugins/loader"
+	"github.com/luca-staudt/Defentrax/sentinel/plugins/sdk"
 )
 
 func TestChecksumAndAllowlist(t *testing.T) {

@@ -13,21 +13,21 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/luca-staudt/Sentinel/sentinel/api/internal/alerts"
-	"github.com/luca-staudt/Sentinel/sentinel/api/internal/auth/ratelimit"
-	"github.com/luca-staudt/Sentinel/sentinel/api/internal/bootstrap"
-	"github.com/luca-staudt/Sentinel/sentinel/api/internal/config"
-	"github.com/luca-staudt/Sentinel/sentinel/api/internal/db"
-	"github.com/luca-staudt/Sentinel/sentinel/api/internal/detectionrun"
-	"github.com/luca-staudt/Sentinel/sentinel/api/internal/logging"
-	"github.com/luca-staudt/Sentinel/sentinel/api/internal/notify"
-	"github.com/luca-staudt/Sentinel/sentinel/api/internal/pluginruntime"
-	"github.com/luca-staudt/Sentinel/sentinel/api/internal/realtime"
-	"github.com/luca-staudt/Sentinel/sentinel/api/internal/server"
-	"github.com/luca-staudt/Sentinel/sentinel/detection"
-	"github.com/luca-staudt/Sentinel/sentinel/plugins/loader"
+	"github.com/luca-staudt/Defentrax/sentinel/api/internal/alerts"
+	"github.com/luca-staudt/Defentrax/sentinel/api/internal/auth/ratelimit"
+	"github.com/luca-staudt/Defentrax/sentinel/api/internal/bootstrap"
+	"github.com/luca-staudt/Defentrax/sentinel/api/internal/config"
+	"github.com/luca-staudt/Defentrax/sentinel/api/internal/db"
+	"github.com/luca-staudt/Defentrax/sentinel/api/internal/detectionrun"
+	"github.com/luca-staudt/Defentrax/sentinel/api/internal/logging"
+	"github.com/luca-staudt/Defentrax/sentinel/api/internal/notify"
+	"github.com/luca-staudt/Defentrax/sentinel/api/internal/pluginruntime"
+	"github.com/luca-staudt/Defentrax/sentinel/api/internal/realtime"
+	"github.com/luca-staudt/Defentrax/sentinel/api/internal/server"
+	"github.com/luca-staudt/Defentrax/sentinel/detection"
+	"github.com/luca-staudt/Defentrax/sentinel/plugins/loader"
 
-	_ "github.com/luca-staudt/Sentinel/sentinel/plugins/examples/echo-parser" // register example plugin factory
+	_ "github.com/luca-staudt/Defentrax/sentinel/plugins/examples/echo-parser" // register example plugin factory
 )
 
 func main() {

@@ -8,8 +8,8 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/luca-staudt/Sentinel/sentinel/api/internal/crypto/password"
-	"github.com/luca-staudt/Sentinel/sentinel/api/internal/store"
+	"github.com/luca-staudt/Defentrax/sentinel/api/internal/crypto/password"
+	"github.com/luca-staudt/Defentrax/sentinel/api/internal/store"
 )
 
 // EnsureFirstAdmin creates the first ADMIN user when the database has zero users.

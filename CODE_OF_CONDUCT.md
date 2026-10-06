@@ -54,7 +54,7 @@ an individual is officially representing the community in public spaces.
 
 Instances of abusive, harassing, or otherwise unacceptable behavior may be
 reported to the project maintainer via the contact methods on the
-[luca-staudt/Sentinel](https://github.com/luca-staudt/Sentinel) GitHub profile.
+[luca-staudt/Defentrax](https://github.com/luca-staudt/Defentrax) GitHub profile.
 All complaints will be reviewed and investigated promptly and fairly.
 
 Security vulnerabilities are **not** handled through this process — see
