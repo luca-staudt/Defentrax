@@ -83,6 +83,24 @@ func CustomRuleDefinition(rule detection.Rule) ([]byte, error) {
 	return json.Marshal(payload)
 }
 
+// EditedRuleDefinition serializes a rule an operator changed.
+// Bundled rules stay on their original id and are marked so startup does not restore the file.
+func EditedRuleDefinition(rule detection.Rule, custom bool) ([]byte, error) {
+	def, err := definitionJSON(rule)
+	if err != nil {
+		return nil, err
+	}
+	var payload map[string]any
+	if err := json.Unmarshal(def, &payload); err != nil {
+		return nil, err
+	}
+	payload["user_modified"] = true
+	if custom {
+		payload["origin"] = "custom"
+	}
+	return json.Marshal(payload)
+}
+
 // SlugCustomRuleID builds a stable custom.* id from a display name.
 func SlugCustomRuleID(name string) string {
 	s := strings.ToLower(strings.TrimSpace(name))
@@ -122,16 +140,30 @@ func HasMatchSignal(c detection.Condition) bool {
 	return false
 }
 
-// NormalizeCustomRule fills defaults and rejects rules that would match every event.
+// NormalizeCustomRule fills defaults for a new operator rule and rejects rules that would match every event.
 func NormalizeCustomRule(rule detection.Rule) (detection.Rule, error) {
-	rule.Name = strings.TrimSpace(rule.Name)
-	rule.Description = strings.TrimSpace(rule.Description)
-	rule.Severity = strings.ToLower(strings.TrimSpace(rule.Severity))
 	rule.ID = strings.TrimSpace(rule.ID)
 	if rule.ID == "" {
 		rule.ID = SlugCustomRuleID(rule.Name)
 	}
-	if !strings.HasPrefix(rule.ID, "custom.") {
+	return normalizeRule(rule, true)
+}
+
+// NormalizeEditedRule validates an update and keeps the existing rule id.
+func NormalizeEditedRule(rule detection.Rule, custom bool) (detection.Rule, error) {
+	rule.ID = strings.TrimSpace(rule.ID)
+	if rule.ID == "" {
+		return detection.Rule{}, fmt.Errorf("rule id required")
+	}
+	return normalizeRule(rule, custom)
+}
+
+func normalizeRule(rule detection.Rule, requireCustomPrefix bool) (detection.Rule, error) {
+	rule.Name = strings.TrimSpace(rule.Name)
+	rule.Description = strings.TrimSpace(rule.Description)
+	rule.Severity = strings.ToLower(strings.TrimSpace(rule.Severity))
+	rule.ID = strings.TrimSpace(rule.ID)
+	if requireCustomPrefix && !strings.HasPrefix(rule.ID, "custom.") {
 		return detection.Rule{}, fmt.Errorf("custom rule id must start with custom.")
 	}
 	if rule.Version < 1 {

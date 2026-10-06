@@ -105,6 +105,18 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
         })}
       </nav>
 
+      <div className="px-3 pb-3">
+        <a
+          href="https://defentrax.de"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center justify-between rounded-xl border border-zinc-800 px-3 py-2 text-xs text-zinc-300 transition hover:border-sky-500/40 hover:bg-sky-500/10 hover:text-sky-200"
+        >
+          <span>defentrax.de</span>
+          <span className="font-mono text-[10px] text-zinc-500">Website</span>
+        </a>
+      </div>
+
       {/* User Session Footer */}
       <div className="border-t border-zinc-800/80 p-3 bg-zinc-950/40">
         <div className="flex items-center gap-2.5 rounded-xl border border-zinc-800/80 bg-zinc-900/40 p-2.5">

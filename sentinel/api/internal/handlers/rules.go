@@ -64,16 +64,79 @@ func (h *RulesHandler) Get(w http.ResponseWriter, r *http.Request, id uuid.UUID)
 
 type patchRuleRequest struct {
 	Enabled *bool `json:"enabled"`
+	createRuleRequest
 }
 
 func (h *RulesHandler) Patch(w http.ResponseWriter, r *http.Request, id uuid.UUID) {
 	var req patchRuleRequest
-	if err := decodeJSON(r, &req); err != nil || req.Enabled == nil {
+	if err := decodeJSON(r, &req); err != nil {
+		badRequest(w, r, "invalid_input", "invalid JSON body")
+		return
+	}
+	if strings.TrimSpace(req.Name) != "" {
+		h.updateContent(w, r, id, req)
+		return
+	}
+	if req.Enabled == nil {
 		badRequest(w, r, "invalid_input", "enabled field required")
 		return
 	}
 	row, err := store.SetRuleEnabled(r.Context(), h.Pool, id, *req.Enabled)
 	if err != nil {
+		if errors.Is(err, store.ErrNotFound) {
+			apperrors.WriteJSON(w, http.StatusNotFound, "not_found", "rule not found", middleware.RequestIDFromContext(r.Context()))
+			return
+		}
+		internalError(w, r)
+		return
+	}
+	if h.OnRuleChange != nil {
+		h.OnRuleChange()
+	}
+	writeJSON(w, http.StatusOK, toRuleResponse(row))
+}
+
+func (h *RulesHandler) updateContent(w http.ResponseWriter, r *http.Request, id uuid.UUID, req patchRuleRequest) {
+	if h.Pool == nil {
+		apperrors.WriteJSON(w, http.StatusServiceUnavailable, "database_unavailable", "database is not configured", middleware.RequestIDFromContext(r.Context()))
+		return
+	}
+	existing, err := store.GetRuleByID(r.Context(), h.Pool, id)
+	if err != nil {
+		if errors.Is(err, store.ErrNotFound) {
+			apperrors.WriteJSON(w, http.StatusNotFound, "not_found", "rule not found", middleware.RequestIDFromContext(r.Context()))
+			return
+		}
+		internalError(w, r)
+		return
+	}
+	custom := definitionOrigin(existing.Definition) == "custom" || strings.HasPrefix(existing.YAMLID, "custom.")
+	rule := ruleFromRequest(req.createRuleRequest)
+	rule.ID = existing.YAMLID
+	rule.Version = existing.Version + 1
+	normalized, err := detectionrun.NormalizeEditedRule(rule, custom)
+	if err != nil {
+		badRequest(w, r, "invalid_input", err.Error())
+		return
+	}
+	def, err := detectionrun.EditedRuleDefinition(normalized, custom)
+	if err != nil {
+		internalError(w, r)
+		return
+	}
+	row, err := store.UpdateRuleContent(r.Context(), h.Pool, id, store.RuleUpsert{
+		YAMLID:      normalized.ID,
+		Name:        normalized.Name,
+		Description: normalized.Description,
+		Severity:    normalized.Severity,
+		Version:     normalized.Version,
+		Definition:  def,
+	})
+	if err != nil {
+		if errors.Is(err, store.ErrRuleExists) {
+			apperrors.WriteJSON(w, http.StatusConflict, "conflict", "a rule with this name already exists", middleware.RequestIDFromContext(r.Context()))
+			return
+		}
 		if errors.Is(err, store.ErrNotFound) {
 			apperrors.WriteJSON(w, http.StatusNotFound, "not_found", "rule not found", middleware.RequestIDFromContext(r.Context()))
 			return
@@ -113,26 +176,7 @@ func (h *RulesHandler) Create(w http.ResponseWriter, r *http.Request) {
 		badRequest(w, r, "invalid_input", "invalid JSON body")
 		return
 	}
-	rule := detection.Rule{
-		Name:        req.Name,
-		Description: req.Description,
-		Severity:    req.Severity,
-		Condition: detection.Condition{
-			Source:          req.Source,
-			Category:        req.Category,
-			EventType:       req.EventType,
-			MessageContains: req.MessageContains,
-			Fields:          compactFields(req.Fields),
-		},
-		GroupBy: compactGroup(req.GroupBy),
-		Action: detection.Action{
-			Title:       req.ActionTitle,
-			Description: req.ActionDescription,
-		},
-	}
-	if req.ThresholdCount > 0 || req.WindowSeconds > 0 {
-		rule.Threshold = &detection.Threshold{Count: req.ThresholdCount, WindowSeconds: req.WindowSeconds}
-	}
+	rule := ruleFromRequest(req)
 	normalized, err := detectionrun.NormalizeCustomRule(rule)
 	if err != nil {
 		badRequest(w, r, "invalid_input", err.Error())
@@ -197,6 +241,30 @@ func itoa(n int) string {
 		n /= 10
 	}
 	return string(b[i:])
+}
+
+func ruleFromRequest(req createRuleRequest) detection.Rule {
+	rule := detection.Rule{
+		Name:        req.Name,
+		Description: req.Description,
+		Severity:    req.Severity,
+		Condition: detection.Condition{
+			Source:          req.Source,
+			Category:        req.Category,
+			EventType:       req.EventType,
+			MessageContains: req.MessageContains,
+			Fields:          compactFields(req.Fields),
+		},
+		GroupBy: compactGroup(req.GroupBy),
+		Action: detection.Action{
+			Title:       req.ActionTitle,
+			Description: req.ActionDescription,
+		},
+	}
+	if req.ThresholdCount > 0 || req.WindowSeconds > 0 {
+		rule.Threshold = &detection.Threshold{Count: req.ThresholdCount, WindowSeconds: req.WindowSeconds}
+	}
+	return rule
 }
 
 func compactFields(in map[string]string) map[string]string {

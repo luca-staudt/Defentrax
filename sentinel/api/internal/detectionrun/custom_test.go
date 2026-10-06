@@ -1,10 +1,35 @@
 package detectionrun
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/luca-staudt/Defentrax/sentinel/detection"
 )
+
+func TestNormalizeEditedRuleKeepsBundledID(t *testing.T) {
+	rule, err := NormalizeEditedRule(detection.Rule{
+		ID:          "ssh.possible-brute-force",
+		Name:        "Possible SSH brute-force pattern",
+		Description: "Possible credential guessing against SSH.",
+		Severity:    "high",
+		Condition:   detection.Condition{Source: "authlog", MessageContains: "failed"},
+		Action:      detection.Action{Title: "Possible SSH brute-force"},
+	}, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rule.ID != "ssh.possible-brute-force" {
+		t.Fatalf("id %q", rule.ID)
+	}
+	def, err := EditedRuleDefinition(rule, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(def), `"user_modified":true`) {
+		t.Fatalf("definition %s", def)
+	}
+}
 
 func TestNormalizeCustomRuleRequiresSignal(t *testing.T) {
 	_, err := NormalizeCustomRule(detection.Rule{

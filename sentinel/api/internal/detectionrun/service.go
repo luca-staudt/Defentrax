@@ -36,6 +36,10 @@ func (s *Service) ReloadEnabled(ctx context.Context) error {
 		}
 		base = append(base, rule)
 	}
+	base, err = overlayUserModified(ctx, s.Log, s.Pool, base)
+	if err != nil {
+		return err
+	}
 	for _, row := range customRows {
 		rule, err := ParseRuleDefinition(row.Definition)
 		if err != nil {

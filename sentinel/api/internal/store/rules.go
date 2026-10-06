@@ -42,11 +42,18 @@ type RuleUpsert struct {
 // SyncBundledRules upserts shipped rules by stable YAML id stored in definition.
 func SyncBundledRules(ctx context.Context, pool *pgxpool.Pool, rules []RuleUpsert) error {
 	for _, r := range rules {
+		locked, err := bundledRuleLocked(ctx, pool, r.YAMLID)
+		if err != nil {
+			return err
+		}
+		if locked {
+			continue
+		}
 		def := r.Definition
 		if len(def) == 0 {
 			def = []byte("{}")
 		}
-		_, err := pool.Exec(ctx, `
+		_, err = pool.Exec(ctx, `
 INSERT INTO rules (name, description, enabled, severity, definition, version)
 VALUES ($1, $2, TRUE, $3, $4::jsonb, $5)
 ON CONFLICT (name) DO UPDATE SET
@@ -61,6 +68,83 @@ ON CONFLICT (name) DO UPDATE SET
 		}
 	}
 	return nil
+}
+
+// bundledRuleLocked reports whether an operator edit must survive the next bundled sync.
+func bundledRuleLocked(ctx context.Context, pool *pgxpool.Pool, yamlID string) (bool, error) {
+	if yamlID == "" {
+		return false, nil
+	}
+	var locked bool
+	err := pool.QueryRow(ctx, `
+SELECT COALESCE(definition->>'user_modified' = 'true', false)
+FROM rules WHERE definition->>'id' = $1
+`, yamlID).Scan(&locked)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return false, nil
+		}
+		return false, err
+	}
+	return locked, nil
+}
+
+// ListUserModifiedBundled returns shipped rules an operator has edited.
+func ListUserModifiedBundled(ctx context.Context, pool *pgxpool.Pool) ([]RuleRow, error) {
+	rows, err := pool.Query(ctx, `
+SELECT id, name, description, enabled, severity, definition, version, created_at, updated_at
+FROM rules
+WHERE definition->>'user_modified' = 'true'
+  AND COALESCE(definition->>'origin', '') <> 'custom'
+ORDER BY name ASC`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []RuleRow
+	for rows.Next() {
+		var r RuleRow
+		if err := rows.Scan(&r.ID, &r.Name, &r.Description, &r.Enabled, &r.Severity, &r.Definition, &r.Version, &r.CreatedAt, &r.UpdatedAt); err != nil {
+			return nil, err
+		}
+		r.YAMLID = yamlIDFromDefinition(r.Definition)
+		out = append(out, r)
+	}
+	return out, rows.Err()
+}
+
+// UpdateRuleContent replaces the editable fields of one rule and keeps its id.
+func UpdateRuleContent(ctx context.Context, pool *pgxpool.Pool, id uuid.UUID, rule RuleUpsert) (RuleRow, error) {
+	def := rule.Definition
+	if len(def) == 0 {
+		def = []byte("{}")
+	}
+	var r RuleRow
+	err := pool.QueryRow(ctx, `
+UPDATE rules SET
+	name = $2,
+	description = $3,
+	severity = $4,
+	definition = $5::jsonb,
+	version = $6,
+	updated_at = now()
+WHERE id = $1
+RETURNING id, name, description, enabled, severity, definition, version, created_at, updated_at
+`, id, rule.Name, rule.Description, rule.Severity, string(def), rule.Version).Scan(
+		&r.ID, &r.Name, &r.Description, &r.Enabled, &r.Severity, &r.Definition, &r.Version, &r.CreatedAt, &r.UpdatedAt,
+	)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return RuleRow{}, ErrNotFound
+		}
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			return RuleRow{}, ErrRuleExists
+		}
+		return RuleRow{}, err
+	}
+	r.YAMLID = yamlIDFromDefinition(r.Definition)
+	return r, nil
 }
 
 // ListRules returns all rules ordered by name.

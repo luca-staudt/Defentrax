@@ -152,6 +152,10 @@ func Bootstrap(ctx context.Context, log *slog.Logger, pool *pgxpool.Pool, engine
 	if err := store.SyncBundledRules(ctx, pool, upserts); err != nil {
 		return err
 	}
+	rules, err = overlayUserModified(ctx, log, pool, rules)
+	if err != nil {
+		return err
+	}
 	customRows, err := store.ListRulesByOrigin(ctx, pool, "custom")
 	if err != nil {
 		return err
@@ -171,6 +175,34 @@ func Bootstrap(ctx context.Context, log *slog.Logger, pool *pgxpool.Pool, engine
 	engine.SetRules(rules, enabled)
 	log.Info("detection rules loaded", "count", len(rules), "path", rulesPath, "custom", len(customRows))
 	return nil
+}
+
+func overlayUserModified(ctx context.Context, log *slog.Logger, pool *pgxpool.Pool, rules []detection.Rule) ([]detection.Rule, error) {
+	rows, err := store.ListUserModifiedBundled(ctx, pool)
+	if err != nil {
+		return nil, err
+	}
+	if len(rows) == 0 {
+		return rules, nil
+	}
+	byID := make(map[string]detection.Rule, len(rows))
+	for _, row := range rows {
+		rule, err := ParseRuleDefinition(row.Definition)
+		if err != nil {
+			if log != nil {
+				log.Warn("skipping invalid edited rule", "name", row.Name, "error", err)
+			}
+			continue
+		}
+		byID[rule.ID] = rule
+	}
+	out := append([]detection.Rule(nil), rules...)
+	for i, rule := range out {
+		if repl, ok := byID[rule.ID]; ok {
+			out[i] = repl
+		}
+	}
+	return out, nil
 }
 
 func definitionJSON(rule detection.Rule) ([]byte, error) {

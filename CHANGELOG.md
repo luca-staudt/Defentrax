@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Default detection rules can be edited from the Rules page. Edits stay in place across restarts. The rule form explains each field. The sidebar always links to https://defentrax.de.
 - Operators with `rules:write` can create custom detection rules from the Rules page. New rules are stored and evaluated by the engine, including after a restart.
 - Page permissions (`pages:dashboard`, `pages:alerts`, `pages:alert_detail`, `pages:events`, `pages:servers`, `pages:server_detail`, `pages:rules`, `pages:notifications`, `pages:team`, `pages:roles`, `pages:audit`) so a role can be granted each panel screen separately. The sidebar and direct URLs follow those keys. Existing roles keep the screens their read permissions already allowed.
 - Team accounts admin: user lifecycle (create/edit/disable, password reset, session revoke, admin 2FA reset)

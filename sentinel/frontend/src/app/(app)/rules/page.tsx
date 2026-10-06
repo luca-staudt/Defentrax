@@ -15,6 +15,10 @@ import type { Rule } from "@/lib/types";
 const fieldClass =
   "mt-1.5 w-full rounded-xl border border-zinc-800 bg-zinc-950/70 px-3 py-2 font-mono text-xs text-zinc-200 placeholder-zinc-600 outline-none transition focus:border-sky-500 focus:ring-1 focus:ring-sky-500";
 
+function Hint({ children }: { children: React.ReactNode }) {
+  return <p className="mt-1 text-[11px] leading-snug text-zinc-500">{children}</p>;
+}
+
 export default function RulesPage() {
   const { user } = useAuth();
   const canWrite = hasPermission(user, "rules", "write");
@@ -25,6 +29,7 @@ export default function RulesPage() {
   const [severityFilter, setSeverityFilter] = useState("ALL");
   const [busyId, setBusyId] = useState<string | null>(null);
   const [composerOpen, setComposerOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [name, setName] = useState("");
@@ -99,7 +104,29 @@ export default function RulesPage() {
     setGroupBy("");
     setActionTitle("");
     setActionDescription("");
+    setEditingId(null);
     setFormError(null);
+  }
+
+  function openEdit(rule: Rule) {
+    const def = rule.definition;
+    const fields = def?.condition?.fields || {};
+    setEditingId(rule.id);
+    setName(rule.name);
+    setDescription(rule.description || "");
+    setSeverity((rule.severity || "medium").toLowerCase());
+    setSource(def?.condition?.source || "");
+    setCategory(def?.condition?.category || "");
+    setEventType(def?.condition?.event_type || "");
+    setMessageContains(def?.condition?.message_contains || "");
+    setFieldsText(Object.entries(fields).map(([key, value]) => `${key}=${value}`).join("\n"));
+    setThresholdCount(def?.threshold?.count ? String(def.threshold.count) : "");
+    setWindowSeconds(def?.threshold?.window_seconds ? String(def.threshold.window_seconds) : "");
+    setGroupBy((def?.group_by || []).join(", "));
+    setActionTitle(def?.action?.title || "");
+    setActionDescription(def?.action?.description || "");
+    setFormError(null);
+    setComposerOpen(true);
   }
 
   async function createRule(e: FormEvent) {
@@ -119,8 +146,8 @@ export default function RulesPage() {
     setSaving(true);
     setFormError(null);
     try {
-      const created = await apiFetch<Rule>("/rules", {
-        method: "POST",
+      const created = await apiFetch<Rule>(editingId ? `/rules/${editingId}` : "/rules", {
+        method: editingId ? "PATCH" : "POST",
         body: JSON.stringify({
           name: name.trim(),
           description: description.trim(),
@@ -140,7 +167,11 @@ export default function RulesPage() {
           action_description: actionDescription.trim(),
         }),
       });
-      setRules((prev) => [created, ...prev.filter((r) => r.id !== created.id)]);
+      setRules((prev) =>
+        editingId
+          ? prev.map((r) => (r.id === created.id ? created : r))
+          : [created, ...prev.filter((r) => r.id !== created.id)],
+      );
       setComposerOpen(false);
       resetComposer();
     } catch (err) {
@@ -176,7 +207,7 @@ export default function RulesPage() {
           <button
             type="button"
             onClick={() => {
-              setFormError(null);
+              resetComposer();
               setComposerOpen(true);
             }}
             className="rounded-xl border border-sky-500/40 bg-sky-500/15 px-4 py-2 text-xs font-semibold text-sky-200 hover:bg-sky-500/25"
@@ -277,6 +308,15 @@ export default function RulesPage() {
                 </div>
                 <div className="flex flex-col items-end gap-2">
                   <SeverityBadge severity={rule.severity} />
+                  {canWrite ? (
+                    <button
+                      type="button"
+                      onClick={() => openEdit(rule)}
+                      className="rounded-lg border border-zinc-700 px-2 py-1 font-mono text-[10px] text-zinc-300 hover:border-sky-500/50 hover:text-sky-200"
+                    >
+                      Edit
+                    </button>
+                  ) : null}
                   <CyberSwitch
                     checked={rule.enabled}
                     disabled={!canWrite || busyId === rule.id}
@@ -292,15 +332,21 @@ export default function RulesPage() {
       <Modal
         isOpen={composerOpen}
         onClose={() => setComposerOpen(false)}
-        title="New detection rule"
-        subtitle="Matches incoming events and can open an alert. Use possibility wording such as “Possible …”."
+        title={editingId ? "Edit detection rule" : "New detection rule"}
+        subtitle="Ein Event kommt rein, die Bedingung filtert es, optional zählt ein Schwellwert, danach entsteht ein Alert."
         maxWidth="max-w-3xl"
       >
         <form className="space-y-4" onSubmit={(e) => void createRule(e)}>
+          <div className="rounded-xl border border-sky-500/20 bg-sky-950/20 p-3 text-[11px] leading-relaxed text-zinc-300">
+            Mindestens ein Match ausfüllen: Source, Category, Event type, Message contains oder ein Feld.
+            Namen und Alert-Texte als Möglichkeit formulieren, zum Beispiel „Possible …“. Wörter wie „confirmed attack“ werden abgelehnt.
+            {editingId ? " Die Regel-ID bleibt gleich, damit bestehende Alerts daran hängen bleiben." : " Neue Regeln bekommen eine ID mit dem Präfix custom."}
+          </div>
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="block text-xs text-zinc-400">
               Name
               <input required value={name} onChange={(e) => setName(e.target.value)} className={fieldClass} placeholder="Possible repeated sudo" />
+              <Hint>Anzeigename in der Liste. Beispiel: Possible SSH brute-force.</Hint>
             </label>
             <label className="block text-xs text-zinc-400">
               Severity
@@ -311,56 +357,68 @@ export default function RulesPage() {
                   </option>
                 ))}
               </select>
+              <Hint>Gewichtung des Alerts. critical ist am höchsten, info am niedrigsten.</Hint>
             </label>
           </div>
           <label className="block text-xs text-zinc-400">
             Description
             <textarea required rows={2} value={description} onChange={(e) => setDescription(e.target.value)} className={fieldClass} />
+            <Hint>Was die Regel sucht und warum das auffällig sein kann. Das ist der Erklärungstext, nicht der Alert selbst.</Hint>
           </label>
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="block text-xs text-zinc-400">
               Source
               <input value={source} onChange={(e) => setSource(e.target.value)} className={fieldClass} placeholder="authlog" />
+              <Hint>Ereignisquelle, zum Beispiel authlog, docker oder nginx. Leer lassen, wenn jede Quelle gelten soll.</Hint>
             </label>
             <label className="block text-xs text-zinc-400">
               Category
               <input value={category} onChange={(e) => setCategory(e.target.value)} className={fieldClass} placeholder="auth" />
+              <Hint>Kategorie des Events, zum Beispiel auth. Muss exakt zum eingehenden Event passen.</Hint>
             </label>
             <label className="block text-xs text-zinc-400">
               Event type
               <input value={eventType} onChange={(e) => setEventType(e.target.value)} className={fieldClass} />
+              <Hint>Optionaler genauer Typ, falls der Agent einen setzt. Sonst leer lassen.</Hint>
             </label>
             <label className="block text-xs text-zinc-400">
               Message contains
               <input value={messageContains} onChange={(e) => setMessageContains(e.target.value)} className={fieldClass} placeholder="failed password" />
+              <Hint>Text, der in der Meldung vorkommen muss. Groß- und Kleinschreibung wird nicht unterschieden.</Hint>
             </label>
           </div>
           <label className="block text-xs text-zinc-400">
             Fields, one key=value per line
             <textarea rows={3} value={fieldsText} onChange={(e) => setFieldsText(e.target.value)} className={fieldClass} placeholder={"result=failed\nprogram=sshd"} />
+            <Hint>Zusätzliche Felder, die exakt passen müssen. Eine Zeile pro Feld, Format key=value. Beispiel: result=failed.</Hint>
           </label>
           <div className="grid gap-3 sm:grid-cols-3">
             <label className="block text-xs text-zinc-400">
               Threshold count
               <input inputMode="numeric" value={thresholdCount} onChange={(e) => setThresholdCount(e.target.value)} className={fieldClass} placeholder="5" />
+              <Hint>Wie oft das Muster im Zeitfenster vorkommen muss. Leer = jedes passende Event öffnet einen Alert. Sonst mindestens 2.</Hint>
             </label>
             <label className="block text-xs text-zinc-400">
               Window seconds
               <input inputMode="numeric" value={windowSeconds} onChange={(e) => setWindowSeconds(e.target.value)} className={fieldClass} placeholder="300" />
+              <Hint>Zeitfenster in Sekunden für den Schwellwert. 300 bedeutet fünf Minuten. Nur zusammen mit Threshold count.</Hint>
             </label>
             <label className="block text-xs text-zinc-400">
               Group by
               <input value={groupBy} onChange={(e) => setGroupBy(e.target.value)} className={fieldClass} placeholder="src_ip, host" />
+              <Hint>Zählt getrennt pro Wert, kommagetrennt. src_ip zählt jede Quell-IP für sich.</Hint>
             </label>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="block text-xs text-zinc-400">
               Alert title
-              <input value={actionTitle} onChange={(e) => setActionTitle(e.target.value)} className={fieldClass} placeholder="Defaults to the rule name" />
+              <input value={actionTitle} onChange={(e) => setActionTitle(e.target.value)} className={fieldClass} placeholder="Possible sudo from {{src_ip}}" />
+              <Hint>Titel des Alerts. Platzhalter wie {"{{src_ip}}"} und {"{{host}}"} werden aus dem Event eingesetzt. Leer = Name der Regel.</Hint>
             </label>
             <label className="block text-xs text-zinc-400">
               Alert description
               <input value={actionDescription} onChange={(e) => setActionDescription(e.target.value)} className={fieldClass} placeholder="Defaults to the rule description" />
+              <Hint>Text im Alert. Leer lassen, dann wird die Beschreibung der Regel verwendet.</Hint>
             </label>
           </div>
           {formError ? <p className="text-xs text-rose-300">{formError}</p> : null}
@@ -369,7 +427,7 @@ export default function RulesPage() {
               Cancel
             </button>
             <button type="submit" disabled={saving} className="rounded-xl bg-sky-500 px-4 py-2 text-xs font-semibold text-black disabled:opacity-50">
-              {saving ? "Saving…" : "Create rule"}
+              {saving ? "Saving…" : editingId ? "Save changes" : "Create rule"}
             </button>
           </div>
         </form>

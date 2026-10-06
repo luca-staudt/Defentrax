@@ -128,6 +128,20 @@ export type AuditLog = {
   created_at: string;
 };
 
+export type RuleDefinition = {
+  condition?: {
+    source?: string;
+    category?: string;
+    event_type?: string;
+    message_contains?: string;
+    fields?: Record<string, string>;
+  };
+  threshold?: { count?: number; window_seconds?: number };
+  group_by?: string[];
+  action?: { title?: string; description?: string };
+  user_modified?: boolean;
+};
+
 export type Rule = {
   id: string;
   rule_id: string;
@@ -136,6 +150,7 @@ export type Rule = {
   enabled: boolean;
   severity: string;
   custom?: boolean;
+  definition?: RuleDefinition;
 };
 
 export type ApiError = {

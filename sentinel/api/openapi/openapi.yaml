@@ -1461,7 +1461,7 @@ paths:
       tags: [Rules]
       operationId: patchRule
       summary: Enable or disable a rule
-      description: "Requires `rules:write` and `pages:rules`. Body must include `enabled`."
+      description: "Requires `rules:write` and `pages:rules`. Send `enabled` to toggle a rule, or the same fields as create to edit a bundled or custom rule. The rule id is kept."
       security:
         - SessionCookie: []
         - BearerApiKey: []
