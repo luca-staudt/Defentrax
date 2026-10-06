@@ -46,16 +46,15 @@ export default function DashboardPage() {
     };
   }, [canAlerts]);
 
-  // Live WebSocket stream for incoming alerts
   useEffect(() => {
-    if (!canAlerts) return;
-    const unsub = connectAlertSocket((newAlert) => {
-      setAlerts((prev) => [newAlert, ...prev.slice(0, 7)]);
+    if (!user || !canAlerts) return;
+    return connectAlertSocket(user, () => {
+      void apiFetch<DashboardStats>("/dashboard/stats").then(setStats).catch(() => undefined);
+      void apiFetch<{ alerts: Alert[] }>("/alerts?limit=8&status=OPEN")
+        .then((r) => setAlerts(r.alerts || []))
+        .catch(() => undefined);
     });
-    return () => {
-      unsub();
-    };
-  }, [canAlerts]);
+  }, [user, canAlerts]);
 
   return (
     <div className="space-y-8">
@@ -195,11 +194,11 @@ export default function DashboardPage() {
               </div>
               <div>
                 <span className="text-zinc-500 block uppercase">Trigger Count</span>
-                <span className="mt-1 block text-zinc-200 font-bold">{selectedAlert.count ?? 1} events</span>
+                <span className="mt-1 block text-zinc-200 font-bold">{selectedAlert.event_count ?? 1} events</span>
               </div>
               <div>
                 <span className="text-zinc-500 block uppercase">Rule Trigger</span>
-                <span className="mt-1 block text-sky-400 truncate">{selectedAlert.rule_name || "Custom SIEM rule"}</span>
+                <span className="mt-1 block text-sky-400 truncate">{selectedAlert.rule_id || "Detection rule"}</span>
               </div>
             </div>
 

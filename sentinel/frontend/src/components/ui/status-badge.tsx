@@ -1,4 +1,4 @@
-import type { AlertStatus } from "@/lib/types";
+type AlertStatus = "OPEN" | "ACKNOWLEDGED" | "INVESTIGATING" | "RESOLVED" | "SILENCED";
 
 const statusConfig: Record<
   AlertStatus,
@@ -18,6 +18,13 @@ const statusConfig: Record<
     border: "border-amber-500/30",
     dot: "bg-amber-400",
   },
+  INVESTIGATING: {
+    label: "INVESTIGATING",
+    text: "text-sky-300",
+    bg: "bg-sky-500/10",
+    border: "border-sky-500/30",
+    dot: "bg-sky-400",
+  },
   RESOLVED: {
     label: "RESOLVED",
     text: "text-emerald-400",
@@ -34,8 +41,8 @@ const statusConfig: Record<
   },
 };
 
-export function StatusBadge({ status }: { status: AlertStatus }) {
-  const config = statusConfig[status] || {
+export function StatusBadge({ status }: { status: string }) {
+  const config = statusConfig[status as AlertStatus] || {
     label: status,
     text: "text-zinc-400",
     bg: "bg-zinc-800/40",

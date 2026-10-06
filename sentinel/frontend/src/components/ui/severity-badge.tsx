@@ -1,4 +1,4 @@
-import type { Severity } from "@/lib/types";
+type Severity = "CRITICAL" | "HIGH" | "MEDIUM" | "LOW" | "INFO";
 
 const severityConfig: Record<
   Severity,
