@@ -68,7 +68,7 @@ All permission checks are server-side (`resource:action` pairs). Opening a panel
 
 ## Alert lifecycle
 
-`OPEN` → `ACKNOWLEDGED` → `INVESTIGATING` → `RESOLVED`
+`OPEN` → `ACKNOWLEDGED` → `INVESTIGATING` → `RESOLVED` (forward skips allowed; `RESOLVED` may reopen to `OPEN`)
 
 Alert titles/descriptions use **possibility language** (“Possible SSH brute-force…”) — never definitive “attacker detected”.
 

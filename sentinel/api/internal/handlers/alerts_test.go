@@ -194,9 +194,6 @@ func TestAlertLifecycleIntegration(t *testing.T) {
 		return res.StatusCode
 	}
 
-	if code := patch("INVESTIGATING", ""); code != http.StatusConflict {
-		t.Fatalf("skip acknowledge expected 409, got %d", code)
-	}
 	if code := patch("ACKNOWLEDGED", ""); code != http.StatusOK {
 		t.Fatalf("ack expected 200, got %d", code)
 	}
@@ -206,8 +203,11 @@ func TestAlertLifecycleIntegration(t *testing.T) {
 	if code := patch("RESOLVED", "Reviewed auth logs; possible automated scanning."); code != http.StatusOK {
 		t.Fatalf("resolve expected 200, got %d", code)
 	}
-	if code := patch("OPEN", ""); code != http.StatusConflict {
-		t.Fatalf("reopen expected 409, got %d", code)
+	if code := patch("OPEN", ""); code != http.StatusOK {
+		t.Fatalf("reopen expected 200, got %d", code)
+	}
+	if code := patch("RESOLVED", "Closed after reopen."); code != http.StatusOK {
+		t.Fatalf("resolve after reopen expected 200, got %d", code)
 	}
 }
 

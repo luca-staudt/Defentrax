@@ -53,14 +53,22 @@ export type Alert = {
   id: string;
   server_id: string;
   rule_id?: string;
+  assigned_to?: string;
   title: string;
   description: string;
   status: string;
   severity: string;
+  source_ip?: string;
   event_count: number;
   first_seen_at: string;
   last_seen_at: string;
+  resolution_notes?: string;
   opened_at: string;
+  acknowledged_at?: string;
+  investigating_at?: string;
+  resolved_at?: string;
+  created_at?: string;
+  updated_at?: string;
 };
 
 export type EventRow = {

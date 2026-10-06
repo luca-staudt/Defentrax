@@ -13,11 +13,15 @@ func TestValidateTransitionAllowed(t *testing.T) {
 		ok       bool
 	}{
 		{alerts.StatusOpen, alerts.StatusAcknowledged, true},
+		{alerts.StatusOpen, alerts.StatusInvestigating, true},
+		{alerts.StatusOpen, alerts.StatusResolved, true},
 		{alerts.StatusAcknowledged, alerts.StatusInvestigating, true},
+		{alerts.StatusAcknowledged, alerts.StatusResolved, true},
 		{alerts.StatusInvestigating, alerts.StatusResolved, true},
-		{alerts.StatusOpen, alerts.StatusInvestigating, false},
-		{alerts.StatusOpen, alerts.StatusResolved, false},
-		{alerts.StatusResolved, alerts.StatusOpen, false},
+		{alerts.StatusResolved, alerts.StatusOpen, true},
+		{alerts.StatusResolved, alerts.StatusAcknowledged, false},
+		{alerts.StatusAcknowledged, alerts.StatusOpen, false},
+		{alerts.StatusInvestigating, alerts.StatusAcknowledged, false},
 	}
 	for _, c := range cases {
 		err := alerts.ValidateTransition(c.from, c.to)

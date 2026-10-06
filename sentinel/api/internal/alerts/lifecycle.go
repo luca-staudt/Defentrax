@@ -19,19 +19,20 @@ var (
 )
 
 // CanTransition reports whether moving from current to next is allowed.
+// Forward skips are allowed (e.g. OPEN → RESOLVED). RESOLVED may reopen to OPEN.
 func CanTransition(current, next string) bool {
 	if current == next {
 		return true
 	}
 	switch current {
 	case StatusOpen:
-		return next == StatusAcknowledged
+		return next == StatusAcknowledged || next == StatusInvestigating || next == StatusResolved
 	case StatusAcknowledged:
-		return next == StatusInvestigating
+		return next == StatusInvestigating || next == StatusResolved
 	case StatusInvestigating:
 		return next == StatusResolved
 	case StatusResolved:
-		return false
+		return next == StatusOpen
 	default:
 		return false
 	}
@@ -42,10 +43,10 @@ func ValidateTransition(current, next string) error {
 	if current == next {
 		return nil
 	}
-	if current == StatusResolved {
-		return ErrTerminalStatus
-	}
 	if !CanTransition(current, next) {
+		if current == StatusResolved {
+			return ErrTerminalStatus
+		}
 		return fmt.Errorf("%w: %s -> %s", ErrInvalidTransition, current, next)
 	}
 	return nil

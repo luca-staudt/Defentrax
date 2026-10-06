@@ -310,6 +310,9 @@ func UpdateAlertLifecycle(ctx context.Context, pool *pgxpool.Pool, alertID uuid.
 	resAt = current.ResolvedAt
 
 	switch status {
+	case "OPEN":
+		// Reopen: clear resolution timestamp so the alert is active again.
+		resAt = nil
 	case "ACKNOWLEDGED":
 		if ackAt == nil {
 			t := now
@@ -321,10 +324,8 @@ func UpdateAlertLifecycle(ctx context.Context, pool *pgxpool.Pool, alertID uuid.
 			invAt = &t
 		}
 	case "RESOLVED":
-		if resAt == nil {
-			t := now
-			resAt = &t
-		}
+		t := now
+		resAt = &t
 	}
 
 	_, err = tx.Exec(ctx, `
@@ -454,6 +455,8 @@ VALUES ($1, $2, $3, $4, $5::jsonb)
 
 func timelineTypeForStatus(status string) string {
 	switch status {
+	case "OPEN":
+		return "reopened"
 	case "ACKNOWLEDGED":
 		return "acknowledged"
 	case "INVESTIGATING":

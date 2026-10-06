@@ -239,6 +239,8 @@ func (h *AlertsHandler) auditAlert(r *http.Request, actor *uuid.UUID, action str
 
 func auditActionForStatus(status string) string {
 	switch status {
+	case alertsvc.StatusOpen:
+		return "alert.reopened"
 	case alertsvc.StatusAcknowledged:
 		return "alert.acknowledged"
 	case alertsvc.StatusInvestigating:
