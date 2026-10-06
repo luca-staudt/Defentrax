@@ -31,6 +31,16 @@ func TestAdminRoleBypassesPermissionCheck(t *testing.T) {
 	}
 }
 
+func TestSuperAdminRoleBypassesPermissionCheck(t *testing.T) {
+	p := &principal.Principal{
+		UserID: uuid.New(),
+		Roles:  []string{"SUPER_ADMIN"},
+	}
+	if !p.HasPermission("roles", "write") {
+		t.Fatal("SUPER_ADMIN should grant any permission")
+	}
+}
+
 func TestHasRole(t *testing.T) {
 	p := &principal.Principal{Roles: []string{"VIEWER", "OPERATOR"}}
 	if !p.HasRole("VIEWER") || p.HasRole("ADMIN") {

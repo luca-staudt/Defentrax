@@ -35,7 +35,8 @@ func RunDev(ctx context.Context, pool *pgxpool.Pool) error {
 	roles := []struct {
 		name, desc string
 	}{
-		{"ADMIN", "Full platform administration"},
+		{"SUPER_ADMIN", "Super Admin — unrestricted platform control"},
+		{"ADMIN", "Admin — full platform administration"},
 		{"SECURITY_ANALYST", "Investigate alerts and tune detection"},
 		{"OPERATOR", "Manage servers, agents, and notifications"},
 		{"VIEWER", "Read-only access"},
@@ -57,6 +58,7 @@ func RunDev(ctx context.Context, pool *pgxpool.Pool) error {
 		{"alerts", "read", "View alerts"},
 		{"alerts", "write", "Update alert lifecycle"},
 		{"events", "read", "View events"},
+		{"servers", "read", "View servers and agents"},
 		{"servers", "write", "Manage servers and agents"},
 		{"rules", "read", "View detection rules"},
 		{"rules", "write", "Manage detection rules"},
@@ -65,6 +67,11 @@ func RunDev(ctx context.Context, pool *pgxpool.Pool) error {
 		{"plugins", "read", "View plugins and plugin configs"},
 		{"plugins", "write", "Enable/disable plugins and manage plugin configs"},
 		{"audit_logs", "read", "View audit trail"},
+		{"audit_logs", "export", "Export audit trail"},
+		{"roles", "read", "View roles and permission assignments"},
+		{"roles", "write", "Manage custom roles and permissions"},
+		{"settings", "read", "View platform settings"},
+		{"settings", "write", "Edit platform settings"},
 		{"api_keys", "write", "Manage personal API keys"},
 	}
 	for _, p := range perms {
@@ -102,7 +109,18 @@ func RunDev(ctx context.Context, pool *pgxpool.Pool) error {
 
 		_, err = tx.Exec(ctx, `
 			INSERT INTO user_roles (user_id, role_id)
+			SELECT $1, id FROM roles WHERE name = 'SUPER_ADMIN'
+			ON CONFLICT DO NOTHING
+		`, userID)
+		if err != nil {
+			return fmt.Errorf("assign super admin role: %w", err)
+		}
+		_, err = tx.Exec(ctx, `
+			INSERT INTO user_roles (user_id, role_id)
 			SELECT $1, id FROM roles WHERE name = 'ADMIN'
+			  AND NOT EXISTS (
+			    SELECT 1 FROM user_roles ur WHERE ur.user_id = $1
+			  )
 			ON CONFLICT DO NOTHING
 		`, userID)
 		if err != nil {

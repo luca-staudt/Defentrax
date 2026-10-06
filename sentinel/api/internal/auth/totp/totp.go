@@ -4,7 +4,6 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/json"
-	"fmt"
 	"strings"
 	"time"
 
@@ -134,5 +133,5 @@ func ValidateCodeWithOpts(secret, code string) bool {
 
 // FormatAccountEmail normalizes account label for provisioning URI.
 func FormatAccountEmail(email string) string {
-	return fmt.Sprintf("%s", strings.TrimSpace(email))
+	return strings.TrimSpace(email)
 }

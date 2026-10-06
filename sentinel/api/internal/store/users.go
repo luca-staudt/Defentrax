@@ -19,14 +19,20 @@ type User struct {
 	DisplayName  string
 	IsActive     bool
 	LastLoginAt  *time.Time
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
 }
 
 type UserPublic struct {
-	ID          uuid.UUID `json:"id"`
-	Email       string    `json:"email"`
-	DisplayName string    `json:"display_name"`
-	IsActive    bool      `json:"is_active"`
-	Roles       []string  `json:"roles,omitempty"`
+	ID          uuid.UUID  `json:"id"`
+	Email       string     `json:"email"`
+	DisplayName string     `json:"display_name"`
+	IsActive    bool       `json:"is_active"`
+	Roles       []string   `json:"roles,omitempty"`
+	LastLoginAt *time.Time `json:"last_login_at,omitempty"`
+	CreatedAt   time.Time  `json:"created_at"`
+	UpdatedAt   time.Time  `json:"updated_at"`
+	TOTPEnabled bool       `json:"totp_enabled"`
 }
 
 func CountUsers(ctx context.Context, pool *pgxpool.Pool) (int64, error) {
@@ -38,9 +44,9 @@ func CountUsers(ctx context.Context, pool *pgxpool.Pool) (int64, error) {
 func GetUserByEmail(ctx context.Context, pool *pgxpool.Pool, email string) (User, error) {
 	var u User
 	err := pool.QueryRow(ctx, `
-		SELECT id, email, password_hash, display_name, is_active, last_login_at
+		SELECT id, email, password_hash, display_name, is_active, last_login_at, created_at, updated_at
 		FROM users WHERE lower(email) = lower($1)
-	`, email).Scan(&u.ID, &u.Email, &u.PasswordHash, &u.DisplayName, &u.IsActive, &u.LastLoginAt)
+	`, email).Scan(&u.ID, &u.Email, &u.PasswordHash, &u.DisplayName, &u.IsActive, &u.LastLoginAt, &u.CreatedAt, &u.UpdatedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return User{}, ErrNotFound
 	}
@@ -50,9 +56,9 @@ func GetUserByEmail(ctx context.Context, pool *pgxpool.Pool, email string) (User
 func GetUserByID(ctx context.Context, pool *pgxpool.Pool, id uuid.UUID) (User, error) {
 	var u User
 	err := pool.QueryRow(ctx, `
-		SELECT id, email, password_hash, display_name, is_active, last_login_at
+		SELECT id, email, password_hash, display_name, is_active, last_login_at, created_at, updated_at
 		FROM users WHERE id = $1
-	`, id).Scan(&u.ID, &u.Email, &u.PasswordHash, &u.DisplayName, &u.IsActive, &u.LastLoginAt)
+	`, id).Scan(&u.ID, &u.Email, &u.PasswordHash, &u.DisplayName, &u.IsActive, &u.LastLoginAt, &u.CreatedAt, &u.UpdatedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return User{}, ErrNotFound
 	}
@@ -69,6 +75,27 @@ func CreateUser(ctx context.Context, pool *pgxpool.Pool, email, passwordHash, di
 	return id, err
 }
 
+func UpdateUser(ctx context.Context, pool *pgxpool.Pool, id uuid.UUID, displayName *string, isActive *bool) error {
+	if displayName == nil && isActive == nil {
+		return nil
+	}
+	_, err := pool.Exec(ctx, `
+		UPDATE users SET
+			display_name = COALESCE($2, display_name),
+			is_active = COALESCE($3, is_active),
+			updated_at = now()
+		WHERE id = $1
+	`, id, displayName, isActive)
+	return err
+}
+
+func UpdateUserPassword(ctx context.Context, pool *pgxpool.Pool, id uuid.UUID, passwordHash string) error {
+	_, err := pool.Exec(ctx, `
+		UPDATE users SET password_hash = $2, updated_at = now() WHERE id = $1
+	`, id, passwordHash)
+	return err
+}
+
 func SetUserRoles(ctx context.Context, pool *pgxpool.Pool, userID uuid.UUID, roleNames []string, assignedBy *uuid.UUID) error {
 	tx, err := pool.Begin(ctx)
 	if err != nil {
@@ -81,15 +108,30 @@ func SetUserRoles(ctx context.Context, pool *pgxpool.Pool, userID uuid.UUID, rol
 		return err
 	}
 	for _, name := range roleNames {
-		_, err = tx.Exec(ctx, `
+		tag, err := tx.Exec(ctx, `
 			INSERT INTO user_roles (user_id, role_id, assigned_by)
 			SELECT $1, id, $2 FROM roles WHERE name = $3
 		`, userID, assignedBy, name)
 		if err != nil {
 			return err
 		}
+		if tag.RowsAffected() == 0 {
+			return fmtRoleNotFound(name)
+		}
 	}
 	return tx.Commit(ctx)
+}
+
+type roleNotFoundError struct{ Name string }
+
+func (e roleNotFoundError) Error() string { return "role not found: " + e.Name }
+
+func fmtRoleNotFound(name string) error { return roleNotFoundError{Name: name} }
+
+// IsRoleNotFound reports whether err is an unknown role name from SetUserRoles.
+func IsRoleNotFound(err error) bool {
+	var e roleNotFoundError
+	return errors.As(err, &e)
 }
 
 func ListUserRoles(ctx context.Context, pool *pgxpool.Pool, userID uuid.UUID) ([]string, error) {
@@ -138,9 +180,47 @@ func ListPermissionsForUser(ctx context.Context, pool *pgxpool.Pool, userID uuid
 	return out, rows.Err()
 }
 
+func userTOTPEnabled(ctx context.Context, pool *pgxpool.Pool, userID uuid.UUID) bool {
+	var enabled bool
+	err := pool.QueryRow(ctx, `
+		SELECT COALESCE((SELECT enabled FROM two_factor_auth WHERE user_id = $1), FALSE)
+	`, userID).Scan(&enabled)
+	if err != nil {
+		return false
+	}
+	return enabled
+}
+
+func toUserPublic(ctx context.Context, pool *pgxpool.Pool, u User) (UserPublic, error) {
+	roles, err := ListUserRoles(ctx, pool, u.ID)
+	if err != nil {
+		return UserPublic{}, err
+	}
+	return UserPublic{
+		ID:          u.ID,
+		Email:       u.Email,
+		DisplayName: u.DisplayName,
+		IsActive:    u.IsActive,
+		Roles:       roles,
+		LastLoginAt: u.LastLoginAt,
+		CreatedAt:   u.CreatedAt,
+		UpdatedAt:   u.UpdatedAt,
+		TOTPEnabled: userTOTPEnabled(ctx, pool, u.ID),
+	}, nil
+}
+
+func GetUserPublic(ctx context.Context, pool *pgxpool.Pool, id uuid.UUID) (UserPublic, error) {
+	u, err := GetUserByID(ctx, pool, id)
+	if err != nil {
+		return UserPublic{}, err
+	}
+	return toUserPublic(ctx, pool, u)
+}
+
 func ListUsers(ctx context.Context, pool *pgxpool.Pool) ([]UserPublic, error) {
 	rows, err := pool.Query(ctx, `
-		SELECT id, email, display_name, is_active FROM users ORDER BY email
+		SELECT id, email, display_name, is_active, last_login_at, created_at, updated_at
+		FROM users ORDER BY email
 	`)
 	if err != nil {
 		return nil, err
@@ -148,16 +228,15 @@ func ListUsers(ctx context.Context, pool *pgxpool.Pool) ([]UserPublic, error) {
 	defer rows.Close()
 	var users []UserPublic
 	for rows.Next() {
-		var u UserPublic
-		if err := rows.Scan(&u.ID, &u.Email, &u.DisplayName, &u.IsActive); err != nil {
+		var u User
+		if err := rows.Scan(&u.ID, &u.Email, &u.DisplayName, &u.IsActive, &u.LastLoginAt, &u.CreatedAt, &u.UpdatedAt); err != nil {
 			return nil, err
 		}
-		roles, err := ListUserRoles(ctx, pool, u.ID)
+		pub, err := toUserPublic(ctx, pool, u)
 		if err != nil {
 			return nil, err
 		}
-		u.Roles = roles
-		users = append(users, u)
+		users = append(users, pub)
 	}
 	return users, rows.Err()
 }
@@ -174,4 +253,15 @@ func RoleIDByName(ctx context.Context, pool *pgxpool.Pool, name string) (uuid.UU
 		return uuid.Nil, ErrNotFound
 	}
 	return id, err
+}
+
+// CountUsersWithRole returns how many users currently hold the named role.
+func CountUsersWithRole(ctx context.Context, pool *pgxpool.Pool, roleName string) (int64, error) {
+	var n int64
+	err := pool.QueryRow(ctx, `
+		SELECT COUNT(*) FROM user_roles ur
+		JOIN roles r ON r.id = ur.role_id
+		WHERE r.name = $1
+	`, roleName).Scan(&n)
+	return n, err
 }

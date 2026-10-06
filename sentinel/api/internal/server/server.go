@@ -63,6 +63,7 @@ func NewWithOptions(log *slog.Logger, cfg config.Config, pool *pgxpool.Pool, log
 	apiMux := http.NewServeMux()
 	authH := &handlers.AuthHandler{Pool: pool, Config: cfg, Limiter: loginLimiter}
 	usersH := &handlers.UsersHandler{Pool: pool}
+	rolesH := &handlers.RolesHandler{Pool: pool}
 	keysH := &handlers.APIKeysHandler{Pool: pool}
 	serversH := &handlers.ServersHandler{Pool: pool}
 	agentH := &handlers.AgentHandler{Pool: pool, Config: cfg, IngestLimiter: ingestLimiter, EnrollLimiter: enrollLimiter}
@@ -118,6 +119,24 @@ func NewWithOptions(log *slog.Logger, cfg config.Config, pool *pgxpool.Pool, log
 
 	apiMux.Handle("GET /api/v1/users", protectPerm(pool, cfg, "users", "read", http.HandlerFunc(usersH.List)))
 	apiMux.Handle("POST /api/v1/users", protectPerm(pool, cfg, "users", "write", http.HandlerFunc(usersH.Create)))
+	apiMux.Handle("GET /api/v1/users/{id}", protectPerm(pool, cfg, "users", "read", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		id, err := uuid.Parse(r.PathValue("id"))
+		if err != nil {
+			requestID := middleware.RequestIDFromContext(r.Context())
+			apperrors.WriteJSON(w, http.StatusBadRequest, "invalid_id", "invalid user id", requestID)
+			return
+		}
+		usersH.Get(w, r, id)
+	})))
+	apiMux.Handle("PATCH /api/v1/users/{id}", protectPerm(pool, cfg, "users", "write", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		id, err := uuid.Parse(r.PathValue("id"))
+		if err != nil {
+			requestID := middleware.RequestIDFromContext(r.Context())
+			apperrors.WriteJSON(w, http.StatusBadRequest, "invalid_id", "invalid user id", requestID)
+			return
+		}
+		usersH.Patch(w, r, id)
+	})))
 	apiMux.Handle("PUT /api/v1/users/{id}/roles", protectPerm(pool, cfg, "users", "write", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		id, err := uuid.Parse(r.PathValue("id"))
 		if err != nil {
@@ -127,6 +146,97 @@ func NewWithOptions(log *slog.Logger, cfg config.Config, pool *pgxpool.Pool, log
 		}
 		usersH.UpdateRoles(w, r, id)
 	})))
+	apiMux.Handle("POST /api/v1/users/{id}/password", protectPerm(pool, cfg, "users", "write", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		id, err := uuid.Parse(r.PathValue("id"))
+		if err != nil {
+			requestID := middleware.RequestIDFromContext(r.Context())
+			apperrors.WriteJSON(w, http.StatusBadRequest, "invalid_id", "invalid user id", requestID)
+			return
+		}
+		usersH.ResetPassword(w, r, id)
+	})))
+	apiMux.Handle("POST /api/v1/users/{id}/totp/reset", protectPerm(pool, cfg, "users", "write", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		id, err := uuid.Parse(r.PathValue("id"))
+		if err != nil {
+			requestID := middleware.RequestIDFromContext(r.Context())
+			apperrors.WriteJSON(w, http.StatusBadRequest, "invalid_id", "invalid user id", requestID)
+			return
+		}
+		usersH.ResetTOTP(w, r, id)
+	})))
+	apiMux.Handle("GET /api/v1/users/{id}/sessions", protectPerm(pool, cfg, "users", "write", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		id, err := uuid.Parse(r.PathValue("id"))
+		if err != nil {
+			requestID := middleware.RequestIDFromContext(r.Context())
+			apperrors.WriteJSON(w, http.StatusBadRequest, "invalid_id", "invalid user id", requestID)
+			return
+		}
+		usersH.ListSessions(w, r, id)
+	})))
+	apiMux.Handle("DELETE /api/v1/users/{id}/sessions", protectPerm(pool, cfg, "users", "write", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		id, err := uuid.Parse(r.PathValue("id"))
+		if err != nil {
+			requestID := middleware.RequestIDFromContext(r.Context())
+			apperrors.WriteJSON(w, http.StatusBadRequest, "invalid_id", "invalid user id", requestID)
+			return
+		}
+		usersH.RevokeAllSessions(w, r, id)
+	})))
+	apiMux.Handle("DELETE /api/v1/users/{id}/sessions/{sessionId}", protectPerm(pool, cfg, "users", "write", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		id, err := uuid.Parse(r.PathValue("id"))
+		if err != nil {
+			requestID := middleware.RequestIDFromContext(r.Context())
+			apperrors.WriteJSON(w, http.StatusBadRequest, "invalid_id", "invalid user id", requestID)
+			return
+		}
+		sid, err := uuid.Parse(r.PathValue("sessionId"))
+		if err != nil {
+			requestID := middleware.RequestIDFromContext(r.Context())
+			apperrors.WriteJSON(w, http.StatusBadRequest, "invalid_id", "invalid session id", requestID)
+			return
+		}
+		usersH.RevokeSession(w, r, id, sid)
+	})))
+
+	apiMux.Handle("GET /api/v1/roles", protectPerm(pool, cfg, "roles", "read", http.HandlerFunc(rolesH.ListRoles)))
+	apiMux.Handle("POST /api/v1/roles", protectPerm(pool, cfg, "roles", "write", http.HandlerFunc(rolesH.CreateRole)))
+	apiMux.Handle("GET /api/v1/roles/{id}", protectPerm(pool, cfg, "roles", "read", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		id, err := uuid.Parse(r.PathValue("id"))
+		if err != nil {
+			requestID := middleware.RequestIDFromContext(r.Context())
+			apperrors.WriteJSON(w, http.StatusBadRequest, "invalid_id", "invalid role id", requestID)
+			return
+		}
+		rolesH.GetRole(w, r, id)
+	})))
+	apiMux.Handle("PATCH /api/v1/roles/{id}", protectPerm(pool, cfg, "roles", "write", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		id, err := uuid.Parse(r.PathValue("id"))
+		if err != nil {
+			requestID := middleware.RequestIDFromContext(r.Context())
+			apperrors.WriteJSON(w, http.StatusBadRequest, "invalid_id", "invalid role id", requestID)
+			return
+		}
+		rolesH.PatchRole(w, r, id)
+	})))
+	apiMux.Handle("DELETE /api/v1/roles/{id}", protectPerm(pool, cfg, "roles", "write", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		id, err := uuid.Parse(r.PathValue("id"))
+		if err != nil {
+			requestID := middleware.RequestIDFromContext(r.Context())
+			apperrors.WriteJSON(w, http.StatusBadRequest, "invalid_id", "invalid role id", requestID)
+			return
+		}
+		rolesH.DeleteRole(w, r, id)
+	})))
+	apiMux.Handle("PUT /api/v1/roles/{id}/permissions", protectPerm(pool, cfg, "roles", "write", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		id, err := uuid.Parse(r.PathValue("id"))
+		if err != nil {
+			requestID := middleware.RequestIDFromContext(r.Context())
+			apperrors.WriteJSON(w, http.StatusBadRequest, "invalid_id", "invalid role id", requestID)
+			return
+		}
+		rolesH.SetPermissions(w, r, id)
+	})))
+	apiMux.Handle("GET /api/v1/permissions", protectPerm(pool, cfg, "roles", "read", http.HandlerFunc(rolesH.ListPermissions)))
 
 	apiMux.Handle("GET /api/v1/users/me/api-keys", protectPerm(pool, cfg, "api_keys", "write", http.HandlerFunc(keysH.List)))
 	apiMux.Handle("POST /api/v1/users/me/api-keys", protectPerm(pool, cfg, "api_keys", "write", http.HandlerFunc(keysH.Create)))
@@ -147,8 +257,8 @@ func NewWithOptions(log *slog.Logger, cfg config.Config, pool *pgxpool.Pool, log
 	})))
 	apiMux.Handle("GET /api/v1/ws/alerts", protectPerm(pool, cfg, "alerts", "read", http.HandlerFunc(realtimeH.AlertsWS)))
 
-	apiMux.Handle("GET /api/v1/servers", protectPerm(pool, cfg, "servers", "write", http.HandlerFunc(serversH.List)))
-	apiMux.Handle("GET /api/v1/servers/{id}", protectPerm(pool, cfg, "servers", "write", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	apiMux.Handle("GET /api/v1/servers", protectPerm(pool, cfg, "servers", "read", http.HandlerFunc(serversH.List)))
+	apiMux.Handle("GET /api/v1/servers/{id}", protectPerm(pool, cfg, "servers", "read", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		id, err := uuid.Parse(r.PathValue("id"))
 		if err != nil {
 			requestID := middleware.RequestIDFromContext(r.Context())

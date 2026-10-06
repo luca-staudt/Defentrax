@@ -10,13 +10,15 @@ const nav = [
   { href: "/dashboard", label: "Dashboard", perm: ["alerts", "read"] as const },
   { href: "/alerts", label: "Alerts", perm: ["alerts", "read"] as const },
   { href: "/events", label: "Events", perm: ["events", "read"] as const },
-  { href: "/servers", label: "Servers", perm: ["servers", "write"] as const },
+  { href: "/servers", label: "Servers", perm: ["servers", "read"] as const },
   { href: "/rules", label: "Rules", perm: ["rules", "read"] as const },
   {
     href: "/notifications",
     label: "Notifications",
     perm: ["notifications", "read"] as const,
   },
+  { href: "/users", label: "Team", perm: ["users", "read"] as const },
+  { href: "/roles", label: "Roles", perm: ["roles", "read"] as const },
   { href: "/audit", label: "Audit logs", perm: ["audit_logs", "read"] as const },
 ];
 
