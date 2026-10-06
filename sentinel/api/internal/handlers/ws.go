@@ -49,7 +49,7 @@ func (h *RealtimeHandler) AlertsWS(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		return
 	}
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 
 	ch := h.Hub.Subscribe()
 	defer h.Hub.Unsubscribe(ch)

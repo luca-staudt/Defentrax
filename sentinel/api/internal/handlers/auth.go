@@ -417,7 +417,7 @@ func (h *AuthHandler) verifyTOTPCode(r *http.Request, userID uuid.UUID, code str
 }
 
 func decodeJSON(r *http.Request, dst any) error {
-	defer r.Body.Close()
+	defer func() { _ = r.Body.Close() }()
 	dec := json.NewDecoder(io.LimitReader(r.Body, 1<<20))
 	dec.DisallowUnknownFields()
 	return dec.Decode(dst)

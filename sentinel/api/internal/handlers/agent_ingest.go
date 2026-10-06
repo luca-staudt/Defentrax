@@ -122,7 +122,7 @@ func (h *AgentHandler) IngestEvents(w http.ResponseWriter, r *http.Request) {
 var errPayloadTooLarge = errors.New("payload too large")
 
 func decodeIngestJSON(r *http.Request, maxBytes int64, dst any) error {
-	defer r.Body.Close()
+	defer func() { _ = r.Body.Close() }()
 	if maxBytes < 1 {
 		maxBytes = 1 << 20
 	}

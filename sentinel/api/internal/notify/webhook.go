@@ -80,7 +80,7 @@ func (s *WebhookSender) postJSON(ctx context.Context, webhookURL string, headers
 	if err != nil {
 		return fmt.Errorf("webhook request failed: %s", SafeError(err))
 	}
-	defer res.Body.Close()
+	defer func() { _ = res.Body.Close() }()
 	_, _ = io.Copy(io.Discard, io.LimitReader(res.Body, 4096))
 	if res.StatusCode < 200 || res.StatusCode >= 300 {
 		return fmt.Errorf("webhook returned status %d", res.StatusCode)

@@ -5,6 +5,9 @@
   "description": "Example parser for ECHO-format log lines (Phase 12 demo)",
   "kind": "event_parser",
   "api_version": 1,
-  "artifacts": ["parse.go", "plugin.go"],
-  "checksum_sha256": "6ae292aba049102327c49a957a1ebf0475422bcb218a64add7810933e0b813f4"
+  "artifacts": [
+    "parse.go",
+    "plugin.go"
+  ],
+  "checksum_sha256": "e3d909b09d96a1c62e81228f0dd230495af3c53f08d944a1dd1b9e1f5cf3fadb"
 }

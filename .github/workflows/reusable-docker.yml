@@ -89,7 +89,7 @@ jobs:
 
       - name: Trivy scan API image
         if: ${{ inputs.scan-api-image && contains(inputs.images, 'api') }}
-        uses: aquasecurity/trivy-action@v0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           scan-type: image
           image-ref: sentinel-api:${{ inputs.tag }}
