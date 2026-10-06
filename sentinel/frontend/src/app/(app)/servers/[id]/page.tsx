@@ -192,11 +192,11 @@ export default function ServerDetailPage() {
               <p className="mt-2 text-sm text-amber-300">{copyHint}</p>
             ) : null}
             <pre className="mt-4 overflow-x-auto rounded bg-black/50 p-3 text-xs text-zinc-400">
-{`# On the monitored host:
-export SENTINEL_API_URL=http://YOUR_SENTINEL_HOST:8080
+{`# On the monitored host (Defentrax agent):
+export SENTINEL_API_URL=http://YOUR_DEFENTRAX_HOST:8080
 export SENTINEL_ENROLLMENT_TOKEN=${issued.token}
 export SENTINEL_AGENT_NAME=${label || "agent"}
-./sentinel-agent`}
+./sentinel-agent  # Defentrax agent binary`}
             </pre>
           </div>
         ) : null}
