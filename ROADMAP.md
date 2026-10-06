@@ -29,20 +29,25 @@ Living plan from the first tagged pre-release **`v0.1.0`** toward a production-r
 | 20 | Documentation |
 | 21 | Release prep + first tagged pre-release (`v0.1.0`) |
 
+## Shipped after `v0.1.0`
+
+| Tag | Theme | What landed |
+|-----|-------|-------------|
+| **v0.2.0** (2026-10-06) | **Operator depth + Defentrax brand** | Team accounts, custom roles, page permissions, audit UI, notification test, custom/editable rules, Defentrax rebrand + UI remake, repo rename |
+
 ## Release line concept
 
 | Release | Theme | Focus |
 |---------|-------|--------|
-| **v0.1.0** (this pre-release) | **Preview foundation** | Self-hostable Compose stack: API, agent enrollment, detection, alerts, operator UI, notifications |
-| **v0.1.x** | **Stabilize preview** | Bugfixes, install/upgrade polish, clearer operator docs, UI/API consistency |
-| **v0.2.0** | **Operator depth** | More log collectors, automated retention/purge, public audit-log API + UI |
-| **v0.3.0** | **Hardening** | Agent ↔ API mTLS, cosign/signed images, broader rule packs, GeoIP optional |
+| **v0.1.0** | **Preview foundation** | Self-hostable Compose stack: API, agent enrollment, detection, alerts, operator UI, notifications |
+| **v0.2.0** (current pre-release) | **Operator depth** | Team/RBAC admin, page permissions, audit UI, custom rules, Defentrax brand |
+| **v0.2.x** | **Stabilize** | Bugfixes, install/upgrade polish, clearer operator docs |
+| **v0.3.0** | **Collectors + hardening** | Broader log collectors, automated retention, agent mTLS, cosign/signed images |
 | **v1.0.0** | **Production public** | LICENSE decided, readiness checklist green, stable upgrade path |
 
-## After `v0.1.0` (candidates — not promises)
+## After `v0.2.0` (candidates — not promises)
 
-- Close v1.0 checklist gaps (license, collectors, audit API, retention job, mTLS, cosign)
-- Public audit-log API and UI
+- Close v1.0 checklist gaps (license, collectors, retention job, mTLS, cosign)
 - Automated retention / purge jobs with operator policy
 - Agent ↔ API mTLS
 - Cosign / signed release images in CI
@@ -52,7 +57,7 @@ Living plan from the first tagged pre-release **`v0.1.0`** toward a production-r
 - Broader log sources and rule packs
 - Multi-replica rate-limit refinements already partly covered by Redis
 
-## Non-goals for the first tag / pre-release
+## Non-goals for the pre-1.0 line
 
 - Calling the release `v1.0.0` while LICENSE / collector / hardening gaps remain
 - Multi-tenant SaaS isolation

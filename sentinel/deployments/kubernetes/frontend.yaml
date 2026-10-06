@@ -25,7 +25,7 @@ spec:
         fsGroup: 65532
       containers:
         - name: frontend
-          image: sentinel-frontend:0.1.0
+          image: sentinel-frontend:0.2.0
           imagePullPolicy: IfNotPresent
           ports:
             - name: http

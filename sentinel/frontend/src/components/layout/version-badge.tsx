@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-const FALLBACK = "v0.1.0";
+const FALLBACK = "v0.2.0";
 
 export function VersionBadge() {
   const [version, setVersion] = useState<string>(FALLBACK);

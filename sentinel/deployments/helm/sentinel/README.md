@@ -41,7 +41,7 @@ helm upgrade --install sentinel "$CHART" \
   --set secrets.sessionSecret="$SESS" \
   --set secrets.totpEncryptionKey="$TOTP" \
   --set secrets.secretsEncryptionKey="$SENC" \
-  --set image.tag=0.1.0
+  --set image.tag=0.2.0
 ```
 
 Using an existing Opaque Secret (keys must match Phase 16: `POSTGRES_PASSWORD`, `DATABASE_URL`, `SESSION_SECRET`, `TOTP_ENCRYPTION_KEY`, `SECRETS_ENCRYPTION_KEY`):

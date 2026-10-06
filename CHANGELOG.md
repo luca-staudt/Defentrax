@@ -7,26 +7,61 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.2.0] — 2026-10-06
+
+Second tagged **pre-release**. Product rebrand to **Defentrax**, GitHub repo rename,
+and substantial operator-depth features on top of `v0.1.0`. Still **not** a finished
+`v1.0.0` — expect gaps and breaking changes before production-ready.
+
+**SemVer choice:** minor bump (`0.1.0` → `0.2.0`) because Team Accounts / RBAC,
+per-page permissions, custom detection rules, and a full operator UI remake landed —
+not a patch-only line of fixes and docs.
+
 ### Added
 
-- Default detection rules can be edited from the Rules page. Edits stay in place across restarts. The rule form explains each field. The sidebar always links to https://defentrax.de.
-- Operators with `rules:write` can create custom detection rules from the Rules page. New rules are stored and evaluated by the engine, including after a restart.
-- Page permissions (`pages:dashboard`, `pages:alerts`, `pages:alert_detail`, `pages:events`, `pages:servers`, `pages:server_detail`, `pages:rules`, `pages:notifications`, `pages:team`, `pages:roles`, `pages:audit`) so a role can be granted each panel screen separately. The sidebar and direct URLs follow those keys. Existing roles keep the screens their read permissions already allowed.
 - Team accounts admin: user lifecycle (create/edit/disable, password reset, session revoke, admin 2FA reset)
 - Roles & permissions management API + panel UI (custom roles, `roles:read`/`roles:write`)
 - Built-in `SUPER_ADMIN` role (alongside legacy `ADMIN` bypass)
 - Permission keys: `servers:read`, `roles:*`, `settings:*`, `audit_logs:export`
+- Page permissions (`pages:dashboard`, `pages:alerts`, `pages:alert_detail`, `pages:events`, `pages:servers`, `pages:server_detail`, `pages:rules`, `pages:notifications`, `pages:team`, `pages:roles`, `pages:audit`) so a role can be granted each panel screen separately
 - Panel pages: `/users` (Team), `/roles`
+- Operators can create custom detection rules and edit bundled rules from the Rules page
+- Notification channel test action, audit logs UI, clipboard copy fallback for enrollment tokens
+- Defentrax brand assets (UI logo, favicon, docs lockup) and Core Guard operator UI remake (SOC layout, telemetry charts, alert console, roles/users/notifications polish)
 
 ### Changed
 
+- Product / docs / UI branding: **Sentinel → Defentrax** (code paths and Compose service names still use `sentinel/` / `sentinel-*` identifiers)
+- GitHub module and clone URLs retargeted to `luca-staudt/Defentrax`
 - Server list/detail now requires `servers:read` (create/tokens still `servers:write`)
 - `/auth/me` returns real `display_name`, `is_active`, timestamps, and `totp_enabled`
+- Frontend production build fixes after the UI remake (WebSocket / build path)
+
+### Fixed
+
+- CI unblocked after Defentrax rename
+- Frontend production build after UI remake
+
+### Known gaps (unchanged blockers for `v1.0.0`)
+
+- No `LICENSE` file (maintainer decision pending)
+- No dedicated nginx / apache / firewall / full systemd collectors
+- No automated event retention job yet
+- No agent mTLS; cosign image signing not in CI
+- Production HTTPS / cookie hardening still operator-owned
+
+### Forward path
+
+| Tag | Intent |
+|-----|--------|
+| **v0.2.x** | Stabilize this operator-depth line: install/upgrade polish, bugfixes |
+| **v0.3.0** | Broader collectors + automated retention + hardening (mTLS, signed images) |
+| **v1.0.0** | Production-ready public release once LICENSE + readiness checklist are green |
 
 ## [0.1.0] — 2026-10-05
 
 First formal tagged **pre-release**. This is an early, self-hostable preview of the
-Defentrax SIEM control plane — **not** a finished `v1.0.0` product. Expect gaps,
+SIEM control plane — **not** a finished `v1.0.0` product. Expect gaps,
 rough edges, and breaking changes before a production-ready line.
 
 ### Added
@@ -75,5 +110,6 @@ rough edges, and breaking changes before a production-ready line.
 
 ---
 
-[Unreleased]: https://github.com/luca-staudt/Defentrax/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/luca-staudt/Defentrax/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/luca-staudt/Defentrax/releases/tag/v0.2.0
 [0.1.0]: https://github.com/luca-staudt/Defentrax/releases/tag/v0.1.0

@@ -18,7 +18,7 @@ info:
     `SUPER_ADMIN` and `ADMIN` bypass these checks. Plugins and API keys have no page key.
 
     Interactive UI: `GET /api/v1/docs` (Swagger UI). Raw spec: `GET /api/v1/openapi.yaml`.
-  version: 0.1.0
+  version: 0.2.0
   contact:
     name: Defentrax
 servers:
@@ -115,7 +115,7 @@ paths:
                     example: sentinel-api
                   version:
                     type: string
-                    example: "0.1.0"
+                    example: "0.2.0"
                   api:
                     type: string
                     example: v1

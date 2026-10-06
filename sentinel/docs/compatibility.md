@@ -1,6 +1,6 @@
 # Compatibility notes
 
-Versions Defentrax **expects** for the `VERSION` / `v0.1.0` line. This is an
+Versions Defentrax **expects** for the `VERSION` / `v0.2.0` line. This is an
 operator matrix, not a marketing claim of universal platform support.
 
 ## Product version
@@ -12,7 +12,7 @@ operator matrix, not a marketing claim of universal platform support.
 | OpenAPI `info.version` | [`sentinel/api/openapi/openapi.yaml`](../api/openapi/openapi.yaml) |
 | Frontend `package.json` | [`sentinel/frontend/package.json`](../frontend/package.json) |
 | Helm `version` / `appVersion` / default image tag | [`deployments/helm/sentinel`](../deployments/helm/sentinel) |
-| Compose image tag default | `SENTINEL_IMAGE_TAG` (default `0.1.0`) in root `docker-compose.yml` |
+| Compose image tag default | `SENTINEL_IMAGE_TAG` (default `0.2.0`) in root `docker-compose.yml` |
 
 Bump all of the above together. Validate with:
 
@@ -34,7 +34,7 @@ Bump all of the above together. Validate with:
 
 ## Known capability gaps vs. long-term v1.0 brief
 
-These do **not** block a cautious `v0.1.0` tag, but they **do** block calling the
+These do **not** block a cautious pre-1.0 tag, but they **do** block calling the
 release `v1.0.0`:
 
 | Area | Status on this branch stack |
