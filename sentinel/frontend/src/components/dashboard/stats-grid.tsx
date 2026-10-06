@@ -71,15 +71,15 @@ function SeverityBreakdownChart({ data }: { data: Record<string, number> }) {
             return (
               <div key={k} className="space-y-1">
                 <div className="flex justify-between text-xs font-mono">
-                  <span className={}>{k}</span>
+                  <span className={`${style.text} font-medium uppercase`}>{k}</span>
                   <span className="text-zinc-400">
                     {v} <span className="text-zinc-600">({pct}%)</span>
                   </span>
                 </div>
                 <div className="h-2 overflow-hidden rounded-full bg-zinc-900 border border-zinc-800">
                   <div
-                    className={}
-                    style={{ width:  }}
+                    className={`h-full rounded-full transition-all duration-500 ${style.bg}`}
+                    style={{ width: `${pct}%` }}
                   />
                 </div>
               </div>
@@ -118,7 +118,7 @@ function RulesBarChart({ title, data }: { title: string; data: Record<string, nu
               <div className="h-2 overflow-hidden rounded-full bg-zinc-900 border border-zinc-800">
                 <div
                   className="h-full rounded-full bg-gradient-to-r from-sky-500 to-indigo-500 transition-all duration-500"
-                  style={{ width:  }}
+                  style={{ width: `${(v / max) * 100}%` }}
                 />
               </div>
             </div>

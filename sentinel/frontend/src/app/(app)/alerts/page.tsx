@@ -25,8 +25,8 @@ export default function AlertsPage() {
     let cancelled = false;
     (async () => {
       try {
-        const query = selectedStatus === "ALL" ? "" : ;
-        const res = await apiFetch<{ alerts: Alert[] }>();
+        const query = selectedStatus === "ALL" ? "" : `?status=${selectedStatus}`;
+        const res = await apiFetch<{ alerts: Alert[] }>(`/alerts${query}`);
         if (!cancelled) {
           setAlerts(res.alerts || []);
         }
@@ -107,7 +107,11 @@ export default function AlertsPage() {
                 key={sev}
                 type="button"
                 onClick={() => setSelectedSeverity(sev)}
-                className={}
+                className={`rounded-lg px-2.5 py-1 transition ${
+                  selectedSeverity === sev
+                    ? "border border-sky-500/50 bg-sky-500/20 text-sky-200 font-semibold shadow-sm"
+                    : "border border-zinc-800 bg-zinc-900/40 text-zinc-400 hover:text-white"
+                }`}
               >
                 {sev}
               </button>
@@ -123,7 +127,11 @@ export default function AlertsPage() {
               key={st}
               type="button"
               onClick={() => setSelectedStatus(st)}
-              className={}
+              className={`rounded-lg px-2.5 py-1 transition ${
+                selectedStatus === st
+                  ? "border border-sky-500/50 bg-sky-500/20 text-sky-200 font-semibold shadow-sm"
+                  : "border border-zinc-800 bg-zinc-900/40 text-zinc-400 hover:text-white"
+              }`}
             >
               {st}
             </button>
@@ -176,7 +184,7 @@ export default function AlertsPage() {
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       <span className="rounded bg-zinc-800/60 px-2 py-0.5 text-[11px] text-sky-400 border border-zinc-700/40">
-                        {alert.rule_id ?  : "SIEM Rule"}
+                        {alert.rule_id ? `Rule: ${alert.rule_id}` : "SIEM Rule"}
                       </span>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
@@ -195,7 +203,7 @@ export default function AlertsPage() {
                           Inspect
                         </button>
                         <Link
-                          href={}
+                          href={`/alerts/${alert.id}`}
                           className="rounded-lg border border-sky-500/40 bg-sky-500/10 px-2.5 py-1 text-[11px] text-sky-300 hover:bg-sky-500/20 hover:text-white transition"
                         >
                           Details →
@@ -215,7 +223,7 @@ export default function AlertsPage() {
         <Modal
           isOpen={!!inspectAlert}
           onClose={() => setInspectAlert(null)}
-          title={}
+          title={`Incident Inspection #${inspectAlert.id.slice(0, 8)}`}
           subtitle={inspectAlert.title}
         >
           <div className="space-y-4">
@@ -268,7 +276,7 @@ export default function AlertsPage() {
                 Close
               </button>
               <Link
-                href={}
+                href={`/alerts/${inspectAlert.id}`}
                 className="rounded-xl border border-sky-500/40 bg-sky-500/20 px-4 py-2 text-xs font-semibold text-sky-200 hover:bg-sky-500/30"
               >
                 Open Full Incident Record
