@@ -67,5 +67,5 @@ rough edges, and breaking changes before a production-ready line.
 
 ---
 
-[Unreleased]: https://github.com/luca-staudt/Sentinel/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/luca-staudt/Sentinel/releases/tag/v0.1.0
+[Unreleased]: https://github.com/luca-staudt/Defentrax/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/luca-staudt/Defentrax/releases/tag/v0.1.0

@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/luca-staudt/Sentinel/sentinel/api/internal/auth/ratelimit"
+	"github.com/luca-staudt/Defentrax/sentinel/api/internal/auth/ratelimit"
 )
 
 func TestEnrollRateLimited(t *testing.T) {

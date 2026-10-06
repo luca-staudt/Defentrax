@@ -6,10 +6,10 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/luca-staudt/Sentinel/sentinel/api/internal/apperrors"
-	"github.com/luca-staudt/Sentinel/sentinel/api/internal/auth/agentctx"
-	"github.com/luca-staudt/Sentinel/sentinel/api/internal/crypto/secrets"
-	"github.com/luca-staudt/Sentinel/sentinel/api/internal/store"
+	"github.com/luca-staudt/Defentrax/sentinel/api/internal/apperrors"
+	"github.com/luca-staudt/Defentrax/sentinel/api/internal/auth/agentctx"
+	"github.com/luca-staudt/Defentrax/sentinel/api/internal/crypto/secrets"
+	"github.com/luca-staudt/Defentrax/sentinel/api/internal/store"
 )
 
 // AuthenticateAgent loads agent bearer credentials into context (sagt_ prefix).

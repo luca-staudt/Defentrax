@@ -1,4 +1,4 @@
-module github.com/luca-staudt/Sentinel/sentinel/database
+module github.com/luca-staudt/Defentrax/sentinel/database
 
 go 1.22
 

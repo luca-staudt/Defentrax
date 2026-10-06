@@ -13,7 +13,7 @@ var embedded string
 
 // buildVersion may be set at link time:
 //
-//	-ldflags="-X github.com/luca-staudt/Sentinel/sentinel/pkg/version.buildVersion=1.2.3"
+//	-ldflags="-X github.com/luca-staudt/Defentrax/sentinel/pkg/version.buildVersion=1.2.3"
 var buildVersion string
 
 // String returns the product version (SemVer without a leading "v").

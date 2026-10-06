@@ -7,8 +7,8 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/luca-staudt/Sentinel/sentinel/api/internal/auth/principal"
-	"github.com/luca-staudt/Sentinel/sentinel/api/internal/middleware"
+	"github.com/luca-staudt/Defentrax/sentinel/api/internal/auth/principal"
+	"github.com/luca-staudt/Defentrax/sentinel/api/internal/middleware"
 )
 
 func TestAlertsWritePermissionRequired(t *testing.T) {

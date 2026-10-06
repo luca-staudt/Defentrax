@@ -10,7 +10,7 @@ VERSION_DIR := sentinel/pkg/version
 FRONTEND_DIR := sentinel/frontend
 VERSION_FILE := VERSION
 VERSION := $(shell tr -d '[:space:]' < $(VERSION_FILE) 2>/dev/null)
-VERSION_LDFLAGS := -X github.com/luca-staudt/Sentinel/sentinel/pkg/version.buildVersion=$(VERSION)
+VERSION_LDFLAGS := -X github.com/luca-staudt/Defentrax/sentinel/pkg/version.buildVersion=$(VERSION)
 
 build: api-build agent-build
 

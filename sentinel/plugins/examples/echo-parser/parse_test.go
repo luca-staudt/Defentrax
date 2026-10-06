@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	echoparser "github.com/luca-staudt/Sentinel/sentinel/plugins/examples/echo-parser"
-	"github.com/luca-staudt/Sentinel/sentinel/plugins/sdk"
+	echoparser "github.com/luca-staudt/Defentrax/sentinel/plugins/examples/echo-parser"
+	"github.com/luca-staudt/Defentrax/sentinel/plugins/sdk"
 )
 
 func TestParseEchoLine(t *testing.T) {

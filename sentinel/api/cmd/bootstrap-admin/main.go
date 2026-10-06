@@ -8,9 +8,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/luca-staudt/Sentinel/sentinel/api/internal/crypto/password"
-	"github.com/luca-staudt/Sentinel/sentinel/api/internal/db"
-	"github.com/luca-staudt/Sentinel/sentinel/api/internal/store"
+	"github.com/luca-staudt/Defentrax/sentinel/api/internal/crypto/password"
+	"github.com/luca-staudt/Defentrax/sentinel/api/internal/db"
+	"github.com/luca-staudt/Defentrax/sentinel/api/internal/store"
 )
 
 func main() {

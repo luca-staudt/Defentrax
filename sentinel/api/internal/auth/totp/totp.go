@@ -12,7 +12,7 @@ import (
 	otplib "github.com/pquerna/otp/totp"
 	"golang.org/x/crypto/bcrypt"
 
-	"github.com/luca-staudt/Sentinel/sentinel/api/internal/crypto/encrypt"
+	"github.com/luca-staudt/Defentrax/sentinel/api/internal/crypto/encrypt"
 )
 
 const (

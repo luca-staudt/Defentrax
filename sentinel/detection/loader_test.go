@@ -4,7 +4,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/luca-staudt/Sentinel/sentinel/detection"
+	"github.com/luca-staudt/Defentrax/sentinel/detection"
 )
 
 func TestLoadRulesFromDir(t *testing.T) {

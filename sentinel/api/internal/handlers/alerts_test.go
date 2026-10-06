@@ -18,16 +18,16 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/luca-staudt/Sentinel/sentinel/api/internal/alerts"
-	"github.com/luca-staudt/Sentinel/sentinel/api/internal/auth/ratelimit"
-	"github.com/luca-staudt/Sentinel/sentinel/api/internal/config"
-	"github.com/luca-staudt/Sentinel/sentinel/api/internal/crypto/password"
-	"github.com/luca-staudt/Sentinel/sentinel/api/internal/detectionrun"
-	"github.com/luca-staudt/Sentinel/sentinel/api/internal/realtime"
-	"github.com/luca-staudt/Sentinel/sentinel/api/internal/server"
-	"github.com/luca-staudt/Sentinel/sentinel/api/internal/store"
-	"github.com/luca-staudt/Sentinel/sentinel/detection"
-	"github.com/luca-staudt/Sentinel/sentinel/pkg/event"
+	"github.com/luca-staudt/Defentrax/sentinel/api/internal/alerts"
+	"github.com/luca-staudt/Defentrax/sentinel/api/internal/auth/ratelimit"
+	"github.com/luca-staudt/Defentrax/sentinel/api/internal/config"
+	"github.com/luca-staudt/Defentrax/sentinel/api/internal/crypto/password"
+	"github.com/luca-staudt/Defentrax/sentinel/api/internal/detectionrun"
+	"github.com/luca-staudt/Defentrax/sentinel/api/internal/realtime"
+	"github.com/luca-staudt/Defentrax/sentinel/api/internal/server"
+	"github.com/luca-staudt/Defentrax/sentinel/api/internal/store"
+	"github.com/luca-staudt/Defentrax/sentinel/detection"
+	"github.com/luca-staudt/Defentrax/sentinel/pkg/event"
 )
 
 func startAlertTestServer(t *testing.T, pool *pgxpool.Pool, dsn string) (*httptest.Server, *realtime.Hub) {

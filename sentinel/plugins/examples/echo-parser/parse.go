@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/luca-staudt/Sentinel/sentinel/pkg/event"
+	"github.com/luca-staudt/Defentrax/sentinel/pkg/event"
 )
 
 // ParseEchoLine parses lines of the form:

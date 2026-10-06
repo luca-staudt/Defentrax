@@ -6,11 +6,11 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/luca-staudt/Sentinel/sentinel/api/internal/apperrors"
-	"github.com/luca-staudt/Sentinel/sentinel/api/internal/auth/principal"
-	"github.com/luca-staudt/Sentinel/sentinel/api/internal/crypto/secrets"
-	"github.com/luca-staudt/Sentinel/sentinel/api/internal/middleware"
-	"github.com/luca-staudt/Sentinel/sentinel/api/internal/store"
+	"github.com/luca-staudt/Defentrax/sentinel/api/internal/apperrors"
+	"github.com/luca-staudt/Defentrax/sentinel/api/internal/auth/principal"
+	"github.com/luca-staudt/Defentrax/sentinel/api/internal/crypto/secrets"
+	"github.com/luca-staudt/Defentrax/sentinel/api/internal/middleware"
+	"github.com/luca-staudt/Defentrax/sentinel/api/internal/store"
 )
 
 // APIKeysHandler manages personal API keys under /api/v1/users/me/api-keys.

@@ -7,9 +7,9 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/luca-staudt/Sentinel/sentinel/api/internal/store"
-	"github.com/luca-staudt/Sentinel/sentinel/plugins/loader"
-	"github.com/luca-staudt/Sentinel/sentinel/plugins/sdk"
+	"github.com/luca-staudt/Defentrax/sentinel/api/internal/store"
+	"github.com/luca-staudt/Defentrax/sentinel/plugins/loader"
+	"github.com/luca-staudt/Defentrax/sentinel/plugins/sdk"
 )
 
 // Runtime holds admitted/loaded plugins for the API process.

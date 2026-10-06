@@ -28,4 +28,4 @@
 {{- end }}
 {{- end }}
 
-Docs: https://github.com/luca-staudt/Sentinel/tree/main/sentinel/deployments/helm/sentinel
+Docs: https://github.com/luca-staudt/Defentrax/tree/main/sentinel/deployments/helm/sentinel

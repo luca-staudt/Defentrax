@@ -7,13 +7,13 @@ import (
 	"syscall"
 	"time"
 
-	agentapi "github.com/luca-staudt/Sentinel/sentinel/agent/internal/api"
-	"github.com/luca-staudt/Sentinel/sentinel/agent/internal/collector/authlog"
-	dockercol "github.com/luca-staudt/Sentinel/sentinel/agent/internal/collector/docker"
-	"github.com/luca-staudt/Sentinel/sentinel/agent/internal/config"
-	"github.com/luca-staudt/Sentinel/sentinel/agent/internal/credentials"
-	agentlog "github.com/luca-staudt/Sentinel/sentinel/agent/internal/logging"
-	"github.com/luca-staudt/Sentinel/sentinel/pkg/event"
+	agentapi "github.com/luca-staudt/Defentrax/sentinel/agent/internal/api"
+	"github.com/luca-staudt/Defentrax/sentinel/agent/internal/collector/authlog"
+	dockercol "github.com/luca-staudt/Defentrax/sentinel/agent/internal/collector/docker"
+	"github.com/luca-staudt/Defentrax/sentinel/agent/internal/config"
+	"github.com/luca-staudt/Defentrax/sentinel/agent/internal/credentials"
+	agentlog "github.com/luca-staudt/Defentrax/sentinel/agent/internal/logging"
+	"github.com/luca-staudt/Defentrax/sentinel/pkg/event"
 )
 
 func main() {

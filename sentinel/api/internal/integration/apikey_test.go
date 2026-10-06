@@ -12,11 +12,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/luca-staudt/Sentinel/sentinel/api/internal/auth/ratelimit"
-	"github.com/luca-staudt/Sentinel/sentinel/api/internal/crypto/password"
-	"github.com/luca-staudt/Sentinel/sentinel/api/internal/server"
-	"github.com/luca-staudt/Sentinel/sentinel/api/internal/store"
-	"github.com/luca-staudt/Sentinel/sentinel/api/internal/testutil"
+	"github.com/luca-staudt/Defentrax/sentinel/api/internal/auth/ratelimit"
+	"github.com/luca-staudt/Defentrax/sentinel/api/internal/crypto/password"
+	"github.com/luca-staudt/Defentrax/sentinel/api/internal/server"
+	"github.com/luca-staudt/Defentrax/sentinel/api/internal/store"
+	"github.com/luca-staudt/Defentrax/sentinel/api/internal/testutil"
 )
 
 func TestAPIKeyAuthIntegration(t *testing.T) {

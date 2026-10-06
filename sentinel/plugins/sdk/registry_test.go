@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/luca-staudt/Sentinel/sentinel/plugins/sdk"
+	"github.com/luca-staudt/Defentrax/sentinel/plugins/sdk"
 )
 
 func TestRegisterLookup(t *testing.T) {

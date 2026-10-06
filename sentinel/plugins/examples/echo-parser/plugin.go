@@ -3,8 +3,8 @@ package echoparser
 import (
 	"context"
 
-	"github.com/luca-staudt/Sentinel/sentinel/pkg/event"
-	"github.com/luca-staudt/Sentinel/sentinel/plugins/sdk"
+	"github.com/luca-staudt/Defentrax/sentinel/pkg/event"
+	"github.com/luca-staudt/Defentrax/sentinel/plugins/sdk"
 )
 
 const slug = "echo-parser"

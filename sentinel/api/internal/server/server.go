@@ -10,16 +10,16 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/luca-staudt/Sentinel/sentinel/api/internal/apperrors"
-	"github.com/luca-staudt/Sentinel/sentinel/api/internal/auth/ratelimit"
-	"github.com/luca-staudt/Sentinel/sentinel/api/internal/config"
-	"github.com/luca-staudt/Sentinel/sentinel/api/internal/detectionrun"
-	"github.com/luca-staudt/Sentinel/sentinel/api/internal/handlers"
-	"github.com/luca-staudt/Sentinel/sentinel/api/internal/middleware"
-	"github.com/luca-staudt/Sentinel/sentinel/api/internal/notify"
-	"github.com/luca-staudt/Sentinel/sentinel/api/internal/pluginruntime"
-	"github.com/luca-staudt/Sentinel/sentinel/api/internal/realtime"
-	"github.com/luca-staudt/Sentinel/sentinel/api/openapi"
+	"github.com/luca-staudt/Defentrax/sentinel/api/internal/apperrors"
+	"github.com/luca-staudt/Defentrax/sentinel/api/internal/auth/ratelimit"
+	"github.com/luca-staudt/Defentrax/sentinel/api/internal/config"
+	"github.com/luca-staudt/Defentrax/sentinel/api/internal/detectionrun"
+	"github.com/luca-staudt/Defentrax/sentinel/api/internal/handlers"
+	"github.com/luca-staudt/Defentrax/sentinel/api/internal/middleware"
+	"github.com/luca-staudt/Defentrax/sentinel/api/internal/notify"
+	"github.com/luca-staudt/Defentrax/sentinel/api/internal/pluginruntime"
+	"github.com/luca-staudt/Defentrax/sentinel/api/internal/realtime"
+	"github.com/luca-staudt/Defentrax/sentinel/api/openapi"
 )
 
 // Server wraps the HTTP server and routing.

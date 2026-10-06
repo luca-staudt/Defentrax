@@ -11,7 +11,7 @@ Fastest path for local development and small self-hosted setups.
 ## 1. Clone and `.env`
 
 ```bash
-git clone https://github.com/luca-staudt/Sentinel.git
+git clone https://github.com/luca-staudt/Defentrax.git
 cd Sentinel
 cp .env.example .env
 ```

@@ -6,7 +6,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/luca-staudt/Sentinel/sentinel/api/internal/realtime"
+	"github.com/luca-staudt/Defentrax/sentinel/api/internal/realtime"
 )
 
 func TestHubPublishRecentSubscribe(t *testing.T) {

@@ -8,7 +8,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/luca-staudt/Sentinel/sentinel/database/internal/seed"
+	"github.com/luca-staudt/Defentrax/sentinel/database/internal/seed"
 )
 
 func main() {

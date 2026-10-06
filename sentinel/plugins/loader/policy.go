@@ -12,7 +12,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/luca-staudt/Sentinel/sentinel/plugins/sdk"
+	"github.com/luca-staudt/Defentrax/sentinel/plugins/sdk"
 )
 
 // Policy controls which plugin manifests may be admitted.

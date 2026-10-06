@@ -1,3 +1,3 @@
-module github.com/luca-staudt/Sentinel/sentinel/pkg/event
+module github.com/luca-staudt/Defentrax/sentinel/pkg/event
 
 go 1.22

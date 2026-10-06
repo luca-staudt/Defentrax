@@ -14,7 +14,7 @@ There is no LTS track yet. Prefer the latest tagged release or `main` for self-h
 
 **Do not open a public GitHub issue for security vulnerabilities.**
 
-Email the maintainer privately (see the GitHub profile for [luca-staudt/Sentinel](https://github.com/luca-staudt/Sentinel)) with:
+Email the maintainer privately (see the GitHub profile for [luca-staudt/Defentrax](https://github.com/luca-staudt/Defentrax)) with:
 
 1. Affected version / commit
 2. Impact (confidentiality / integrity / availability)
