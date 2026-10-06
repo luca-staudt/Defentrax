@@ -5,13 +5,11 @@ function StatCard({
   value,
   hint,
   icon,
-  glowColor = "sky",
 }: {
   label: string;
   value: string | number;
   hint?: string;
   icon?: React.ReactNode;
-  glowColor?: "sky" | "rose" | "emerald" | "amber";
 }) {
   return (
     <div className="relative overflow-hidden rounded-2xl border border-zinc-800/80 bg-gradient-to-br from-[#0c1424]/90 to-[#060b16]/90 p-5 shadow-xl backdrop-blur-md transition-all hover:border-sky-500/40">
@@ -111,7 +109,7 @@ function RulesBarChart({
           <span className="h-2 w-2 rounded-full bg-sky-400" />
           {title}
         </h4>
-        <span className="font-mono text-xs text-zinc-400">{entries.length} Active Rules</span>
+        <span className="font-mono text-xs text-zinc-400">{entries.length} groups</span>
       </div>
 
       <div className="mt-4 space-y-3">
@@ -122,7 +120,7 @@ function RulesBarChart({
             <div key={k} className="space-y-1">
               <div className="flex justify-between text-xs font-mono">
                 <span className="truncate max-w-[200px] text-zinc-300 font-medium">{k}</span>
-                <span className="text-sky-400 font-semibold">{v} triggers</span>
+                <span className="text-sky-400 font-semibold">{v}</span>
               </div>
               <div className="h-2 overflow-hidden rounded-full bg-zinc-900 border border-zinc-800">
                 <div
@@ -145,7 +143,7 @@ export function StatsGrid({ stats }: { stats: DashboardStats }) {
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
           label="Open Incidents"
-          value={stats.open_alerts ?? 0}
+          value={stats.alerts_open ?? 0}
           hint="Requiring active response"
           icon={
             <svg className="h-5 w-5 text-rose-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -154,9 +152,9 @@ export function StatsGrid({ stats }: { stats: DashboardStats }) {
           }
         />
         <StatCard
-          label="Total Alerts (24h)"
-          value={stats.total_alerts ?? 0}
-          hint="Processed by Defentrax rules"
+          label="Events (24h)"
+          value={stats.events_last_24h ?? 0}
+          hint="Ingested in the last 24 hours"
           icon={
             <svg className="h-5 w-5 text-sky-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
@@ -165,7 +163,7 @@ export function StatsGrid({ stats }: { stats: DashboardStats }) {
         />
         <StatCard
           label="Connected Nodes"
-          value={stats.server_count ?? stats.servers_count ?? 0}
+          value={stats.servers_total ?? 0}
           hint="Agent heartbeat nominal"
           icon={
             <svg className="h-5 w-5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -174,9 +172,9 @@ export function StatsGrid({ stats }: { stats: DashboardStats }) {
           }
         />
         <StatCard
-          label="Security Events"
-          value={stats.event_count ?? stats.events_count ?? 0}
-          hint="Ingested telemetry buffer"
+          label="Active Agents"
+          value={stats.agents_active ?? 0}
+          hint="Agents with a recent heartbeat"
           icon={
             <svg className="h-5 w-5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
@@ -188,7 +186,7 @@ export function StatsGrid({ stats }: { stats: DashboardStats }) {
       {/* Cyber Telemetry Charts */}
       <div className="grid gap-6 lg:grid-cols-2">
         <SeverityBreakdownChart data={stats.alerts_by_severity || {}} />
-        <RulesBarChart title="Top Triggered Detection Rules" data={stats.alerts_by_rule || {}} />
+        <RulesBarChart title="Alerts by status" data={stats.alerts_by_status || {}} />
       </div>
     </div>
   );

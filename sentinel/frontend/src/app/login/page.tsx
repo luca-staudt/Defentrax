@@ -3,13 +3,19 @@
 import { useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/context/auth-context";
+import { apiFetch, ApiRequestError } from "@/lib/api/client";
+
+type LoginResponse = {
+  requires_totp?: boolean;
+  login_challenge?: string;
+};
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [totp, setTotp] = useState("");
+  const [challenge, setChallenge] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -18,10 +24,28 @@ export default function LoginPage() {
     setError(null);
     setSubmitting(true);
     try {
-      await login(email, password);
-      router.push("/dashboard");
+      if (challenge) {
+        await apiFetch("/auth/totp/verify", {
+          method: "POST",
+          body: JSON.stringify({ login_challenge: challenge, code: totp }),
+        });
+        router.replace("/dashboard");
+        router.refresh();
+        return;
+      }
+
+      const res = await apiFetch<LoginResponse>("/auth/login", {
+        method: "POST",
+        body: JSON.stringify({ email, password }),
+      });
+      if (res.requires_totp && res.login_challenge) {
+        setChallenge(res.login_challenge);
+        return;
+      }
+      router.replace("/dashboard");
+      router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Authentication failed");
+      setError(err instanceof ApiRequestError ? err.message : "Authentication failed");
     } finally {
       setSubmitting(false);
     }
@@ -78,16 +102,36 @@ export default function LoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••••••"
-              className="mt-1.5 w-full rounded-xl border border-zinc-800 bg-zinc-900/60 px-4 py-2.5 text-sm text-white placeholder-zinc-600 transition focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+              disabled={Boolean(challenge)}
+              className="mt-1.5 w-full rounded-xl border border-zinc-800 bg-zinc-900/60 px-4 py-2.5 text-sm text-white placeholder-zinc-600 transition focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500 disabled:opacity-60"
             />
           </div>
+
+          {challenge ? (
+            <div>
+              <label className="block font-mono text-xs text-zinc-400 uppercase">Authenticator code</label>
+              <input
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                required
+                value={totp}
+                onChange={(e) => setTotp(e.target.value)}
+                placeholder="123456"
+                className="mt-1.5 w-full rounded-xl border border-zinc-800 bg-zinc-900/60 px-4 py-2.5 text-sm text-white placeholder-zinc-600 transition focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+              />
+            </div>
+          ) : null}
 
           <button
             type="submit"
             disabled={submitting}
             className="mt-2 w-full rounded-xl border border-sky-400/40 bg-gradient-to-r from-sky-500 to-sky-600 py-2.5 text-sm font-semibold text-white shadow-lg shadow-sky-500/25 transition hover:brightness-110 disabled:opacity-50"
           >
-            {submitting ? "Authenticating Session..." : "Authorize Operator Access"}
+            {submitting
+              ? "Authenticating Session..."
+              : challenge
+                ? "Verify code"
+                : "Authorize Operator Access"}
           </button>
         </form>
 
