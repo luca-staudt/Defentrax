@@ -73,6 +73,17 @@ func RunDev(ctx context.Context, pool *pgxpool.Pool) error {
 		{"settings", "read", "View platform settings"},
 		{"settings", "write", "Edit platform settings"},
 		{"api_keys", "write", "Manage personal API keys"},
+		{"pages", "dashboard", "Open the Dashboard page"},
+		{"pages", "alerts", "Open the Alerts page"},
+		{"pages", "alert_detail", "Open a single alert page"},
+		{"pages", "events", "Open the Events page"},
+		{"pages", "servers", "Open the Servers page"},
+		{"pages", "server_detail", "Open a single server page"},
+		{"pages", "rules", "Open the Rules page"},
+		{"pages", "notifications", "Open the Notifications page"},
+		{"pages", "team", "Open the Team page"},
+		{"pages", "roles", "Open the Roles page"},
+		{"pages", "audit", "Open the Audit logs page"},
 	}
 	for _, p := range perms {
 		_, err := tx.Exec(ctx, `

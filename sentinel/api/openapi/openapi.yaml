@@ -11,6 +11,12 @@ info:
     - No standalone `GET /api/v1/agents` — agents appear nested under `GET /api/v1/servers/{id}`.
     - No `/api/v1/metrics` — use `GET /api/v1/dashboard/stats`.
 
+    **Page permissions:** panel routes require a `pages:*` key in addition to the
+    data permission named on each operation. `pages:dashboard`, `pages:alerts`,
+    `pages:alert_detail`, `pages:events`, `pages:servers`, `pages:server_detail`,
+    `pages:rules`, `pages:notifications`, `pages:team`, `pages:roles`, `pages:audit`.
+    `SUPER_ADMIN` and `ADMIN` bypass these checks. Plugins and API keys have no page key.
+
     Interactive UI: `GET /api/v1/docs` (Swagger UI). Raw spec: `GET /api/v1/openapi.yaml`.
   version: 0.1.0
   contact:
@@ -349,7 +355,7 @@ paths:
       tags: [Users]
       operationId: listUsers
       summary: List users
-      description: "Requires permission `users:read`."
+      description: "Requires `users:read` and `pages:team`."
       security:
         - SessionCookie: []
         - BearerApiKey: []
@@ -374,7 +380,7 @@ paths:
       tags: [Users]
       operationId: createUser
       summary: Create user
-      description: "Requires permission `users:write`. Password minimum 12 characters. Default role `VIEWER` if omitted."
+      description: "Requires `users:write` and `pages:team`. Password minimum 12 characters. Default role `VIEWER` if omitted."
       security:
         - SessionCookie: []
         - BearerApiKey: []
@@ -417,7 +423,7 @@ paths:
       tags: [Users]
       operationId: updateUserRoles
       summary: Replace user roles
-      description: "Requires permission `users:write`. Audited as `user.role_changed`."
+      description: "Requires `users:write` and `pages:team`. Audited as `user.role_changed`."
       security:
         - SessionCookie: []
         - BearerApiKey: []
@@ -449,7 +455,7 @@ paths:
       tags: [Users]
       operationId: getUser
       summary: Get user by id
-      description: "Requires permission `users:read`."
+      description: "Requires `users:read` and `pages:team`."
       security:
         - SessionCookie: []
         - BearerApiKey: []
@@ -469,7 +475,7 @@ paths:
       operationId: patchUser
       summary: Update user profile or active status
       description: |
-        Requires permission `users:write`.
+        Requires `users:write` and `pages:team`.
         Audited as `user.updated`, `user.disabled`, or `user.enabled`.
         Disabling a user revokes their sessions. Cannot disable yourself.
       security:
@@ -505,7 +511,7 @@ paths:
       tags: [Users]
       operationId: resetUserPassword
       summary: Admin password reset
-      description: "Requires `users:write`. Revokes all sessions. Audited as `user.password_reset`."
+      description: "Requires `users:write` and `pages:team`. Revokes all sessions. Audited as `user.password_reset`."
       security:
         - SessionCookie: []
         - BearerApiKey: []
@@ -535,7 +541,7 @@ paths:
       tags: [Users]
       operationId: resetUserTOTP
       summary: Admin 2FA reset
-      description: "Requires `users:write`. Clears TOTP enrollment. Audited as `auth.totp_admin_reset`."
+      description: "Requires `users:write` and `pages:team`. Clears TOTP enrollment. Audited as `auth.totp_admin_reset`."
       security:
         - SessionCookie: []
         - BearerApiKey: []
@@ -552,7 +558,7 @@ paths:
       tags: [Users]
       operationId: listUserSessions
       summary: List active sessions for a user
-      description: "Requires `users:write`."
+      description: "Requires `users:write` and `pages:team`."
       security:
         - SessionCookie: []
         - BearerApiKey: []
@@ -577,7 +583,7 @@ paths:
       tags: [Users]
       operationId: revokeAllUserSessions
       summary: Revoke all sessions for a user
-      description: "Requires `users:write`. Audited as `user.sessions_revoked`."
+      description: "Requires `users:write` and `pages:team`. Audited as `user.sessions_revoked`."
       security:
         - SessionCookie: []
         - BearerApiKey: []
@@ -594,7 +600,7 @@ paths:
       tags: [Users]
       operationId: revokeUserSession
       summary: Revoke one session
-      description: "Requires `users:write`. Audited as `user.session_revoked`."
+      description: "Requires `users:write` and `pages:team`. Audited as `user.session_revoked`."
       security:
         - SessionCookie: []
         - BearerApiKey: []
@@ -617,7 +623,7 @@ paths:
       tags: [Roles]
       operationId: listRoles
       summary: List roles
-      description: "Requires permission `roles:read`."
+      description: "Requires `roles:read` and `pages:roles`."
       security:
         - SessionCookie: []
         - BearerApiKey: []
@@ -638,7 +644,7 @@ paths:
       tags: [Roles]
       operationId: createRole
       summary: Create custom role
-      description: "Requires `roles:write`. Audited as `role.created`."
+      description: "Requires `roles:write` and `pages:roles`. Audited as `role.created`."
       security:
         - SessionCookie: []
         - BearerApiKey: []
@@ -674,7 +680,7 @@ paths:
       tags: [Roles]
       operationId: getRole
       summary: Get role
-      description: "Requires `roles:read`."
+      description: "Requires `roles:read` and `pages:roles`."
       security:
         - SessionCookie: []
         - BearerApiKey: []
@@ -693,7 +699,7 @@ paths:
       tags: [Roles]
       operationId: patchRole
       summary: Update role name/description
-      description: "Requires `roles:write`. System roles cannot be renamed. Audited as `role.updated`."
+      description: "Requires `roles:write` and `pages:roles`. System roles cannot be renamed. Audited as `role.updated`."
       security:
         - SessionCookie: []
         - BearerApiKey: []
@@ -725,7 +731,7 @@ paths:
       tags: [Roles]
       operationId: deleteRole
       summary: Delete custom role
-      description: "Requires `roles:write`. System roles and roles still assigned to users cannot be deleted. Audited as `role.deleted`."
+      description: "Requires `roles:write` and `pages:roles`. System roles and roles still assigned to users cannot be deleted. Audited as `role.deleted`."
       security:
         - SessionCookie: []
         - BearerApiKey: []
@@ -744,7 +750,7 @@ paths:
       tags: [Roles]
       operationId: setRolePermissions
       summary: Replace role permission set
-      description: "Requires `roles:write`. Audited as `role.permissions_changed`."
+      description: "Requires `roles:write` and `pages:roles`. Audited as `role.permissions_changed`."
       security:
         - SessionCookie: []
         - BearerApiKey: []
@@ -779,7 +785,7 @@ paths:
       tags: [Roles]
       operationId: listPermissions
       summary: List permission catalog
-      description: "Requires `roles:read`."
+      description: "Requires `roles:read` and `pages:roles`."
       security:
         - SessionCookie: []
         - BearerApiKey: []
@@ -869,7 +875,7 @@ paths:
       tags: [Servers]
       operationId: listServers
       summary: List servers
-      description: "Requires permission `servers:read`."
+      description: "Requires `servers:read` and `pages:servers`."
       security:
         - SessionCookie: []
         - BearerApiKey: []
@@ -890,7 +896,7 @@ paths:
       tags: [Servers]
       operationId: createServer
       summary: Create server
-      description: "Requires permission `servers:write`."
+      description: "Requires `servers:write` and `pages:servers`."
       security:
         - SessionCookie: []
         - BearerApiKey: []
@@ -924,7 +930,7 @@ paths:
       operationId: getServer
       summary: Get server with nested agents
       description: |
-        Requires permission `servers:read`.
+        Requires `servers:read` and `pages:server_detail`.
         Agents are returned nested here; there is no standalone agents list endpoint.
       security:
         - SessionCookie: []
@@ -947,7 +953,7 @@ paths:
       operationId: createEnrollmentToken
       summary: Create one-time enrollment token
       description: |
-        Requires permission `servers:write`.
+        Requires `servers:write` and `pages:server_detail`.
         Returns a one-time `senr_…` token (shown once). Default TTL 60 minutes (max 24h).
       security:
         - SessionCookie: []
@@ -1097,7 +1103,7 @@ paths:
       tags: [Events]
       operationId: listEvents
       summary: List events
-      description: "Requires permission `events:read`."
+      description: "Requires `events:read` and `pages:events`."
       security:
         - SessionCookie: []
         - BearerApiKey: []
@@ -1169,7 +1175,7 @@ paths:
       tags: [Events]
       operationId: getEvent
       summary: Get event by id
-      description: "Requires permission `events:read`."
+      description: "Requires `events:read` and `pages:events`."
       security:
         - SessionCookie: []
         - BearerApiKey: []
@@ -1190,7 +1196,7 @@ paths:
       tags: [Alerts]
       operationId: listAlerts
       summary: List alerts
-      description: "Requires permission `alerts:read`."
+      description: "Requires `alerts:read` and `pages:alerts`."
       security:
         - SessionCookie: []
         - BearerApiKey: []
@@ -1243,7 +1249,7 @@ paths:
       tags: [Alerts]
       operationId: listRecentAlertEvents
       summary: Recent in-memory alert feed buffer
-      description: "Requires permission `alerts:read`. Returns hub buffer (empty if hub unset)."
+      description: "Requires `alerts:read` and `pages:alerts`. Returns hub buffer (empty if hub unset)."
       security:
         - SessionCookie: []
         - BearerApiKey: []
@@ -1266,7 +1272,7 @@ paths:
       tags: [Alerts]
       operationId: getAlert
       summary: Get alert with timeline
-      description: "Requires permission `alerts:read`."
+      description: "Requires `alerts:read` and `pages:alert_detail`."
       security:
         - SessionCookie: []
         - BearerApiKey: []
@@ -1294,7 +1300,7 @@ paths:
       operationId: patchAlert
       summary: Update alert lifecycle
       description: |
-        Requires permission `alerts:write`.
+        Requires `alerts:write` and `pages:alert_detail`.
         Status transitions: `OPEN` → `ACKNOWLEDGED` → `INVESTIGATING` → `RESOLVED`.
         Audited on status/assignment changes.
       security:
@@ -1335,7 +1341,7 @@ paths:
       operationId: wsAlerts
       summary: WebSocket alert feed
       description: |
-        Requires permission `alerts:read` (session or API key).
+        Requires `alerts:read` and `pages:alerts` (session or API key).
         Upgrades to WebSocket; text frames are JSON `{ "type": "alert", "data": … }`.
       security:
         - SessionCookie: []
@@ -1355,7 +1361,7 @@ paths:
       tags: [Rules]
       operationId: listRules
       summary: List detection rules
-      description: "Requires permission `rules:read`."
+      description: "Requires `rules:read` and `pages:rules`."
       security:
         - SessionCookie: []
         - BearerApiKey: []
@@ -1378,7 +1384,7 @@ paths:
       tags: [Rules]
       operationId: getRule
       summary: Get detection rule
-      description: "Requires permission `rules:read`."
+      description: "Requires `rules:read` and `pages:rules`."
       security:
         - SessionCookie: []
         - BearerApiKey: []
@@ -1397,7 +1403,7 @@ paths:
       tags: [Rules]
       operationId: patchRule
       summary: Enable or disable a rule
-      description: "Requires permission `rules:write`. Body must include `enabled`."
+      description: "Requires `rules:write` and `pages:rules`. Body must include `enabled`."
       security:
         - SessionCookie: []
         - BearerApiKey: []
@@ -1428,7 +1434,7 @@ paths:
       tags: [Notifications]
       operationId: listNotificationChannels
       summary: List notification channels
-      description: "Requires permission `notifications:read`. Secrets are never returned."
+      description: "Requires `notifications:read` and `pages:notifications`. Secrets are never returned."
       security:
         - SessionCookie: []
         - BearerApiKey: []
@@ -1450,7 +1456,7 @@ paths:
       operationId: createNotificationChannel
       summary: Create notification channel
       description: |
-        Requires permission `notifications:write`.
+        Requires `notifications:write` and `pages:notifications`.
         Needs `SECRETS_ENCRYPTION_KEY` (32-byte) when storing secrets.
         `channel_type`: `discord` | `slack` | `email` | `webhook`.
       security:
@@ -1479,7 +1485,7 @@ paths:
       tags: [Notifications]
       operationId: getNotificationChannel
       summary: Get notification channel
-      description: "Requires permission `notifications:read`."
+      description: "Requires `notifications:read` and `pages:notifications`."
       security:
         - SessionCookie: []
         - BearerApiKey: []
@@ -1498,7 +1504,7 @@ paths:
       tags: [Notifications]
       operationId: patchNotificationChannel
       summary: Update notification channel
-      description: "Requires permission `notifications:write`."
+      description: "Requires `notifications:write` and `pages:notifications`."
       security:
         - SessionCookie: []
         - BearerApiKey: []
@@ -1525,7 +1531,7 @@ paths:
       tags: [Notifications]
       operationId: deleteNotificationChannel
       summary: Delete notification channel
-      description: "Requires permission `notifications:write`."
+      description: "Requires `notifications:write` and `pages:notifications`."
       security:
         - SessionCookie: []
         - BearerApiKey: []
@@ -1543,7 +1549,7 @@ paths:
       operationId: testNotificationChannel
       summary: Send a test notification to a channel
       description: |
-        Requires permission `notifications:write`.
+        Requires `notifications:write` and `pages:notifications`.
         Uses the same delivery path as live alerts (webhook/SMTP) with a synthetic payload.
         On failure returns a safe error message (URLs/secrets redacted) in the standard error envelope.
       security:
@@ -1589,7 +1595,7 @@ paths:
       tags: [Notifications]
       operationId: listNotificationRules
       summary: List notification rules
-      description: "Requires permission `notifications:read`."
+      description: "Requires `notifications:read` and `pages:notifications`."
       security:
         - SessionCookie: []
         - BearerApiKey: []
@@ -1610,7 +1616,7 @@ paths:
       tags: [Notifications]
       operationId: createNotificationRule
       summary: Create notification rule
-      description: "Requires permission `notifications:write`."
+      description: "Requires `notifications:write` and `pages:notifications`."
       security:
         - SessionCookie: []
         - BearerApiKey: []
@@ -1633,7 +1639,7 @@ paths:
       tags: [Notifications]
       operationId: getNotificationRule
       summary: Get notification rule
-      description: "Requires permission `notifications:read`."
+      description: "Requires `notifications:read` and `pages:notifications`."
       security:
         - SessionCookie: []
         - BearerApiKey: []
@@ -1652,7 +1658,7 @@ paths:
       tags: [Notifications]
       operationId: patchNotificationRule
       summary: Update notification rule
-      description: "Requires permission `notifications:write`."
+      description: "Requires `notifications:write` and `pages:notifications`."
       security:
         - SessionCookie: []
         - BearerApiKey: []
@@ -1677,7 +1683,7 @@ paths:
       tags: [Notifications]
       operationId: deleteNotificationRule
       summary: Delete notification rule
-      description: "Requires permission `notifications:write`."
+      description: "Requires `notifications:write` and `pages:notifications`."
       security:
         - SessionCookie: []
         - BearerApiKey: []
@@ -1695,7 +1701,7 @@ paths:
       operationId: listAuditLogs
       summary: List audit logs
       description: |
-        Requires permission `audit_logs:read` (ADMIN and SECURITY_ANALYST).
+        Requires `audit_logs:read` and `pages:audit`. ADMIN and SECURITY_ANALYST have both by default. SUPER_ADMIN and ADMIN bypass the check.
         Newest first. Filters: `action`, `user` (actor email substring), `actor_user_id`,
         `q` (action/entity/email search), `since`/`until` (RFC3339), `limit`/`offset`.
       security:
@@ -1772,7 +1778,7 @@ paths:
       tags: [Audit]
       operationId: getAuditLog
       summary: Get one audit log
-      description: "Requires permission `audit_logs:read`."
+      description: "Requires `audit_logs:read` and `pages:audit`."
       security:
         - SessionCookie: []
         - BearerApiKey: []
@@ -1794,7 +1800,7 @@ paths:
       operationId: getDashboardStats
       summary: Dashboard aggregate metrics
       description: |
-        Requires permission `alerts:read`.
+        Requires `alerts:read` and `pages:dashboard`.
         This is the implemented metrics surface (there is no `/api/v1/metrics`).
       security:
         - SessionCookie: []

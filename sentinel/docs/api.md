@@ -32,7 +32,25 @@ A Go coverage test (`sentinel/api/openapi/coverage_test.go`) fails if the YAML d
 | API key | `Authorization: Bearer sent_…` (create under `/api/v1/users/me/api-keys`) |
 | Agent token | `Authorization: Bearer sagt_…` after `POST /api/v1/agent/enroll` |
 
-RBAC is enforced server-side with resource/action pairs (e.g. `alerts:read`). Roles: `ADMIN`, `SECURITY_ANALYST`, `OPERATOR`, `VIEWER`.
+RBAC is enforced server-side with resource/action pairs (e.g. `alerts:read`). Roles: `SUPER_ADMIN`, `ADMIN`, `SECURITY_ANALYST`, `OPERATOR`, `VIEWER`. `SUPER_ADMIN` and `ADMIN` bypass granular checks.
+
+Panel routes also require a `pages:*` permission. Both keys are required: the page key opens the screen, the existing read/write key allows the data. Migration `00009` copies page keys onto every role that already had the matching read permission, including custom roles. Change them under **Roles**.
+
+| Page | Route | Page permission | Also required |
+|------|--------|-----------------|---------------|
+| Dashboard | `/dashboard` | `pages:dashboard` | `alerts:read` |
+| Alerts | `/alerts` | `pages:alerts` | `alerts:read` |
+| Alert detail | `/alerts/{id}` | `pages:alert_detail` | `alerts:read` (changes: `alerts:write`) |
+| Events | `/events` | `pages:events` | `events:read` |
+| Servers | `/servers` | `pages:servers` | `servers:read` (create: `servers:write`) |
+| Server detail | `/servers/{id}` | `pages:server_detail` | `servers:read` (tokens: `servers:write`) |
+| Rules | `/rules` | `pages:rules` | `rules:read` (enable: `rules:write`) |
+| Notifications | `/notifications` | `pages:notifications` | `notifications:read` (edit: `notifications:write`) |
+| Team | `/users` | `pages:team` | `users:read` (manage: `users:write`) |
+| Roles | `/roles` | `pages:roles` | `roles:read` (edit: `roles:write`) |
+| Audit logs | `/audit` | `pages:audit` | `audit_logs:read` |
+
+There is no panel page for plugins or API keys. Those stay on `plugins:*` and `api_keys:write`.
 
 Errors use a stable envelope:
 

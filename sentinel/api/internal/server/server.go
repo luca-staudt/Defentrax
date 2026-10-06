@@ -117,9 +117,9 @@ func NewWithOptions(log *slog.Logger, cfg config.Config, pool *pgxpool.Pool, log
 	apiMux.Handle("POST /api/v1/auth/totp/confirm", protect(pool, cfg, http.HandlerFunc(authH.ConfirmTOTP)))
 	apiMux.Handle("POST /api/v1/auth/totp/disable", protect(pool, cfg, http.HandlerFunc(authH.DisableTOTP)))
 
-	apiMux.Handle("GET /api/v1/users", protectPerm(pool, cfg, "users", "read", http.HandlerFunc(usersH.List)))
-	apiMux.Handle("POST /api/v1/users", protectPerm(pool, cfg, "users", "write", http.HandlerFunc(usersH.Create)))
-	apiMux.Handle("GET /api/v1/users/{id}", protectPerm(pool, cfg, "users", "read", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	apiMux.Handle("GET /api/v1/users", protectAll(pool, cfg, [][2]string{{"users", "read"}, {"pages", "team"}}, http.HandlerFunc(usersH.List)))
+	apiMux.Handle("POST /api/v1/users", protectAll(pool, cfg, [][2]string{{"users", "write"}, {"pages", "team"}}, http.HandlerFunc(usersH.Create)))
+	apiMux.Handle("GET /api/v1/users/{id}", protectAll(pool, cfg, [][2]string{{"users", "read"}, {"pages", "team"}}, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		id, err := uuid.Parse(r.PathValue("id"))
 		if err != nil {
 			requestID := middleware.RequestIDFromContext(r.Context())
@@ -128,7 +128,7 @@ func NewWithOptions(log *slog.Logger, cfg config.Config, pool *pgxpool.Pool, log
 		}
 		usersH.Get(w, r, id)
 	})))
-	apiMux.Handle("PATCH /api/v1/users/{id}", protectPerm(pool, cfg, "users", "write", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	apiMux.Handle("PATCH /api/v1/users/{id}", protectAll(pool, cfg, [][2]string{{"users", "write"}, {"pages", "team"}}, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		id, err := uuid.Parse(r.PathValue("id"))
 		if err != nil {
 			requestID := middleware.RequestIDFromContext(r.Context())
@@ -137,7 +137,7 @@ func NewWithOptions(log *slog.Logger, cfg config.Config, pool *pgxpool.Pool, log
 		}
 		usersH.Patch(w, r, id)
 	})))
-	apiMux.Handle("PUT /api/v1/users/{id}/roles", protectPerm(pool, cfg, "users", "write", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	apiMux.Handle("PUT /api/v1/users/{id}/roles", protectAll(pool, cfg, [][2]string{{"users", "write"}, {"pages", "team"}}, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		id, err := uuid.Parse(r.PathValue("id"))
 		if err != nil {
 			requestID := middleware.RequestIDFromContext(r.Context())
@@ -146,7 +146,7 @@ func NewWithOptions(log *slog.Logger, cfg config.Config, pool *pgxpool.Pool, log
 		}
 		usersH.UpdateRoles(w, r, id)
 	})))
-	apiMux.Handle("POST /api/v1/users/{id}/password", protectPerm(pool, cfg, "users", "write", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	apiMux.Handle("POST /api/v1/users/{id}/password", protectAll(pool, cfg, [][2]string{{"users", "write"}, {"pages", "team"}}, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		id, err := uuid.Parse(r.PathValue("id"))
 		if err != nil {
 			requestID := middleware.RequestIDFromContext(r.Context())
@@ -155,7 +155,7 @@ func NewWithOptions(log *slog.Logger, cfg config.Config, pool *pgxpool.Pool, log
 		}
 		usersH.ResetPassword(w, r, id)
 	})))
-	apiMux.Handle("POST /api/v1/users/{id}/totp/reset", protectPerm(pool, cfg, "users", "write", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	apiMux.Handle("POST /api/v1/users/{id}/totp/reset", protectAll(pool, cfg, [][2]string{{"users", "write"}, {"pages", "team"}}, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		id, err := uuid.Parse(r.PathValue("id"))
 		if err != nil {
 			requestID := middleware.RequestIDFromContext(r.Context())
@@ -164,7 +164,7 @@ func NewWithOptions(log *slog.Logger, cfg config.Config, pool *pgxpool.Pool, log
 		}
 		usersH.ResetTOTP(w, r, id)
 	})))
-	apiMux.Handle("GET /api/v1/users/{id}/sessions", protectPerm(pool, cfg, "users", "write", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	apiMux.Handle("GET /api/v1/users/{id}/sessions", protectAll(pool, cfg, [][2]string{{"users", "write"}, {"pages", "team"}}, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		id, err := uuid.Parse(r.PathValue("id"))
 		if err != nil {
 			requestID := middleware.RequestIDFromContext(r.Context())
@@ -173,7 +173,7 @@ func NewWithOptions(log *slog.Logger, cfg config.Config, pool *pgxpool.Pool, log
 		}
 		usersH.ListSessions(w, r, id)
 	})))
-	apiMux.Handle("DELETE /api/v1/users/{id}/sessions", protectPerm(pool, cfg, "users", "write", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	apiMux.Handle("DELETE /api/v1/users/{id}/sessions", protectAll(pool, cfg, [][2]string{{"users", "write"}, {"pages", "team"}}, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		id, err := uuid.Parse(r.PathValue("id"))
 		if err != nil {
 			requestID := middleware.RequestIDFromContext(r.Context())
@@ -182,7 +182,7 @@ func NewWithOptions(log *slog.Logger, cfg config.Config, pool *pgxpool.Pool, log
 		}
 		usersH.RevokeAllSessions(w, r, id)
 	})))
-	apiMux.Handle("DELETE /api/v1/users/{id}/sessions/{sessionId}", protectPerm(pool, cfg, "users", "write", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	apiMux.Handle("DELETE /api/v1/users/{id}/sessions/{sessionId}", protectAll(pool, cfg, [][2]string{{"users", "write"}, {"pages", "team"}}, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		id, err := uuid.Parse(r.PathValue("id"))
 		if err != nil {
 			requestID := middleware.RequestIDFromContext(r.Context())
@@ -198,9 +198,9 @@ func NewWithOptions(log *slog.Logger, cfg config.Config, pool *pgxpool.Pool, log
 		usersH.RevokeSession(w, r, id, sid)
 	})))
 
-	apiMux.Handle("GET /api/v1/roles", protectPerm(pool, cfg, "roles", "read", http.HandlerFunc(rolesH.ListRoles)))
-	apiMux.Handle("POST /api/v1/roles", protectPerm(pool, cfg, "roles", "write", http.HandlerFunc(rolesH.CreateRole)))
-	apiMux.Handle("GET /api/v1/roles/{id}", protectPerm(pool, cfg, "roles", "read", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	apiMux.Handle("GET /api/v1/roles", protectAll(pool, cfg, [][2]string{{"roles", "read"}, {"pages", "roles"}}, http.HandlerFunc(rolesH.ListRoles)))
+	apiMux.Handle("POST /api/v1/roles", protectAll(pool, cfg, [][2]string{{"roles", "write"}, {"pages", "roles"}}, http.HandlerFunc(rolesH.CreateRole)))
+	apiMux.Handle("GET /api/v1/roles/{id}", protectAll(pool, cfg, [][2]string{{"roles", "read"}, {"pages", "roles"}}, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		id, err := uuid.Parse(r.PathValue("id"))
 		if err != nil {
 			requestID := middleware.RequestIDFromContext(r.Context())
@@ -209,7 +209,7 @@ func NewWithOptions(log *slog.Logger, cfg config.Config, pool *pgxpool.Pool, log
 		}
 		rolesH.GetRole(w, r, id)
 	})))
-	apiMux.Handle("PATCH /api/v1/roles/{id}", protectPerm(pool, cfg, "roles", "write", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	apiMux.Handle("PATCH /api/v1/roles/{id}", protectAll(pool, cfg, [][2]string{{"roles", "write"}, {"pages", "roles"}}, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		id, err := uuid.Parse(r.PathValue("id"))
 		if err != nil {
 			requestID := middleware.RequestIDFromContext(r.Context())
@@ -218,7 +218,7 @@ func NewWithOptions(log *slog.Logger, cfg config.Config, pool *pgxpool.Pool, log
 		}
 		rolesH.PatchRole(w, r, id)
 	})))
-	apiMux.Handle("DELETE /api/v1/roles/{id}", protectPerm(pool, cfg, "roles", "write", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	apiMux.Handle("DELETE /api/v1/roles/{id}", protectAll(pool, cfg, [][2]string{{"roles", "write"}, {"pages", "roles"}}, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		id, err := uuid.Parse(r.PathValue("id"))
 		if err != nil {
 			requestID := middleware.RequestIDFromContext(r.Context())
@@ -227,7 +227,7 @@ func NewWithOptions(log *slog.Logger, cfg config.Config, pool *pgxpool.Pool, log
 		}
 		rolesH.DeleteRole(w, r, id)
 	})))
-	apiMux.Handle("PUT /api/v1/roles/{id}/permissions", protectPerm(pool, cfg, "roles", "write", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	apiMux.Handle("PUT /api/v1/roles/{id}/permissions", protectAll(pool, cfg, [][2]string{{"roles", "write"}, {"pages", "roles"}}, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		id, err := uuid.Parse(r.PathValue("id"))
 		if err != nil {
 			requestID := middleware.RequestIDFromContext(r.Context())
@@ -236,7 +236,7 @@ func NewWithOptions(log *slog.Logger, cfg config.Config, pool *pgxpool.Pool, log
 		}
 		rolesH.SetPermissions(w, r, id)
 	})))
-	apiMux.Handle("GET /api/v1/permissions", protectPerm(pool, cfg, "roles", "read", http.HandlerFunc(rolesH.ListPermissions)))
+	apiMux.Handle("GET /api/v1/permissions", protectAll(pool, cfg, [][2]string{{"roles", "read"}, {"pages", "roles"}}, http.HandlerFunc(rolesH.ListPermissions)))
 
 	apiMux.Handle("GET /api/v1/users/me/api-keys", protectPerm(pool, cfg, "api_keys", "write", http.HandlerFunc(keysH.List)))
 	apiMux.Handle("POST /api/v1/users/me/api-keys", protectPerm(pool, cfg, "api_keys", "write", http.HandlerFunc(keysH.Create)))
@@ -244,9 +244,9 @@ func NewWithOptions(log *slog.Logger, cfg config.Config, pool *pgxpool.Pool, log
 	apiMux.Handle("POST /api/v1/agent/heartbeat", agentAuth(http.HandlerFunc(agentH.Heartbeat)))
 	apiMux.Handle("POST /api/v1/agent/events", agentAuth(http.HandlerFunc(agentH.IngestEvents)))
 
-	apiMux.Handle("GET /api/v1/dashboard/stats", protectPerm(pool, cfg, "alerts", "read", http.HandlerFunc(dashboardH.Stats)))
-	apiMux.Handle("GET /api/v1/events", protectPerm(pool, cfg, "events", "read", http.HandlerFunc(eventsH.List)))
-	apiMux.Handle("GET /api/v1/events/{id}", protectPerm(pool, cfg, "events", "read", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	apiMux.Handle("GET /api/v1/dashboard/stats", protectAll(pool, cfg, [][2]string{{"alerts", "read"}, {"pages", "dashboard"}}, http.HandlerFunc(dashboardH.Stats)))
+	apiMux.Handle("GET /api/v1/events", protectAll(pool, cfg, [][2]string{{"events", "read"}, {"pages", "events"}}, http.HandlerFunc(eventsH.List)))
+	apiMux.Handle("GET /api/v1/events/{id}", protectAll(pool, cfg, [][2]string{{"events", "read"}, {"pages", "events"}}, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		id, err := uuid.Parse(r.PathValue("id"))
 		if err != nil {
 			requestID := middleware.RequestIDFromContext(r.Context())
@@ -255,10 +255,10 @@ func NewWithOptions(log *slog.Logger, cfg config.Config, pool *pgxpool.Pool, log
 		}
 		eventsH.Get(w, r, id)
 	})))
-	apiMux.Handle("GET /api/v1/ws/alerts", protectPerm(pool, cfg, "alerts", "read", http.HandlerFunc(realtimeH.AlertsWS)))
+	apiMux.Handle("GET /api/v1/ws/alerts", protectAll(pool, cfg, [][2]string{{"alerts", "read"}, {"pages", "alerts"}}, http.HandlerFunc(realtimeH.AlertsWS)))
 
-	apiMux.Handle("GET /api/v1/servers", protectPerm(pool, cfg, "servers", "read", http.HandlerFunc(serversH.List)))
-	apiMux.Handle("GET /api/v1/servers/{id}", protectPerm(pool, cfg, "servers", "read", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	apiMux.Handle("GET /api/v1/servers", protectAll(pool, cfg, [][2]string{{"servers", "read"}, {"pages", "servers"}}, http.HandlerFunc(serversH.List)))
+	apiMux.Handle("GET /api/v1/servers/{id}", protectAll(pool, cfg, [][2]string{{"servers", "read"}, {"pages", "server_detail"}}, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		id, err := uuid.Parse(r.PathValue("id"))
 		if err != nil {
 			requestID := middleware.RequestIDFromContext(r.Context())
@@ -267,8 +267,8 @@ func NewWithOptions(log *slog.Logger, cfg config.Config, pool *pgxpool.Pool, log
 		}
 		serversH.Get(w, r, id)
 	})))
-	apiMux.Handle("POST /api/v1/servers", protectPerm(pool, cfg, "servers", "write", http.HandlerFunc(serversH.Create)))
-	apiMux.Handle("POST /api/v1/servers/{id}/enrollment-tokens", protectPerm(pool, cfg, "servers", "write", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	apiMux.Handle("POST /api/v1/servers", protectAll(pool, cfg, [][2]string{{"servers", "write"}, {"pages", "servers"}}, http.HandlerFunc(serversH.Create)))
+	apiMux.Handle("POST /api/v1/servers/{id}/enrollment-tokens", protectAll(pool, cfg, [][2]string{{"servers", "write"}, {"pages", "server_detail"}}, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		id, err := uuid.Parse(r.PathValue("id"))
 		if err != nil {
 			requestID := middleware.RequestIDFromContext(r.Context())
@@ -288,8 +288,8 @@ func NewWithOptions(log *slog.Logger, cfg config.Config, pool *pgxpool.Pool, log
 		keysH.Revoke(w, r, id)
 	})))
 
-	apiMux.Handle("GET /api/v1/rules", protectPerm(pool, cfg, "rules", "read", http.HandlerFunc(rulesH.List)))
-	apiMux.Handle("GET /api/v1/rules/{id}", protectPerm(pool, cfg, "rules", "read", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	apiMux.Handle("GET /api/v1/rules", protectAll(pool, cfg, [][2]string{{"rules", "read"}, {"pages", "rules"}}, http.HandlerFunc(rulesH.List)))
+	apiMux.Handle("GET /api/v1/rules/{id}", protectAll(pool, cfg, [][2]string{{"rules", "read"}, {"pages", "rules"}}, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		id, err := uuid.Parse(r.PathValue("id"))
 		if err != nil {
 			requestID := middleware.RequestIDFromContext(r.Context())
@@ -298,9 +298,9 @@ func NewWithOptions(log *slog.Logger, cfg config.Config, pool *pgxpool.Pool, log
 		}
 		rulesH.Get(w, r, id)
 	})))
-	apiMux.Handle("GET /api/v1/alerts", protectPerm(pool, cfg, "alerts", "read", http.HandlerFunc(alertsH.List)))
-	apiMux.Handle("GET /api/v1/alerts/recent-events", protectPerm(pool, cfg, "alerts", "read", http.HandlerFunc(alertsH.RecentEvents)))
-	apiMux.Handle("GET /api/v1/alerts/{id}", protectPerm(pool, cfg, "alerts", "read", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	apiMux.Handle("GET /api/v1/alerts", protectAll(pool, cfg, [][2]string{{"alerts", "read"}, {"pages", "alerts"}}, http.HandlerFunc(alertsH.List)))
+	apiMux.Handle("GET /api/v1/alerts/recent-events", protectAll(pool, cfg, [][2]string{{"alerts", "read"}, {"pages", "alerts"}}, http.HandlerFunc(alertsH.RecentEvents)))
+	apiMux.Handle("GET /api/v1/alerts/{id}", protectAll(pool, cfg, [][2]string{{"alerts", "read"}, {"pages", "alert_detail"}}, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		id, err := uuid.Parse(r.PathValue("id"))
 		if err != nil {
 			requestID := middleware.RequestIDFromContext(r.Context())
@@ -309,7 +309,7 @@ func NewWithOptions(log *slog.Logger, cfg config.Config, pool *pgxpool.Pool, log
 		}
 		alertsH.Get(w, r, id)
 	})))
-	apiMux.Handle("PATCH /api/v1/alerts/{id}", protectPerm(pool, cfg, "alerts", "write", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	apiMux.Handle("PATCH /api/v1/alerts/{id}", protectAll(pool, cfg, [][2]string{{"alerts", "write"}, {"pages", "alert_detail"}}, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		id, err := uuid.Parse(r.PathValue("id"))
 		if err != nil {
 			requestID := middleware.RequestIDFromContext(r.Context())
@@ -319,9 +319,9 @@ func NewWithOptions(log *slog.Logger, cfg config.Config, pool *pgxpool.Pool, log
 		alertsH.Patch(w, r, id)
 	})))
 
-	apiMux.Handle("GET /api/v1/notification-channels", protectPerm(pool, cfg, "notifications", "read", http.HandlerFunc(notifH.ListChannels)))
-	apiMux.Handle("POST /api/v1/notification-channels", protectPerm(pool, cfg, "notifications", "write", http.HandlerFunc(notifH.CreateChannel)))
-	apiMux.Handle("GET /api/v1/notification-channels/{id}", protectPerm(pool, cfg, "notifications", "read", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	apiMux.Handle("GET /api/v1/notification-channels", protectAll(pool, cfg, [][2]string{{"notifications", "read"}, {"pages", "notifications"}}, http.HandlerFunc(notifH.ListChannels)))
+	apiMux.Handle("POST /api/v1/notification-channels", protectAll(pool, cfg, [][2]string{{"notifications", "write"}, {"pages", "notifications"}}, http.HandlerFunc(notifH.CreateChannel)))
+	apiMux.Handle("GET /api/v1/notification-channels/{id}", protectAll(pool, cfg, [][2]string{{"notifications", "read"}, {"pages", "notifications"}}, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		id, err := uuid.Parse(r.PathValue("id"))
 		if err != nil {
 			requestID := middleware.RequestIDFromContext(r.Context())
@@ -330,7 +330,7 @@ func NewWithOptions(log *slog.Logger, cfg config.Config, pool *pgxpool.Pool, log
 		}
 		notifH.GetChannel(w, r, id)
 	})))
-	apiMux.Handle("PATCH /api/v1/notification-channels/{id}", protectPerm(pool, cfg, "notifications", "write", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	apiMux.Handle("PATCH /api/v1/notification-channels/{id}", protectAll(pool, cfg, [][2]string{{"notifications", "write"}, {"pages", "notifications"}}, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		id, err := uuid.Parse(r.PathValue("id"))
 		if err != nil {
 			requestID := middleware.RequestIDFromContext(r.Context())
@@ -339,7 +339,7 @@ func NewWithOptions(log *slog.Logger, cfg config.Config, pool *pgxpool.Pool, log
 		}
 		notifH.PatchChannel(w, r, id)
 	})))
-	apiMux.Handle("DELETE /api/v1/notification-channels/{id}", protectPerm(pool, cfg, "notifications", "write", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	apiMux.Handle("DELETE /api/v1/notification-channels/{id}", protectAll(pool, cfg, [][2]string{{"notifications", "write"}, {"pages", "notifications"}}, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		id, err := uuid.Parse(r.PathValue("id"))
 		if err != nil {
 			requestID := middleware.RequestIDFromContext(r.Context())
@@ -348,7 +348,7 @@ func NewWithOptions(log *slog.Logger, cfg config.Config, pool *pgxpool.Pool, log
 		}
 		notifH.DeleteChannel(w, r, id)
 	})))
-	apiMux.Handle("POST /api/v1/notification-channels/{id}/test", protectPerm(pool, cfg, "notifications", "write", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	apiMux.Handle("POST /api/v1/notification-channels/{id}/test", protectAll(pool, cfg, [][2]string{{"notifications", "write"}, {"pages", "notifications"}}, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		id, err := uuid.Parse(r.PathValue("id"))
 		if err != nil {
 			requestID := middleware.RequestIDFromContext(r.Context())
@@ -358,9 +358,9 @@ func NewWithOptions(log *slog.Logger, cfg config.Config, pool *pgxpool.Pool, log
 		notifH.TestChannel(w, r, id)
 	})))
 
-	apiMux.Handle("GET /api/v1/notification-rules", protectPerm(pool, cfg, "notifications", "read", http.HandlerFunc(notifH.ListRules)))
-	apiMux.Handle("POST /api/v1/notification-rules", protectPerm(pool, cfg, "notifications", "write", http.HandlerFunc(notifH.CreateRule)))
-	apiMux.Handle("GET /api/v1/notification-rules/{id}", protectPerm(pool, cfg, "notifications", "read", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	apiMux.Handle("GET /api/v1/notification-rules", protectAll(pool, cfg, [][2]string{{"notifications", "read"}, {"pages", "notifications"}}, http.HandlerFunc(notifH.ListRules)))
+	apiMux.Handle("POST /api/v1/notification-rules", protectAll(pool, cfg, [][2]string{{"notifications", "write"}, {"pages", "notifications"}}, http.HandlerFunc(notifH.CreateRule)))
+	apiMux.Handle("GET /api/v1/notification-rules/{id}", protectAll(pool, cfg, [][2]string{{"notifications", "read"}, {"pages", "notifications"}}, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		id, err := uuid.Parse(r.PathValue("id"))
 		if err != nil {
 			requestID := middleware.RequestIDFromContext(r.Context())
@@ -369,7 +369,7 @@ func NewWithOptions(log *slog.Logger, cfg config.Config, pool *pgxpool.Pool, log
 		}
 		notifH.GetRule(w, r, id)
 	})))
-	apiMux.Handle("PATCH /api/v1/notification-rules/{id}", protectPerm(pool, cfg, "notifications", "write", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	apiMux.Handle("PATCH /api/v1/notification-rules/{id}", protectAll(pool, cfg, [][2]string{{"notifications", "write"}, {"pages", "notifications"}}, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		id, err := uuid.Parse(r.PathValue("id"))
 		if err != nil {
 			requestID := middleware.RequestIDFromContext(r.Context())
@@ -378,7 +378,7 @@ func NewWithOptions(log *slog.Logger, cfg config.Config, pool *pgxpool.Pool, log
 		}
 		notifH.PatchRule(w, r, id)
 	})))
-	apiMux.Handle("DELETE /api/v1/notification-rules/{id}", protectPerm(pool, cfg, "notifications", "write", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	apiMux.Handle("DELETE /api/v1/notification-rules/{id}", protectAll(pool, cfg, [][2]string{{"notifications", "write"}, {"pages", "notifications"}}, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		id, err := uuid.Parse(r.PathValue("id"))
 		if err != nil {
 			requestID := middleware.RequestIDFromContext(r.Context())
@@ -388,7 +388,7 @@ func NewWithOptions(log *slog.Logger, cfg config.Config, pool *pgxpool.Pool, log
 		notifH.DeleteRule(w, r, id)
 	})))
 
-	apiMux.Handle("PATCH /api/v1/rules/{id}", protectPerm(pool, cfg, "rules", "write", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	apiMux.Handle("PATCH /api/v1/rules/{id}", protectAll(pool, cfg, [][2]string{{"rules", "write"}, {"pages", "rules"}}, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		id, err := uuid.Parse(r.PathValue("id"))
 		if err != nil {
 			requestID := middleware.RequestIDFromContext(r.Context())
@@ -398,8 +398,8 @@ func NewWithOptions(log *slog.Logger, cfg config.Config, pool *pgxpool.Pool, log
 		rulesH.Patch(w, r, id)
 	})))
 
-	apiMux.Handle("GET /api/v1/audit-logs", protectPerm(pool, cfg, "audit_logs", "read", http.HandlerFunc(auditH.List)))
-	apiMux.Handle("GET /api/v1/audit-logs/{id}", protectPerm(pool, cfg, "audit_logs", "read", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	apiMux.Handle("GET /api/v1/audit-logs", protectAll(pool, cfg, [][2]string{{"audit_logs", "read"}, {"pages", "audit"}}, http.HandlerFunc(auditH.List)))
+	apiMux.Handle("GET /api/v1/audit-logs/{id}", protectAll(pool, cfg, [][2]string{{"audit_logs", "read"}, {"pages", "audit"}}, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		id, err := uuid.Parse(r.PathValue("id"))
 		if err != nil {
 			requestID := middleware.RequestIDFromContext(r.Context())
@@ -490,9 +490,15 @@ func protect(pool *pgxpool.Pool, cfg config.Config, h http.Handler) http.Handler
 }
 
 func protectPerm(pool *pgxpool.Pool, cfg config.Config, resource, action string, h http.Handler) http.Handler {
-	h = middleware.RequirePermission(resource, action)(h)
-	h = middleware.RequireAuth(h)
-	return h
+	return protectAll(pool, cfg, [][2]string{{resource, action}}, h)
+}
+
+// protectAll requires every resource/action pair. Authentication is the outer check.
+func protectAll(pool *pgxpool.Pool, cfg config.Config, pairs [][2]string, h http.Handler) http.Handler {
+	for _, pair := range pairs {
+		h = middleware.RequirePermission(pair[0], pair[1])(h)
+	}
+	return middleware.RequireAuth(h)
 }
 
 func apiV1NotFound(w http.ResponseWriter, r *http.Request) {

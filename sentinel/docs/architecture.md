@@ -64,7 +64,7 @@ Shared wire types for events live in `sentinel/pkg/event`. Prefer `api/internal/
 | `OPERATOR` | Manage servers, agents, notifications |
 | `VIEWER` | Read-only |
 
-All permission checks are server-side (`resource:action` pairs).
+All permission checks are server-side (`resource:action` pairs). Opening a panel screen also requires the matching `pages:*` key (`pages:dashboard`, `pages:alerts`, `pages:alert_detail`, `pages:events`, `pages:servers`, `pages:server_detail`, `pages:rules`, `pages:notifications`, `pages:team`, `pages:roles`, `pages:audit`). `SUPER_ADMIN` and `ADMIN` can open every page.
 
 ## Alert lifecycle
 

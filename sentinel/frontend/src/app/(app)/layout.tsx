@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { PageAccess } from "@/components/layout/page-access";
 import { Sidebar } from "@/components/layout/sidebar";
 import { AuthProvider } from "@/context/auth-context";
 import { serverApiFetch } from "@/lib/api/server";
@@ -19,7 +20,9 @@ export default async function AppLayout({
       <div className="flex min-h-screen bg-[radial-gradient(ellipse_at_top,_#0a1628_0%,_#030712_55%)]">
         <Sidebar />
         <main className="min-w-0 flex-1 overflow-auto">
-          <div className="mx-auto max-w-6xl px-4 py-8 md:px-8">{children}</div>
+          <div className="mx-auto max-w-6xl px-4 py-8 md:px-8">
+            <PageAccess>{children}</PageAccess>
+          </div>
         </main>
       </div>
     </AuthProvider>
