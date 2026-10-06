@@ -6,10 +6,14 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { LoadingBlock } from "@/components/ui/loading-block";
 import { SeverityBadge } from "@/components/ui/severity-badge";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { useAuth } from "@/context/auth-context";
 import { apiFetch } from "@/lib/api/client";
+import { canSeePage } from "@/lib/pages";
 import type { Alert } from "@/lib/types";
 
 export default function AlertsPage() {
+  const { user } = useAuth();
+  const canDetail = canSeePage(user, "alert_detail");
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [total, setTotal] = useState(0);
   const [status, setStatus] = useState("");
@@ -99,9 +103,13 @@ export default function AlertsPage() {
               {alerts.map((a) => (
                 <tr key={a.id} className="hover:bg-zinc-900/50">
                   <td className="px-4 py-3">
-                    <Link href={`/alerts/${a.id}`} className="font-medium text-brand-300 hover:underline">
-                      {a.title}
-                    </Link>
+                    {canDetail ? (
+                      <Link href={`/alerts/${a.id}`} className="font-medium text-brand-300 hover:underline">
+                        {a.title}
+                      </Link>
+                    ) : (
+                      <span className="font-medium text-zinc-100">{a.title}</span>
+                    )}
                   </td>
                   <td className="px-4 py-3">
                     <StatusBadge status={a.status} />

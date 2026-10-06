@@ -4,23 +4,9 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/context/auth-context";
-import { hasPermission } from "@/lib/permissions";
+import { canSeePage, PANEL_PAGES } from "@/lib/pages";
 
-const nav = [
-  { href: "/dashboard", label: "Dashboard", perm: ["alerts", "read"] as const },
-  { href: "/alerts", label: "Alerts", perm: ["alerts", "read"] as const },
-  { href: "/events", label: "Events", perm: ["events", "read"] as const },
-  { href: "/servers", label: "Servers", perm: ["servers", "read"] as const },
-  { href: "/rules", label: "Rules", perm: ["rules", "read"] as const },
-  {
-    href: "/notifications",
-    label: "Notifications",
-    perm: ["notifications", "read"] as const,
-  },
-  { href: "/users", label: "Team", perm: ["users", "read"] as const },
-  { href: "/roles", label: "Roles", perm: ["roles", "read"] as const },
-  { href: "/audit", label: "Audit logs", perm: ["audit_logs", "read"] as const },
-];
+const nav = PANEL_PAGES.filter((page) => page.nav && page.href);
 
 export function Sidebar() {
   const pathname = usePathname();
@@ -37,7 +23,7 @@ export function Sidebar() {
       </div>
       <nav className="flex-1 space-y-1 px-3 py-4">
         {nav.map((item) => {
-          if (!hasPermission(user, item.perm[0], item.perm[1])) return null;
+          if (!item.href || !canSeePage(user, item.action)) return null;
           const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
           return (
             <Link

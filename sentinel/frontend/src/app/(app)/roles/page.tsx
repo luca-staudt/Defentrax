@@ -65,7 +65,13 @@ export default function RolesPage() {
       list.push(p);
       m.set(p.resource, list);
     }
-    return m;
+    const entries = [...m.entries()];
+    entries.sort(([a], [b]) => {
+      if (a === "pages") return -1;
+      if (b === "pages") return 1;
+      return a.localeCompare(b);
+    });
+    return entries;
   }, [permissions]);
 
   function openRole(role: Role) {
@@ -161,24 +167,24 @@ export default function RolesPage() {
   }) {
     return (
       <div className="space-y-3">
-        {[...permsByResource.entries()].map(([resource, perms]) => (
+        {permsByResource.map(([resource, perms]) => (
           <div key={resource}>
             <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-zinc-500">
-              {resource}
+              {resource === "pages" ? "Pages (who can open the screen)" : resource}
             </p>
             <div className="flex flex-wrap gap-2">
               {perms.map((p) => (
                 <label
                   key={p.key}
                   className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-zinc-800 px-2 py-1 text-xs text-zinc-300"
-                  title={p.description}
+                  title={p.key}
                 >
                   <input
                     type="checkbox"
                     checked={selectedKeys.includes(p.key)}
                     onChange={() => onToggle(p.key)}
                   />
-                  {p.action}
+                  {resource === "pages" ? p.description : p.action}
                 </label>
               ))}
             </div>
@@ -195,9 +201,11 @@ export default function RolesPage() {
           Roles & permissions
         </h1>
         <p className="text-sm text-zinc-500">
-          Built-in roles plus custom roles with selectable permission sets.
-          Keys use <code className="text-brand-200">resource:action</code>{" "}
-          (server-enforced).
+          Built-in roles plus custom roles. The Pages group decides which
+          screens a role can open. Other groups still control read and write
+          on the API. Keys use{" "}
+          <code className="text-brand-200">resource:action</code> and are
+          enforced on the server. SUPER_ADMIN and ADMIN can open every page.
         </p>
       </header>
 

@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Page permissions (`pages:dashboard`, `pages:alerts`, `pages:alert_detail`, `pages:events`, `pages:servers`, `pages:server_detail`, `pages:rules`, `pages:notifications`, `pages:team`, `pages:roles`, `pages:audit`) so a role can be granted each panel screen separately. The sidebar and direct URLs follow those keys. Existing roles keep the screens their read permissions already allowed.
 - Team accounts admin: user lifecycle (create/edit/disable, password reset, session revoke, admin 2FA reset)
 - Roles & permissions management API + panel UI (custom roles, `roles:read`/`roles:write`)
 - Built-in `SUPER_ADMIN` role (alongside legacy `ADMIN` bypass)

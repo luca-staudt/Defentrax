@@ -5,8 +5,10 @@ import { useParams } from "next/navigation";
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { EmptyState } from "@/components/ui/empty-state";
 import { LoadingBlock } from "@/components/ui/loading-block";
+import { useAuth } from "@/context/auth-context";
 import { apiFetch, ApiRequestError } from "@/lib/api/client";
 import { copyText } from "@/lib/clipboard";
+import { canSeePage } from "@/lib/pages";
 import type { EnrollmentToken } from "@/lib/types";
 
 type Agent = {
@@ -36,6 +38,8 @@ const btnGhost =
 
 export default function ServerDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const { user } = useAuth();
+  const canList = canSeePage(user, "servers");
   const [server, setServer] = useState<ServerDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -112,9 +116,11 @@ export default function ServerDetailPage() {
   return (
     <div className="space-y-8">
       <header>
-        <Link href="/servers" className="text-xs text-zinc-500 hover:text-brand-300">
-          ← Servers
-        </Link>
+        {canList ? (
+          <Link href="/servers" className="text-xs text-zinc-500 hover:text-brand-300">
+            ← Servers
+          </Link>
+        ) : null}
         <h1 className="font-display mt-2 text-2xl font-semibold text-white">
           {server.name}
         </h1>
