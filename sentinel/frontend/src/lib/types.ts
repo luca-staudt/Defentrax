@@ -135,6 +135,7 @@ export type Rule = {
   description: string;
   enabled: boolean;
   severity: string;
+  custom?: boolean;
 };
 
 export type ApiError = {

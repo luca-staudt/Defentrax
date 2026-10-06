@@ -44,7 +44,7 @@ Panel routes also require a `pages:*` permission. Both keys are required: the pa
 | Events | `/events` | `pages:events` | `events:read` |
 | Servers | `/servers` | `pages:servers` | `servers:read` (create: `servers:write`) |
 | Server detail | `/servers/{id}` | `pages:server_detail` | `servers:read` (tokens: `servers:write`) |
-| Rules | `/rules` | `pages:rules` | `rules:read` (enable: `rules:write`) |
+| Rules | `/rules` | `pages:rules` | `rules:read` (enable and create: `rules:write`) |
 | Notifications | `/notifications` | `pages:notifications` | `notifications:read` (edit: `notifications:write`) |
 | Team | `/users` | `pages:team` | `users:read` (manage: `users:write`) |
 | Roles | `/roles` | `pages:roles` | `roles:read` (edit: `roles:write`) |

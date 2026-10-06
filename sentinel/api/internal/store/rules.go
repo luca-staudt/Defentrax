@@ -8,8 +8,12 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
+
+// ErrRuleExists is returned when a rule name or id is already taken.
+var ErrRuleExists = errors.New("rule already exists")
 
 // RuleRow is a detection rule persisted in PostgreSQL.
 type RuleRow struct {
@@ -112,6 +116,61 @@ RETURNING id, name, description, enabled, severity, definition, version, created
 	}
 	r.YAMLID = yamlIDFromDefinition(r.Definition)
 	return r, nil
+}
+
+// YAMLRuleIDExists reports whether a definition id is already stored.
+func YAMLRuleIDExists(ctx context.Context, pool *pgxpool.Pool, yamlID string) (bool, error) {
+	var exists bool
+	err := pool.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM rules WHERE definition->>'id' = $1)`, yamlID).Scan(&exists)
+	return exists, err
+}
+
+// InsertCustomRule stores an operator-authored rule. The definition must include id and origin.
+func InsertCustomRule(ctx context.Context, pool *pgxpool.Pool, rule RuleUpsert) (RuleRow, error) {
+	def := rule.Definition
+	if len(def) == 0 {
+		def = []byte("{}")
+	}
+	var r RuleRow
+	err := pool.QueryRow(ctx, `
+INSERT INTO rules (name, description, enabled, severity, definition, version)
+VALUES ($1, $2, TRUE, $3, $4::jsonb, $5)
+RETURNING id, name, description, enabled, severity, definition, version, created_at, updated_at
+`, rule.Name, rule.Description, rule.Severity, string(def), rule.Version).Scan(
+		&r.ID, &r.Name, &r.Description, &r.Enabled, &r.Severity, &r.Definition, &r.Version, &r.CreatedAt, &r.UpdatedAt,
+	)
+	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			return RuleRow{}, ErrRuleExists
+		}
+		return RuleRow{}, err
+	}
+	r.YAMLID = yamlIDFromDefinition(r.Definition)
+	return r, nil
+}
+
+// ListRulesByOrigin returns rules whose definition origin matches, ordered by name.
+func ListRulesByOrigin(ctx context.Context, pool *pgxpool.Pool, origin string) ([]RuleRow, error) {
+	rows, err := pool.Query(ctx, `
+SELECT id, name, description, enabled, severity, definition, version, created_at, updated_at
+FROM rules
+WHERE definition->>'origin' = $1
+ORDER BY name ASC`, origin)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []RuleRow
+	for rows.Next() {
+		var r RuleRow
+		if err := rows.Scan(&r.ID, &r.Name, &r.Description, &r.Enabled, &r.Severity, &r.Definition, &r.Version, &r.CreatedAt, &r.UpdatedAt); err != nil {
+			return nil, err
+		}
+		r.YAMLID = yamlIDFromDefinition(r.Definition)
+		out = append(out, r)
+	}
+	return out, rows.Err()
 }
 
 // EnabledYAMLRuleIDs returns yaml ids for enabled rules.

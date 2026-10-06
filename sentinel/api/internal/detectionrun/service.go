@@ -3,6 +3,7 @@ package detectionrun
 import (
 	"context"
 	"log/slog"
+	"strings"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -24,6 +25,28 @@ func (s *Service) ReloadEnabled(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	s.Engine.SetRules(s.Rules, enabled)
+	customRows, err := store.ListRulesByOrigin(ctx, s.Pool, "custom")
+	if err != nil {
+		return err
+	}
+	base := make([]detection.Rule, 0, len(s.Rules))
+	for _, rule := range s.Rules {
+		if strings.HasPrefix(rule.ID, "custom.") {
+			continue
+		}
+		base = append(base, rule)
+	}
+	for _, row := range customRows {
+		rule, err := ParseRuleDefinition(row.Definition)
+		if err != nil {
+			if s.Log != nil {
+				s.Log.Warn("skipping invalid custom rule", "name", row.Name, "error", err)
+			}
+			continue
+		}
+		base = append(base, rule)
+	}
+	s.Rules = base
+	s.Engine.SetRules(base, enabled)
 	return nil
 }

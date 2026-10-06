@@ -289,6 +289,7 @@ func NewWithOptions(log *slog.Logger, cfg config.Config, pool *pgxpool.Pool, log
 	})))
 
 	apiMux.Handle("GET /api/v1/rules", protectAll(pool, cfg, [][2]string{{"rules", "read"}, {"pages", "rules"}}, http.HandlerFunc(rulesH.List)))
+	apiMux.Handle("POST /api/v1/rules", protectAll(pool, cfg, [][2]string{{"rules", "write"}, {"pages", "rules"}}, http.HandlerFunc(rulesH.Create)))
 	apiMux.Handle("GET /api/v1/rules/{id}", protectAll(pool, cfg, [][2]string{{"rules", "read"}, {"pages", "rules"}}, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		id, err := uuid.Parse(r.PathValue("id"))
 		if err != nil {

@@ -1378,6 +1378,64 @@ paths:
                     type: array
                     items:
                       $ref: "#/components/schemas/Rule"
+    post:
+      tags: [Rules]
+      operationId: createRule
+      summary: Create a custom detection rule
+      description: "Requires `rules:write` and `pages:rules`. The rule is stored and loaded into the detection engine. Names and alert text must stay possibility-oriented. At least one match field is required."
+      security:
+        - SessionCookie: []
+        - BearerApiKey: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, description, severity]
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                severity:
+                  type: string
+                  enum: [info, low, medium, high, critical]
+                source:
+                  type: string
+                category:
+                  type: string
+                event_type:
+                  type: string
+                message_contains:
+                  type: string
+                fields:
+                  type: object
+                  additionalProperties:
+                    type: string
+                threshold_count:
+                  type: integer
+                window_seconds:
+                  type: integer
+                group_by:
+                  type: array
+                  items:
+                    type: string
+                action_title:
+                  type: string
+                action_description:
+                  type: string
+      responses:
+        "201":
+          description: Created rule
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Rule"
+        "400":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
 
   /api/v1/rules/{id}:
     get:

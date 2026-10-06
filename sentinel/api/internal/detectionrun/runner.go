@@ -152,12 +152,24 @@ func Bootstrap(ctx context.Context, log *slog.Logger, pool *pgxpool.Pool, engine
 	if err := store.SyncBundledRules(ctx, pool, upserts); err != nil {
 		return err
 	}
+	customRows, err := store.ListRulesByOrigin(ctx, pool, "custom")
+	if err != nil {
+		return err
+	}
+	for _, row := range customRows {
+		rule, err := ParseRuleDefinition(row.Definition)
+		if err != nil {
+			log.Warn("skipping invalid custom rule", "name", row.Name, "error", err)
+			continue
+		}
+		rules = append(rules, rule)
+	}
 	enabled, err := store.EnabledYAMLRuleIDs(ctx, pool)
 	if err != nil {
 		return err
 	}
 	engine.SetRules(rules, enabled)
-	log.Info("detection rules loaded", "count", len(rules), "path", rulesPath)
+	log.Info("detection rules loaded", "count", len(rules), "path", rulesPath, "custom", len(customRows))
 	return nil
 }
 
