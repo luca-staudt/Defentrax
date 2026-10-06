@@ -2,12 +2,9 @@
 
 import { useState } from "react";
 import { Sidebar } from "@/components/layout/sidebar";
+import { VersionBadge } from "@/components/layout/version-badge";
 
-export function ClientAppShell({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export function ClientAppShell({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
@@ -64,11 +61,8 @@ export function ClientAppShell({
             </div>
           </div>
 
-          <div className="flex items-center gap-3 text-xs font-mono">
-            <span className="rounded-full border border-sky-500/20 bg-sky-950/30 px-2.5 py-0.5 text-[10px] text-sky-300 hidden sm:inline">
-              GUARD ENGINE v2.4
-            </span>
-          </div>
+          {/* Auto-synced GitHub release version */}
+          <VersionBadge />
         </header>
 
         <main className="min-w-0 flex-1 overflow-y-auto">
