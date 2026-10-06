@@ -3,6 +3,7 @@
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { EmptyState } from "@/components/ui/empty-state";
 import { LoadingBlock } from "@/components/ui/loading-block";
+import { CyberCheckbox } from "@/components/ui/cyber-checkbox";
 import { apiFetch, ApiRequestError } from "@/lib/api/client";
 import { hasPermission, roleDisplayName } from "@/lib/permissions";
 import { useAuth } from "@/context/auth-context";
@@ -305,19 +306,15 @@ export default function TeamUsersPage() {
               Roles
               <div className="mt-2 flex flex-wrap gap-2">
                 {roleOptions.map((name) => (
-                  <label
+                  <CyberCheckbox
                     key={name}
-                    className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-zinc-800 px-2 py-1 text-zinc-300"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={createRoles.includes(name)}
-                      onChange={() =>
-                        toggleRole(createRoles, name, setCreateRoles)
-                      }
-                    />
-                    {roleDisplayName(name)}
-                  </label>
+                    variant="pill"
+                    label={roleDisplayName(name)}
+                    checked={createRoles.includes(name)}
+                    onChange={() =>
+                      toggleRole(createRoles, name, setCreateRoles)
+                    }
+                  />
                 ))}
               </div>
             </div>
@@ -440,19 +437,15 @@ export default function TeamUsersPage() {
                   Roles
                   <div className="mt-2 flex flex-wrap gap-2">
                     {roleOptions.map((name) => (
-                      <label
+                      <CyberCheckbox
                         key={name}
-                        className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-zinc-800 px-2 py-1 text-zinc-300"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={editRoles.includes(name)}
-                          onChange={() =>
-                            toggleRole(editRoles, name, setEditRoles)
-                          }
-                        />
-                        {roleDisplayName(name)}
-                      </label>
+                        variant="pill"
+                        label={roleDisplayName(name)}
+                        checked={editRoles.includes(name)}
+                        onChange={() =>
+                          toggleRole(editRoles, name, setEditRoles)
+                        }
+                      />
                     ))}
                   </div>
                 </div>

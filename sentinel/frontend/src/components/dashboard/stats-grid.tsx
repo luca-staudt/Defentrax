@@ -39,48 +39,41 @@ function SeverityBreakdownChart({ data }: { data: Record<string, number> }) {
   const getSeverityStyle = (sev: string) => {
     switch (sev.toUpperCase()) {
       case "CRITICAL":
-        return { bg: "bg-rose-500", text: "text-rose-400" };
+        return { bg: "bg-rose-500", text: "text-rose-400", border: "border-rose-500/40" };
       case "HIGH":
-        return { bg: "bg-amber-500", text: "text-amber-400" };
+        return { bg: "bg-amber-500", text: "text-amber-400", border: "border-amber-500/40" };
       case "MEDIUM":
-        return { bg: "bg-yellow-400", text: "text-yellow-300" };
+        return { bg: "bg-yellow-400", text: "text-yellow-300", border: "border-yellow-400/40" };
       case "LOW":
-        return { bg: "bg-sky-400", text: "text-sky-300" };
+        return { bg: "bg-sky-400", text: "text-sky-300", border: "border-sky-400/40" };
       default:
-        return { bg: "bg-zinc-500", text: "text-zinc-400" };
+        return { bg: "bg-zinc-500", text: "text-zinc-400", border: "border-zinc-500/40" };
     }
   };
 
   return (
     <div className="rounded-2xl border border-zinc-800/80 bg-gradient-to-br from-[#0c1424]/90 to-[#060b16]/90 p-5 shadow-xl backdrop-blur-md">
       <div className="flex items-center justify-between border-b border-zinc-800/60 pb-3">
-        <h4 className="font-display text-sm font-semibold text-zinc-200 flex items-center gap-2">
-          <span className="h-2 w-2 rounded-full bg-rose-500 animate-pulse" />
-          Alert Severity Distribution
-        </h4>
-        <span className="font-mono text-xs text-zinc-400">Total: {total}</span>
+        <h4 className="font-display text-sm font-semibold text-white">Alerts by Severity</h4>
+        <span className="font-mono text-xs text-zinc-400">Live Breakdown</span>
       </div>
-
       <div className="mt-4 space-y-3">
         {entries.length === 0 ? (
-          <p className="text-xs text-zinc-500 font-mono">No active alerts recorded</p>
+          <p className="text-center font-mono text-xs text-zinc-500 py-4">No active severity incidents</p>
         ) : (
-          entries.map(([k, v]) => {
-            const pct = total > 0 ? Math.round((v / total) * 100) : 0;
-            const style = getSeverityStyle(k);
+          entries.map(([sev, count]) => {
+            const style = getSeverityStyle(sev);
+            const pct = total > 0 ? Math.round((count / total) * 100) : 0;
             return (
-              <div key={k} className="space-y-1">
-                <div className="flex justify-between text-xs font-mono">
-                  <span className={`${style.text} font-medium uppercase`}>{k}</span>
+              <div key={sev} className="space-y-1">
+                <div className="flex justify-between font-mono text-xs">
+                  <span className={`font-semibold ${style.text}`}>{sev.toUpperCase()}</span>
                   <span className="text-zinc-400">
-                    {v} <span className="text-zinc-600">({pct}%)</span>
+                    {count} ({pct}%)
                   </span>
                 </div>
-                <div className="h-2 overflow-hidden rounded-full bg-zinc-900 border border-zinc-800">
-                  <div
-                    className={`h-full rounded-full transition-all duration-500 ${style.bg}`}
-                    style={{ width: `${pct}%` }}
-                  />
+                <div className="h-2 w-full overflow-hidden rounded-full bg-zinc-800/80">
+                  <div className={`h-full ${style.bg} transition-all duration-500`} style={{ width: `${pct}%` }} />
                 </div>
               </div>
             );
@@ -91,88 +84,85 @@ function SeverityBreakdownChart({ data }: { data: Record<string, number> }) {
   );
 }
 
-function RulesBarChart({ title, data }: { title: string; data: Record<string, number> }) {
-  const entries = Object.entries(data);
-  const max = Math.max(...entries.map(([, v]) => v), 1);
-
-  return (
-    <div className="rounded-2xl border border-zinc-800/80 bg-gradient-to-br from-[#0c1424]/90 to-[#060b16]/90 p-5 shadow-xl backdrop-blur-md">
-      <div className="flex items-center justify-between border-b border-zinc-800/60 pb-3">
-        <h4 className="font-display text-sm font-semibold text-zinc-200 flex items-center gap-2">
-          <span className="h-2 w-2 rounded-full bg-sky-400" />
-          {title}
-        </h4>
-        <span className="font-mono text-xs text-zinc-400">{entries.length} Status Groups</span>
-      </div>
-
-      <div className="mt-4 space-y-3">
-        {entries.length === 0 ? (
-          <p className="text-xs text-zinc-500 font-mono">No alert status distribution data</p>
-        ) : (
-          entries.map(([k, v]) => (
-            <div key={k} className="space-y-1">
-              <div className="flex justify-between text-xs font-mono">
-                <span className="truncate max-w-[200px] text-zinc-300 font-medium">{k}</span>
-                <span className="text-sky-400 font-semibold">{v}</span>
-              </div>
-              <div className="h-2 overflow-hidden rounded-full bg-zinc-900 border border-zinc-800">
-                <div
-                  className="h-full rounded-full bg-gradient-to-r from-sky-500 to-indigo-500 transition-all duration-500"
-                  style={{ width: `${(v / max) * 100}%` }}
-                />
-              </div>
-            </div>
-          ))
-        )}
-      </div>
-    </div>
-  );
-}
-
 export function StatsGrid({ stats }: { stats: DashboardStats }) {
+  const criticalCount = (stats.alerts_by_severity?.CRITICAL || stats.alerts_by_severity?.critical || 0);
+
   return (
     <div className="space-y-6">
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      {/* 4 Top KPI Cards */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          label="Monitored Fleet"
+          value={stats.servers_total}
+          sublabel={`${stats.agents_active} active agent${stats.agents_active === 1 ? "" : "s"}`}
+          icon={<ServerIcon className="h-5 w-5" />}
+        />
         <StatCard
           label="Open Incidents"
-          value={stats.alerts_open ?? 0}
-          sublabel="Requiring active response"
-          icon={<AlertTriangleIcon className="h-5 w-5 text-rose-400" />}
+          value={stats.alerts_open}
+          sublabel={criticalCount > 0 ? `${criticalCount} critical incident${criticalCount === 1 ? "" : "s"}` : "No critical threats"}
+          icon={<AlertTriangleIcon className="h-5 w-5" />}
         />
         <StatCard
-          label="Events (24h)"
-          value={stats.events_last_24h ?? 0}
-          sublabel="Ingested in the last 24 hours"
-          icon={<ShieldCheckIcon className="h-5 w-5 text-sky-400" />}
+          label="24h Event Ingestion"
+          value={stats.events_last_24h.toLocaleString()}
+          sublabel="Stream throughput"
+          icon={<ActivityIcon className="h-5 w-5" />}
         />
         <StatCard
-          label="Connected Nodes"
-          value={stats.servers_total ?? 0}
-          sublabel="Agent heartbeat nominal"
-          icon={<ServerIcon className="h-5 w-5 text-emerald-400" />}
-        />
-        <StatCard
-          label="Active Agents"
-          value={stats.agents_active ?? 0}
-          sublabel="Active agent heartbeats"
-          icon={<ActivityIcon className="h-5 w-5 text-amber-400" />}
+          label="Fleet Agent Ratio"
+          value={stats.servers_total > 0 ? `${Math.round((stats.agents_active / stats.servers_total) * 100)}%` : "0%"}
+          sublabel={`${stats.agents_active} of ${stats.servers_total} enrolled`}
+          icon={<ShieldCheckIcon className="h-5 w-5" />}
         />
       </div>
 
-      {/* Advanced Telemetry Section: 24h Area Chart + Posture Gauge */}
-      <div className="grid gap-6 lg:grid-cols-3">
+      {/* Real-time Telemetry & Dynamic Posture Calculation */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <div className="lg:col-span-2">
-          <ThreatTimelineChart />
+          <ThreatTimelineChart
+            eventsTotal={stats.events_last_24h}
+            alertsCount={stats.alerts_open}
+          />
         </div>
         <div>
-          <SecurityPostureGauge />
+          <SecurityPostureGauge
+            alertsOpen={stats.alerts_open}
+            criticalAlerts={criticalCount}
+          />
         </div>
       </div>
 
-      {/* Telemetry Breakdown: Severity + Status */}
-      <div className="grid gap-6 lg:grid-cols-2">
+      {/* Severity Breakdown Section */}
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <SeverityBreakdownChart data={stats.alerts_by_severity || {}} />
-        <RulesBarChart title="Alerts by Status" data={stats.alerts_by_status || {}} />
+        <div className="rounded-2xl border border-zinc-800/80 bg-gradient-to-br from-[#0c1424]/90 to-[#060b16]/90 p-5 shadow-xl backdrop-blur-md">
+          <div className="flex items-center justify-between border-b border-zinc-800/60 pb-3">
+            <h4 className="font-display text-sm font-semibold text-white">24h Event Volume by Severity</h4>
+            <span className="font-mono text-xs text-zinc-400">Stream Telemetry</span>
+          </div>
+          <div className="mt-4 space-y-3">
+            {Object.keys(stats.events_by_severity_24h || {}).length === 0 ? (
+              <p className="text-center font-mono text-xs text-zinc-500 py-4">No events registered in past 24h</p>
+            ) : (
+              Object.entries(stats.events_by_severity_24h).map(([sev, count]) => {
+                const total = stats.events_last_24h || 1;
+                const pct = Math.min(100, Math.round((count / total) * 100));
+                return (
+                  <div key={sev} className="space-y-1">
+                    <div className="flex justify-between font-mono text-xs">
+                      <span className="text-zinc-300 font-medium uppercase">{sev}</span>
+                      <span className="text-zinc-400">{count.toLocaleString()} ({pct}%)</span>
+                    </div>
+                    <div className="h-2 w-full overflow-hidden rounded-full bg-zinc-800/80">
+                      <div className="h-full bg-sky-500 transition-all duration-500" style={{ width: `${pct}%` }} />
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );

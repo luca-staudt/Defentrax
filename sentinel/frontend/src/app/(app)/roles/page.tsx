@@ -3,6 +3,7 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { EmptyState } from "@/components/ui/empty-state";
 import { LoadingBlock } from "@/components/ui/loading-block";
+import { CyberCheckbox } from "@/components/ui/cyber-checkbox";
 import { apiFetch, ApiRequestError } from "@/lib/api/client";
 import { hasPermission, roleDisplayName } from "@/lib/permissions";
 import { useAuth } from "@/context/auth-context";
@@ -174,18 +175,14 @@ export default function RolesPage() {
             </p>
             <div className="flex flex-wrap gap-2">
               {perms.map((p) => (
-                <label
+                <CyberCheckbox
                   key={p.key}
-                  className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-zinc-800 px-2 py-1 text-xs text-zinc-300"
+                  variant="pill"
                   title={p.key}
-                >
-                  <input
-                    type="checkbox"
-                    checked={selectedKeys.includes(p.key)}
-                    onChange={() => onToggle(p.key)}
-                  />
-                  {resource === "pages" ? p.description : p.action}
-                </label>
+                  label={resource === "pages" ? p.description : p.action}
+                  checked={selectedKeys.includes(p.key)}
+                  onChange={() => onToggle(p.key)}
+                />
               ))}
             </div>
           </div>

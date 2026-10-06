@@ -3,6 +3,7 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { EmptyState } from "@/components/ui/empty-state";
 import { LoadingBlock } from "@/components/ui/loading-block";
+import { CyberCheckbox } from "@/components/ui/cyber-checkbox";
 import { apiFetch, ApiRequestError } from "@/lib/api/client";
 import { hasPermission } from "@/lib/permissions";
 import { useAuth } from "@/context/auth-context";
@@ -517,17 +518,13 @@ export default function NotificationsPage() {
               <legend className="text-sm text-zinc-400">Triggers</legend>
               <div className="mt-2 flex flex-wrap gap-3">
                 {TRIGGERS.map((t) => (
-                  <label
+                  <CyberCheckbox
                     key={t.id}
-                    className="flex items-center gap-2 text-sm text-zinc-300"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={triggers.includes(t.id)}
-                      onChange={() => toggleTrigger(t.id)}
-                    />
-                    {t.label}
-                  </label>
+                    variant="pill"
+                    label={t.label}
+                    checked={triggers.includes(t.id)}
+                    onChange={() => toggleTrigger(t.id)}
+                  />
                 ))}
               </div>
             </fieldset>
@@ -541,17 +538,13 @@ export default function NotificationsPage() {
               ) : (
                 <div className="mt-2 flex flex-wrap gap-3">
                   {channels.map((ch) => (
-                    <label
+                    <CyberCheckbox
                       key={ch.id}
-                      className="flex items-center gap-2 text-sm text-zinc-300"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={channelIds.includes(ch.id)}
-                        onChange={() => toggleChannelId(ch.id)}
-                      />
-                      {ch.name} ({ch.channel_type})
-                    </label>
+                      variant="pill"
+                      label={`${ch.name} (${ch.channel_type})`}
+                      checked={channelIds.includes(ch.id)}
+                      onChange={() => toggleChannelId(ch.id)}
+                    />
                   ))}
                 </div>
               )}
