@@ -5,6 +5,8 @@ import { FormEvent, useCallback, useEffect, useState } from "react";
 import { EmptyState } from "@/components/ui/empty-state";
 import { LoadingBlock } from "@/components/ui/loading-block";
 import { apiFetch, ApiRequestError } from "@/lib/api/client";
+import { hasPermission } from "@/lib/permissions";
+import { useAuth } from "@/context/auth-context";
 import type { Server } from "@/lib/types";
 
 const inputClass =
@@ -13,6 +15,9 @@ const btnPrimary =
   "rounded-lg bg-brand-500 px-4 py-2 text-sm font-semibold text-black hover:bg-brand-400 disabled:opacity-50";
 
 export default function ServersPage() {
+  const { user } = useAuth();
+  const canWrite = hasPermission(user, "servers", "write");
+
   const [servers, setServers] = useState<Server[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -41,6 +46,7 @@ export default function ServersPage() {
 
   async function onCreate(e: FormEvent) {
     e.preventDefault();
+    if (!canWrite) return;
     setFormError(null);
     setSaving(true);
     try {
@@ -78,6 +84,7 @@ export default function ServersPage() {
         </p>
       </header>
 
+      {canWrite ? (
       <section className="rounded-xl border border-zinc-800 bg-zinc-950/40 p-5">
         <h2 className="mb-4 text-sm font-medium uppercase tracking-widest text-zinc-400">
           Create server
@@ -130,6 +137,7 @@ export default function ServersPage() {
           </div>
         </form>
       </section>
+      ) : null}
 
       {servers.length === 0 ? (
         <EmptyState

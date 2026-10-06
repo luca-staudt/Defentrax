@@ -5,6 +5,38 @@ export type User = {
   is_active: boolean;
   roles: string[];
   permissions?: string[];
+  last_login_at?: string | null;
+  created_at?: string;
+  updated_at?: string;
+  totp_enabled?: boolean;
+};
+
+export type Role = {
+  id: string;
+  name: string;
+  description: string;
+  is_system: boolean;
+  created_at: string;
+  updated_at?: string;
+  permissions?: string[];
+};
+
+export type Permission = {
+  id: string;
+  resource: string;
+  action: string;
+  key: string;
+  description: string;
+};
+
+export type UserSession = {
+  id: string;
+  user_id: string;
+  expires_at: string;
+  created_at: string;
+  ip_address?: string;
+  user_agent?: string;
+  current?: boolean;
 };
 
 export type DashboardStats = {

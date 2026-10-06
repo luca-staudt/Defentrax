@@ -68,7 +68,7 @@ export default function AuditLogsPage() {
           Audit logs
         </h1>
         <p className="text-sm text-zinc-500">
-          Who did what, when, and where — admin activity trail
+          Who did what, when, and where — attributed to the acting admin account
         </p>
       </header>
 
@@ -139,7 +139,7 @@ export default function AuditLogsPage() {
             <thead className="bg-zinc-900/80 text-xs uppercase text-zinc-500">
               <tr>
                 <th className="px-4 py-3">When</th>
-                <th className="px-4 py-3">Who</th>
+        <th className="px-4 py-3">Who (admin)</th>
                 <th className="px-4 py-3">Action</th>
                 <th className="px-4 py-3">Entity</th>
                 <th className="px-4 py-3">Where</th>

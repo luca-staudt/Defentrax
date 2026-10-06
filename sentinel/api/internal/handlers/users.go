@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"errors"
 	"net/http"
 	"strings"
 
@@ -26,8 +27,17 @@ type createUserRequest struct {
 	Roles       []string `json:"roles"`
 }
 
+type updateUserRequest struct {
+	DisplayName *string `json:"display_name"`
+	IsActive    *bool   `json:"is_active"`
+}
+
 type updateRolesRequest struct {
 	Roles []string `json:"roles"`
+}
+
+type resetPasswordRequest struct {
+	Password string `json:"password"`
 }
 
 func (h *UsersHandler) List(w http.ResponseWriter, r *http.Request) {
@@ -41,6 +51,23 @@ func (h *UsersHandler) List(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"users": users})
+}
+
+func (h *UsersHandler) Get(w http.ResponseWriter, r *http.Request, userID uuid.UUID) {
+	if r.Method != http.MethodGet {
+		methodNotAllowed(w, r)
+		return
+	}
+	user, err := store.GetUserPublic(r.Context(), h.Pool, userID)
+	if errors.Is(err, store.ErrNotFound) {
+		apperrors.WriteJSON(w, http.StatusNotFound, "not_found", "user not found", middleware.RequestIDFromContext(r.Context()))
+		return
+	}
+	if err != nil {
+		internalError(w, r)
+		return
+	}
+	writeJSON(w, http.StatusOK, user)
 }
 
 func (h *UsersHandler) Create(w http.ResponseWriter, r *http.Request) {
@@ -79,20 +106,77 @@ func (h *UsersHandler) Create(w http.ResponseWriter, r *http.Request) {
 		assignedBy = &p.UserID
 	}
 	if err := store.SetUserRoles(r.Context(), h.Pool, id, roles, assignedBy); err != nil {
+		if store.IsRoleNotFound(err) {
+			badRequest(w, r, "invalid_role", err.Error())
+			return
+		}
 		internalError(w, r)
 		return
 	}
 	uid := id
 	auditUser(r, h.Pool, p, "user.created", &uid, map[string]any{"email": email, "roles": roles})
-	user, _ := store.GetUserByID(r.Context(), h.Pool, id)
-	roleList, _ := store.ListUserRoles(r.Context(), h.Pool, id)
-	writeJSON(w, http.StatusCreated, store.UserPublic{
-		ID:          id,
-		Email:       user.Email,
-		DisplayName: user.DisplayName,
-		IsActive:    user.IsActive,
-		Roles:       roleList,
-	})
+	user, err := store.GetUserPublic(r.Context(), h.Pool, id)
+	if err != nil {
+		internalError(w, r)
+		return
+	}
+	writeJSON(w, http.StatusCreated, user)
+}
+
+func (h *UsersHandler) Patch(w http.ResponseWriter, r *http.Request, userID uuid.UUID) {
+	if r.Method != http.MethodPatch {
+		methodNotAllowed(w, r)
+		return
+	}
+	var req updateUserRequest
+	if err := decodeJSON(r, &req); err != nil {
+		badRequest(w, r, "invalid_json", "invalid request body")
+		return
+	}
+	if req.DisplayName == nil && req.IsActive == nil {
+		badRequest(w, r, "invalid_input", "no fields to update")
+		return
+	}
+	if _, err := store.GetUserByID(r.Context(), h.Pool, userID); err != nil {
+		apperrors.WriteJSON(w, http.StatusNotFound, "not_found", "user not found", middleware.RequestIDFromContext(r.Context()))
+		return
+	}
+	p, _ := principal.FromContext(r.Context())
+	// Prevent self-disable lockout.
+	if req.IsActive != nil && !*req.IsActive && p != nil && p.UserID == userID {
+		badRequest(w, r, "invalid_input", "cannot disable your own account")
+		return
+	}
+	var display *string
+	if req.DisplayName != nil {
+		trimmed := strings.TrimSpace(*req.DisplayName)
+		display = &trimmed
+	}
+	if err := store.UpdateUser(r.Context(), h.Pool, userID, display, req.IsActive); err != nil {
+		internalError(w, r)
+		return
+	}
+	meta := map[string]any{}
+	if display != nil {
+		meta["display_name"] = *display
+	}
+	if req.IsActive != nil {
+		meta["is_active"] = *req.IsActive
+		if !*req.IsActive {
+			_, _ = store.DeleteSessionsByUser(r.Context(), h.Pool, userID)
+			auditUser(r, h.Pool, p, "user.disabled", &userID, meta)
+		} else {
+			auditUser(r, h.Pool, p, "user.enabled", &userID, meta)
+		}
+	} else {
+		auditUser(r, h.Pool, p, "user.updated", &userID, meta)
+	}
+	user, err := store.GetUserPublic(r.Context(), h.Pool, userID)
+	if err != nil {
+		internalError(w, r)
+		return
+	}
+	writeJSON(w, http.StatusOK, user)
 }
 
 func (h *UsersHandler) UpdateRoles(w http.ResponseWriter, r *http.Request, userID uuid.UUID) {
@@ -118,11 +202,132 @@ func (h *UsersHandler) UpdateRoles(w http.ResponseWriter, r *http.Request, userI
 	if p != nil {
 		assignedBy = &p.UserID
 	}
+	prev, _ := store.ListUserRoles(r.Context(), h.Pool, userID)
 	if err := store.SetUserRoles(r.Context(), h.Pool, userID, req.Roles, assignedBy); err != nil {
+		if store.IsRoleNotFound(err) {
+			badRequest(w, r, "invalid_role", err.Error())
+			return
+		}
 		internalError(w, r)
 		return
 	}
-	auditUser(r, h.Pool, p, "user.role_changed", &userID, map[string]any{"roles": req.Roles})
+	auditUser(r, h.Pool, p, "user.role_changed", &userID, map[string]any{"roles": req.Roles, "previous_roles": prev})
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *UsersHandler) ResetPassword(w http.ResponseWriter, r *http.Request, userID uuid.UUID) {
+	if r.Method != http.MethodPost {
+		methodNotAllowed(w, r)
+		return
+	}
+	var req resetPasswordRequest
+	if err := decodeJSON(r, &req); err != nil {
+		badRequest(w, r, "invalid_json", "invalid request body")
+		return
+	}
+	if len(req.Password) < 12 {
+		badRequest(w, r, "invalid_input", "password must be at least 12 characters")
+		return
+	}
+	if _, err := store.GetUserByID(r.Context(), h.Pool, userID); err != nil {
+		apperrors.WriteJSON(w, http.StatusNotFound, "not_found", "user not found", middleware.RequestIDFromContext(r.Context()))
+		return
+	}
+	hash, err := password.Hash(req.Password)
+	if err != nil {
+		internalError(w, r)
+		return
+	}
+	if err := store.UpdateUserPassword(r.Context(), h.Pool, userID, hash); err != nil {
+		internalError(w, r)
+		return
+	}
+	_, _ = store.DeleteSessionsByUser(r.Context(), h.Pool, userID)
+	p, _ := principal.FromContext(r.Context())
+	auditUser(r, h.Pool, p, "user.password_reset", &userID, map[string]any{"sessions_revoked": true})
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *UsersHandler) ResetTOTP(w http.ResponseWriter, r *http.Request, userID uuid.UUID) {
+	if r.Method != http.MethodPost {
+		methodNotAllowed(w, r)
+		return
+	}
+	if _, err := store.GetUserByID(r.Context(), h.Pool, userID); err != nil {
+		apperrors.WriteJSON(w, http.StatusNotFound, "not_found", "user not found", middleware.RequestIDFromContext(r.Context()))
+		return
+	}
+	if err := store.DisableTwoFactor(r.Context(), h.Pool, userID); err != nil {
+		internalError(w, r)
+		return
+	}
+	p, _ := principal.FromContext(r.Context())
+	auditUser(r, h.Pool, p, "auth.totp_admin_reset", &userID, nil)
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *UsersHandler) ListSessions(w http.ResponseWriter, r *http.Request, userID uuid.UUID) {
+	if r.Method != http.MethodGet {
+		methodNotAllowed(w, r)
+		return
+	}
+	if _, err := store.GetUserByID(r.Context(), h.Pool, userID); err != nil {
+		apperrors.WriteJSON(w, http.StatusNotFound, "not_found", "user not found", middleware.RequestIDFromContext(r.Context()))
+		return
+	}
+	sessions, err := store.ListSessionsByUser(r.Context(), h.Pool, userID)
+	if err != nil {
+		internalError(w, r)
+		return
+	}
+	p, _ := principal.FromContext(r.Context())
+	if p != nil {
+		for i := range sessions {
+			if sessions[i].ID == p.SessionID {
+				sessions[i].Current = true
+			}
+		}
+	}
+	if sessions == nil {
+		sessions = []store.SessionPublic{}
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"sessions": sessions})
+}
+
+func (h *UsersHandler) RevokeSession(w http.ResponseWriter, r *http.Request, userID, sessionID uuid.UUID) {
+	if r.Method != http.MethodDelete {
+		methodNotAllowed(w, r)
+		return
+	}
+	if err := store.DeleteSessionForUser(r.Context(), h.Pool, userID, sessionID); err != nil {
+		if errors.Is(err, store.ErrNotFound) {
+			apperrors.WriteJSON(w, http.StatusNotFound, "not_found", "session not found", middleware.RequestIDFromContext(r.Context()))
+			return
+		}
+		internalError(w, r)
+		return
+	}
+	p, _ := principal.FromContext(r.Context())
+	auditUser(r, h.Pool, p, "user.session_revoked", &userID, map[string]any{"session_id": sessionID.String()})
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *UsersHandler) RevokeAllSessions(w http.ResponseWriter, r *http.Request, userID uuid.UUID) {
+	if r.Method != http.MethodDelete {
+		methodNotAllowed(w, r)
+		return
+	}
+	if _, err := store.GetUserByID(r.Context(), h.Pool, userID); err != nil {
+		apperrors.WriteJSON(w, http.StatusNotFound, "not_found", "user not found", middleware.RequestIDFromContext(r.Context()))
+		return
+	}
+	n, err := store.DeleteSessionsByUser(r.Context(), h.Pool, userID)
+	if err != nil {
+		internalError(w, r)
+		return
+	}
+	p, _ := principal.FromContext(r.Context())
+	auditUser(r, h.Pool, p, "user.sessions_revoked", &userID, map[string]any{"count": n})
 	w.WriteHeader(http.StatusNoContent)
 }
 

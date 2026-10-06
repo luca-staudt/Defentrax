@@ -45,6 +45,8 @@ tags:
     description: Plugin registry and configs
   - name: Audit
     description: Audit log list/detail (`audit_logs:read`)
+  - name: Roles
+    description: Role and permission management (`roles:read` / `roles:write`)
 
 paths:
   /healthz:
@@ -442,6 +444,359 @@ paths:
         "404":
           $ref: "#/components/responses/Error"
 
+  /api/v1/users/{id}:
+    get:
+      tags: [Users]
+      operationId: getUser
+      summary: Get user by id
+      description: "Requires permission `users:read`."
+      security:
+        - SessionCookie: []
+        - BearerApiKey: []
+      parameters:
+        - $ref: "#/components/parameters/PathUUID"
+      responses:
+        "200":
+          description: User
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserPublic"
+        "404":
+          $ref: "#/components/responses/Error"
+    patch:
+      tags: [Users]
+      operationId: patchUser
+      summary: Update user profile or active status
+      description: |
+        Requires permission `users:write`.
+        Audited as `user.updated`, `user.disabled`, or `user.enabled`.
+        Disabling a user revokes their sessions. Cannot disable yourself.
+      security:
+        - SessionCookie: []
+        - BearerApiKey: []
+      parameters:
+        - $ref: "#/components/parameters/PathUUID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                display_name:
+                  type: string
+                is_active:
+                  type: boolean
+      responses:
+        "200":
+          description: Updated user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserPublic"
+        "400":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+
+  /api/v1/users/{id}/password:
+    post:
+      tags: [Users]
+      operationId: resetUserPassword
+      summary: Admin password reset
+      description: "Requires `users:write`. Revokes all sessions. Audited as `user.password_reset`."
+      security:
+        - SessionCookie: []
+        - BearerApiKey: []
+      parameters:
+        - $ref: "#/components/parameters/PathUUID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [password]
+              properties:
+                password:
+                  type: string
+                  minLength: 12
+      responses:
+        "204":
+          description: Password reset
+        "400":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+
+  /api/v1/users/{id}/totp/reset:
+    post:
+      tags: [Users]
+      operationId: resetUserTOTP
+      summary: Admin 2FA reset
+      description: "Requires `users:write`. Clears TOTP enrollment. Audited as `auth.totp_admin_reset`."
+      security:
+        - SessionCookie: []
+        - BearerApiKey: []
+      parameters:
+        - $ref: "#/components/parameters/PathUUID"
+      responses:
+        "204":
+          description: TOTP cleared
+        "404":
+          $ref: "#/components/responses/Error"
+
+  /api/v1/users/{id}/sessions:
+    get:
+      tags: [Users]
+      operationId: listUserSessions
+      summary: List active sessions for a user
+      description: "Requires `users:write`."
+      security:
+        - SessionCookie: []
+        - BearerApiKey: []
+      parameters:
+        - $ref: "#/components/parameters/PathUUID"
+      responses:
+        "200":
+          description: Sessions
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [sessions]
+                properties:
+                  sessions:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/UserSession"
+        "404":
+          $ref: "#/components/responses/Error"
+    delete:
+      tags: [Users]
+      operationId: revokeAllUserSessions
+      summary: Revoke all sessions for a user
+      description: "Requires `users:write`. Audited as `user.sessions_revoked`."
+      security:
+        - SessionCookie: []
+        - BearerApiKey: []
+      parameters:
+        - $ref: "#/components/parameters/PathUUID"
+      responses:
+        "204":
+          description: Revoked
+        "404":
+          $ref: "#/components/responses/Error"
+
+  /api/v1/users/{id}/sessions/{sessionId}:
+    delete:
+      tags: [Users]
+      operationId: revokeUserSession
+      summary: Revoke one session
+      description: "Requires `users:write`. Audited as `user.session_revoked`."
+      security:
+        - SessionCookie: []
+        - BearerApiKey: []
+      parameters:
+        - $ref: "#/components/parameters/PathUUID"
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Revoked
+        "404":
+          $ref: "#/components/responses/Error"
+
+  /api/v1/roles:
+    get:
+      tags: [Roles]
+      operationId: listRoles
+      summary: List roles
+      description: "Requires permission `roles:read`."
+      security:
+        - SessionCookie: []
+        - BearerApiKey: []
+      responses:
+        "200":
+          description: Roles with permission keys
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [roles]
+                properties:
+                  roles:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Role"
+    post:
+      tags: [Roles]
+      operationId: createRole
+      summary: Create custom role
+      description: "Requires `roles:write`. Audited as `role.created`."
+      security:
+        - SessionCookie: []
+        - BearerApiKey: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                permissions:
+                  type: array
+                  items:
+                    type: string
+                  description: "`resource:action` keys"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Role"
+        "400":
+          $ref: "#/components/responses/Error"
+
+  /api/v1/roles/{id}:
+    get:
+      tags: [Roles]
+      operationId: getRole
+      summary: Get role
+      description: "Requires `roles:read`."
+      security:
+        - SessionCookie: []
+        - BearerApiKey: []
+      parameters:
+        - $ref: "#/components/parameters/PathUUID"
+      responses:
+        "200":
+          description: Role
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Role"
+        "404":
+          $ref: "#/components/responses/Error"
+    patch:
+      tags: [Roles]
+      operationId: patchRole
+      summary: Update role name/description
+      description: "Requires `roles:write`. System roles cannot be renamed. Audited as `role.updated`."
+      security:
+        - SessionCookie: []
+        - BearerApiKey: []
+      parameters:
+        - $ref: "#/components/parameters/PathUUID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Role"
+        "400":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+    delete:
+      tags: [Roles]
+      operationId: deleteRole
+      summary: Delete custom role
+      description: "Requires `roles:write`. System roles and roles still assigned to users cannot be deleted. Audited as `role.deleted`."
+      security:
+        - SessionCookie: []
+        - BearerApiKey: []
+      parameters:
+        - $ref: "#/components/parameters/PathUUID"
+      responses:
+        "204":
+          description: Deleted
+        "400":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+
+  /api/v1/roles/{id}/permissions:
+    put:
+      tags: [Roles]
+      operationId: setRolePermissions
+      summary: Replace role permission set
+      description: "Requires `roles:write`. Audited as `role.permissions_changed`."
+      security:
+        - SessionCookie: []
+        - BearerApiKey: []
+      parameters:
+        - $ref: "#/components/parameters/PathUUID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [permissions]
+              properties:
+                permissions:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        "200":
+          description: Updated role
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Role"
+        "400":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+
+  /api/v1/permissions:
+    get:
+      tags: [Roles]
+      operationId: listPermissions
+      summary: List permission catalog
+      description: "Requires `roles:read`."
+      security:
+        - SessionCookie: []
+        - BearerApiKey: []
+      responses:
+        "200":
+          description: Permissions
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [permissions]
+                properties:
+                  permissions:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Permission"
+
   /api/v1/users/me/api-keys:
     get:
       tags: [Users]
@@ -514,7 +869,7 @@ paths:
       tags: [Servers]
       operationId: listServers
       summary: List servers
-      description: "Requires permission `servers:write`."
+      description: "Requires permission `servers:read`."
       security:
         - SessionCookie: []
         - BearerApiKey: []
@@ -569,7 +924,7 @@ paths:
       operationId: getServer
       summary: Get server with nested agents
       description: |
-        Requires permission `servers:write`.
+        Requires permission `servers:read`.
         Agents are returned nested here; there is no standalone agents list endpoint.
       security:
         - SessionCookie: []
@@ -1708,11 +2063,79 @@ components:
 
     RoleName:
       type: string
-      enum: [ADMIN, SECURITY_ANALYST, OPERATOR, VIEWER]
+      description: |
+        Built-in roles include SUPER_ADMIN, ADMIN, SECURITY_ANALYST, OPERATOR, VIEWER.
+        Custom role names are also accepted (free-form uppercase identifiers).
+      example: VIEWER
+
+    Role:
+      type: object
+      required: [id, name, description, is_system, created_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        is_system:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        permissions:
+          type: array
+          items:
+            type: string
+          description: "`resource:action` keys"
+
+    Permission:
+      type: object
+      required: [id, resource, action, key]
+      properties:
+        id:
+          type: string
+          format: uuid
+        resource:
+          type: string
+        action:
+          type: string
+        key:
+          type: string
+          example: users:read
+        description:
+          type: string
+
+    UserSession:
+      type: object
+      required: [id, user_id, expires_at, created_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        expires_at:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+        ip_address:
+          type: string
+        user_agent:
+          type: string
+        current:
+          type: boolean
 
     UserPublic:
       type: object
-      required: [id, email, display_name, is_active]
+      required: [id, email, display_name, is_active, created_at, updated_at, totp_enabled]
       properties:
         id:
           type: string
@@ -1728,6 +2151,18 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/RoleName"
+        last_login_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        totp_enabled:
+          type: boolean
 
     MeResponse:
       type: object

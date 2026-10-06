@@ -242,15 +242,28 @@ func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) {
 		apperrors.WriteJSON(w, http.StatusUnauthorized, "unauthorized", "authentication required", middleware.RequestIDFromContext(r.Context()))
 		return
 	}
+	user, err := store.GetUserByID(r.Context(), h.Pool, p.UserID)
+	if err != nil {
+		internalError(w, r)
+		return
+	}
 	roles, _ := store.ListUserRoles(r.Context(), h.Pool, p.UserID)
 	perms, _ := store.ListPermissionsForUser(r.Context(), h.Pool, p.UserID)
+	totpEnabled := false
+	if tf, err := store.GetTwoFactor(r.Context(), h.Pool, p.UserID); err == nil {
+		totpEnabled = tf.Enabled
+	}
 	writeJSON(w, http.StatusOK, map[string]any{
-		"id":           p.UserID,
-		"email":        p.Email,
-		"display_name": "",
-		"is_active":    true,
-		"roles":        roles,
-		"permissions":  perms,
+		"id":            p.UserID,
+		"email":         user.Email,
+		"display_name":  user.DisplayName,
+		"is_active":     user.IsActive,
+		"roles":         roles,
+		"permissions":   perms,
+		"last_login_at": user.LastLoginAt,
+		"created_at":    user.CreatedAt,
+		"updated_at":    user.UpdatedAt,
+		"totp_enabled":  totpEnabled,
 	})
 }
 

@@ -37,7 +37,8 @@ func (p *Principal) HasPermission(resource, action string) bool {
 		return true
 	}
 	for _, r := range p.Roles {
-		if r == "ADMIN" {
+		// SUPER_ADMIN and legacy ADMIN bypass granular checks.
+		if r == "SUPER_ADMIN" || r == "ADMIN" {
 			return true
 		}
 	}

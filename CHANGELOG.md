@@ -9,11 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
-- (none yet)
+- Team accounts admin: user lifecycle (create/edit/disable, password reset, session revoke, admin 2FA reset)
+- Roles & permissions management API + panel UI (custom roles, `roles:read`/`roles:write`)
+- Built-in `SUPER_ADMIN` role (alongside legacy `ADMIN` bypass)
+- Permission keys: `servers:read`, `roles:*`, `settings:*`, `audit_logs:export`
+- Panel pages: `/users` (Team), `/roles`
 
 ### Changed
 
-- (none yet)
+- Server list/detail now requires `servers:read` (create/tokens still `servers:write`)
+- `/auth/me` returns real `display_name`, `is_active`, timestamps, and `totp_enabled`
 
 ## [0.1.0] — 2026-10-05
 

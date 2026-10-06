@@ -38,7 +38,12 @@ func EnsureFirstAdmin(ctx context.Context, pool *pgxpool.Pool) (created bool, er
 	if err != nil {
 		return false, err
 	}
-	if err := store.SetUserRoles(ctx, pool, id, []string{"ADMIN"}, nil); err != nil {
+	// Prefer SUPER_ADMIN when migration 00008 has run; fall back to ADMIN.
+	bootRole := "SUPER_ADMIN"
+	if _, err := store.RoleIDByName(ctx, pool, bootRole); err != nil {
+		bootRole = "ADMIN"
+	}
+	if err := store.SetUserRoles(ctx, pool, id, []string{bootRole}, nil); err != nil {
 		return false, err
 	}
 	_ = store.Audit(ctx, pool, &id, "user", "user.created", "user", &id, map[string]any{"bootstrap": true}, nil, "bootstrap")
