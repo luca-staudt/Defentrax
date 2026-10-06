@@ -1,152 +1,282 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
 import { EmptyState } from "@/components/ui/empty-state";
 import { LoadingBlock } from "@/components/ui/loading-block";
 import { SeverityBadge } from "@/components/ui/severity-badge";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { useAuth } from "@/context/auth-context";
+import { Modal } from "@/components/ui/modal";
+import { SearchIcon, FilterIcon, CopyIcon } from "@/components/ui/icons";
 import { apiFetch } from "@/lib/api/client";
-import { canSeePage } from "@/lib/pages";
 import type { Alert } from "@/lib/types";
 
 export default function AlertsPage() {
-  const { user } = useAuth();
-  const canDetail = canSeePage(user, "alert_detail");
   const [alerts, setAlerts] = useState<Alert[]>([]);
-  const [total, setTotal] = useState(0);
-  const [status, setStatus] = useState("");
-  const [severity, setSeverity] = useState("");
-  const [offset, setOffset] = useState(0);
   const [loading, setLoading] = useState(true);
-  const limit = 25;
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const q = new URLSearchParams({
-        limit: String(limit),
-        offset: String(offset),
-      });
-      if (status) q.set("status", status);
-      if (severity) q.set("severity", severity);
-      const res = await apiFetch<{ alerts: Alert[]; total: number }>(`/alerts?${q}`);
-      setAlerts(res.alerts || []);
-      setTotal(res.total || 0);
-    } finally {
-      setLoading(false);
-    }
-  }, [offset, severity, status]);
+  const [error, setError] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [selectedStatus, setSelectedStatus] = useState<string>("ALL");
+  const [selectedSeverity, setSelectedSeverity] = useState<string>("ALL");
+  const [inspectAlert, setInspectAlert] = useState<Alert | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   useEffect(() => {
-    void load();
-  }, [load]);
+    let cancelled = false;
+    (async () => {
+      try {
+        const query = selectedStatus === "ALL" ? "" : ;
+        const res = await apiFetch<{ alerts: Alert[] }>();
+        if (!cancelled) {
+          setAlerts(res.alerts || []);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : "Failed to load alerts");
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedStatus]);
+
+  const filteredAlerts = alerts.filter((a) => {
+    const matchesSearch =
+      search === "" ||
+      a.title.toLowerCase().includes(search.toLowerCase()) ||
+      (a.rule_id && a.rule_id.toLowerCase().includes(search.toLowerCase())) ||
+      (a.server_id && a.server_id.toLowerCase().includes(search.toLowerCase()));
+
+    const matchesSeverity =
+      selectedSeverity === "ALL" || a.severity?.toUpperCase() === selectedSeverity;
+
+    return matchesSearch && matchesSeverity;
+  });
+
+  const handleCopy = (payload: string) => {
+    navigator.clipboard.writeText(payload);
+    setCopiedId(payload);
+    setTimeout(() => setCopiedId(null), 1500);
+  };
 
   return (
     <div className="space-y-6">
-      <header>
-        <h1 className="font-display text-2xl font-semibold text-white">Alerts</h1>
-        <p className="text-sm text-zinc-500">{total} total</p>
-      </header>
-
-      <div className="flex flex-wrap gap-3">
-        <select
-          value={status}
-          onChange={(e) => {
-            setOffset(0);
-            setStatus(e.target.value);
-          }}
-          className="rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm"
-        >
-          <option value="">All statuses</option>
-          {["OPEN", "ACKNOWLEDGED", "INVESTIGATING", "RESOLVED"].map((s) => (
-            <option key={s} value={s}>
-              {s}
-            </option>
-          ))}
-        </select>
-        <select
-          value={severity}
-          onChange={(e) => {
-            setOffset(0);
-            setSeverity(e.target.value);
-          }}
-          className="rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm"
-        >
-          <option value="">All severities</option>
-          {["critical", "high", "medium", "low", "info"].map((s) => (
-            <option key={s} value={s}>
-              {s}
-            </option>
-          ))}
-        </select>
+      {/* Header */}
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <div className="font-mono text-xs text-sky-400 flex items-center gap-2">
+            <span className="h-2 w-2 rounded-full bg-rose-500 animate-pulse" />
+            INCIDENT MANAGEMENT CONSOLE
+          </div>
+          <h1 className="font-display mt-1 text-2xl font-bold tracking-tight text-white md:text-3xl">
+            Security Alerts
+          </h1>
+          <p className="text-xs text-zinc-400">
+            Real-time detections generated by SIEM correlation rules across endpoints
+          </p>
+        </div>
       </div>
 
+      {/* Filter and Search Bar */}
+      <div className="rounded-2xl border border-zinc-800/80 bg-[#090e1a]/80 p-4 backdrop-blur-md space-y-3">
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          {/* Search Input */}
+          <div className="relative flex-1">
+            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-zinc-500">
+              <SearchIcon className="h-4 w-4" />
+            </div>
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search alert title, rule ID, server ID..."
+              className="w-full rounded-xl border border-zinc-800 bg-zinc-900/60 pl-9 pr-4 py-2 text-xs text-white placeholder-zinc-500 transition focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500 font-mono"
+            />
+          </div>
+
+          {/* Severity Pills */}
+          <div className="flex flex-wrap items-center gap-1.5 font-mono text-[11px]">
+            <span className="text-zinc-500 mr-1 flex items-center gap-1">
+              <FilterIcon className="h-3.5 w-3.5" /> Severity:
+            </span>
+            {["ALL", "CRITICAL", "HIGH", "MEDIUM", "LOW"].map((sev) => (
+              <button
+                key={sev}
+                type="button"
+                onClick={() => setSelectedSeverity(sev)}
+                className={}
+              >
+                {sev}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Status Pills */}
+        <div className="flex flex-wrap items-center gap-1.5 font-mono text-[11px] border-t border-zinc-800/60 pt-3">
+          <span className="text-zinc-500 mr-1">Status:</span>
+          {["ALL", "OPEN", "ACKNOWLEDGED", "RESOLVED", "SILENCED"].map((st) => (
+            <button
+              key={st}
+              type="button"
+              onClick={() => setSelectedStatus(st)}
+              className={}
+            >
+              {st}
+            </button>
+          ))}
+          <span className="ml-auto text-zinc-500">
+            {filteredAlerts.length} matching incident{filteredAlerts.length === 1 ? "" : "s"}
+          </span>
+        </div>
+      </div>
+
+      {error ? (
+        <div className="rounded-xl border border-rose-500/40 bg-rose-950/20 p-4 font-mono text-xs text-rose-300">
+          Telemetry query error: {error}
+        </div>
+      ) : null}
+
+      {/* Alerts Table */}
       {loading ? (
-        <LoadingBlock />
-      ) : alerts.length === 0 ? (
-        <EmptyState title="No alerts match filters" />
+        <LoadingBlock label="Querying Security Alerts Index..." />
+      ) : filteredAlerts.length === 0 ? (
+        <EmptyState
+          title="No Alerts Match Query"
+          description="Try broadening your search criteria or resetting severity and status filters."
+        />
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-zinc-800">
-          <table className="min-w-full text-left text-sm">
-            <thead className="bg-zinc-900/80 text-xs uppercase tracking-wider text-zinc-500">
-              <tr>
-                <th className="px-4 py-3">Title</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3">Severity</th>
-                <th className="px-4 py-3">Events</th>
-                <th className="px-4 py-3">Last seen</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-zinc-800">
-              {alerts.map((a) => (
-                <tr key={a.id} className="hover:bg-zinc-900/50">
-                  <td className="px-4 py-3">
-                    {canDetail ? (
-                      <Link href={`/alerts/${a.id}`} className="font-medium text-brand-300 hover:underline">
-                        {a.title}
-                      </Link>
-                    ) : (
-                      <span className="font-medium text-zinc-100">{a.title}</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3">
-                    <StatusBadge status={a.status} />
-                  </td>
-                  <td className="px-4 py-3">
-                    <SeverityBadge severity={a.severity} />
-                  </td>
-                  <td className="px-4 py-3 text-zinc-400">{a.event_count}</td>
-                  <td className="px-4 py-3 text-zinc-500">{a.last_seen_at}</td>
+        <div className="overflow-hidden rounded-2xl border border-zinc-800/80 bg-gradient-to-br from-[#090e1a]/80 to-[#040812]/80 shadow-xl backdrop-blur-md">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs font-mono">
+              <thead className="border-b border-zinc-800 bg-zinc-950/60 text-[10px] uppercase text-zinc-400">
+                <tr>
+                  <th className="px-4 py-3">Severity</th>
+                  <th className="px-4 py-3">Alert Title</th>
+                  <th className="px-4 py-3">Detection Rule</th>
+                  <th className="px-4 py-3">Status</th>
+                  <th className="px-4 py-3">Last Seen</th>
+                  <th className="px-4 py-3 text-right">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-zinc-800/50">
+                {filteredAlerts.map((alert) => (
+                  <tr key={alert.id} className="transition-colors hover:bg-zinc-900/40">
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <div className="flex items-center gap-2">
+                        <SeverityBadge severity={alert.severity} />
+                        <span className="text-zinc-500 font-mono text-[11px]">#{alert.id.slice(0, 8)}</span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <p className="font-sans font-medium text-zinc-100 max-w-sm truncate">{alert.title}</p>
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <span className="rounded bg-zinc-800/60 px-2 py-0.5 text-[11px] text-sky-400 border border-zinc-700/40">
+                        {alert.rule_id ?  : "SIEM Rule"}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <StatusBadge status={alert.status} />
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-zinc-400 text-[11px]">
+                      {new Date(alert.last_seen_at || Date.now()).toLocaleTimeString()}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setInspectAlert(alert)}
+                          className="rounded-lg border border-zinc-800 px-2 py-1 text-[11px] text-zinc-400 hover:border-sky-500/50 hover:bg-sky-500/10 hover:text-sky-300 transition"
+                        >
+                          Inspect
+                        </button>
+                        <Link
+                          href={}
+                          className="rounded-lg border border-sky-500/40 bg-sky-500/10 px-2.5 py-1 text-[11px] text-sky-300 hover:bg-sky-500/20 hover:text-white transition"
+                        >
+                          Details →
+                        </Link>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
-      <div className="flex justify-between text-sm">
-        <button
-          type="button"
-          disabled={offset === 0}
-          onClick={() => setOffset((o) => Math.max(0, o - limit))}
-          className="rounded border border-zinc-700 px-3 py-1 disabled:opacity-40"
+      {/* Quick Inspect Modal */}
+      {inspectAlert && (
+        <Modal
+          isOpen={!!inspectAlert}
+          onClose={() => setInspectAlert(null)}
+          title={}
+          subtitle={inspectAlert.title}
         >
-          Previous
-        </button>
-        <span className="text-zinc-500">
-          {offset + 1}–{Math.min(offset + limit, total)} of {total}
-        </span>
-        <button
-          type="button"
-          disabled={offset + limit >= total}
-          onClick={() => setOffset((o) => o + limit)}
-          className="rounded border border-zinc-700 px-3 py-1 disabled:opacity-40"
-        >
-          Next
-        </button>
-      </div>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4 rounded-xl border border-zinc-800 bg-zinc-900/50 p-4 font-mono text-xs">
+              <div>
+                <span className="text-zinc-500 block uppercase">Severity</span>
+                <div className="mt-1">
+                  <SeverityBadge severity={inspectAlert.severity} />
+                </div>
+              </div>
+              <div>
+                <span className="text-zinc-500 block uppercase">Status</span>
+                <div className="mt-1">
+                  <StatusBadge status={inspectAlert.status} />
+                </div>
+              </div>
+              <div>
+                <span className="text-zinc-500 block uppercase">Server Node ID</span>
+                <span className="mt-1 block text-zinc-200 font-mono">{inspectAlert.server_id || "Internal Pipeline"}</span>
+              </div>
+              <div>
+                <span className="text-zinc-500 block uppercase">Trigger Count</span>
+                <span className="mt-1 block text-sky-400 font-bold">{inspectAlert.event_count ?? 1} events</span>
+              </div>
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between">
+                <h4 className="font-mono text-xs font-semibold text-zinc-400 uppercase">Alert Payload Data</h4>
+                <button
+                  type="button"
+                  onClick={() => handleCopy(JSON.stringify(inspectAlert, null, 2))}
+                  className="inline-flex items-center gap-1 text-[11px] font-mono text-sky-400 hover:text-sky-300"
+                >
+                  <CopyIcon className="h-3.5 w-3.5" />
+                  {copiedId ? "Copied!" : "Copy JSON"}
+                </button>
+              </div>
+              <pre className="mt-2 max-h-60 overflow-x-auto rounded-xl border border-zinc-800 bg-black/60 p-4 font-mono text-xs text-sky-200">
+                {JSON.stringify(inspectAlert, null, 2)}
+              </pre>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setInspectAlert(null)}
+                className="rounded-xl border border-zinc-800 px-4 py-2 text-xs font-semibold text-zinc-300 hover:bg-zinc-900"
+              >
+                Close
+              </button>
+              <Link
+                href={}
+                className="rounded-xl border border-sky-500/40 bg-sky-500/20 px-4 py-2 text-xs font-semibold text-sky-200 hover:bg-sky-500/30"
+              >
+                Open Full Incident Record
+              </Link>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }
