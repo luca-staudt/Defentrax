@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 
 const FALLBACK = "v0.1.0";
 
-export function useLatestRelease() {
+export function VersionBadge() {
   const [version, setVersion] = useState<string>(FALLBACK);
   const [url, setUrl] = useState<string>("https://github.com/luca-staudt/Defentrax/releases");
 
@@ -31,24 +31,15 @@ export function useLatestRelease() {
     };
   }, []);
 
-  return { version, url };
-}
-
-export function VersionBadge() {
-  const { version, url } = useLatestRelease();
   return (
     <a
       href={url}
       target="_blank"
       rel="noopener noreferrer"
-      title="Latest GitHub release"
-      className="inline-flex items-center gap-1.5 rounded-full border border-sky-500/25 bg-sky-950/40 px-3 py-1 font-mono text-[10px] font-semibold tracking-wider text-sky-300 transition hover:border-sky-400/60 hover:bg-sky-900/40 hover:text-sky-200"
+      className="inline-flex items-center gap-1.5 rounded-md border border-zinc-800 bg-zinc-900/80 px-2.5 py-1 font-mono text-[11px] text-zinc-300 transition hover:border-zinc-700 hover:text-white"
     >
-      <span className="h-1.5 w-1.5 rounded-full bg-sky-400 shadow-[0_0_6px_#00a3ff]" />
-      GUARD ENGINE {version.toUpperCase()}
-      <svg className="h-2.5 w-2.5 opacity-60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-      </svg>
+      <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+      <span>Engine {version}</span>
     </a>
   );
 }

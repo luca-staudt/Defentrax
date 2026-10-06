@@ -13,11 +13,9 @@ export function ThreatTimelineChart({
 }) {
   const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
 
-  // Dynamic distribution curve anchored around the actual 24h event volume and alert count
   const baseVolume = eventsTotal > 0 ? eventsTotal : 36580;
   const baseAlerts = alertsCount > 0 ? alertsCount : 12;
 
-  // Normalized hourly traffic distribution multiplier for realistic SOC day/night patterns
   const hourlyRatios = [
     { hour: "00:00", mult: 0.04, threatMult: 0.05 },
     { hour: "02:00", mult: 0.03, threatMult: 0.02 },
@@ -56,69 +54,62 @@ export function ThreatTimelineChart({
   const areaD = `${pathD} L 500 ${height} L 0 ${height} Z`;
 
   return (
-    <div className="relative rounded-2xl border border-zinc-800/80 bg-gradient-to-br from-[#0c1424]/90 to-[#060b16]/90 p-5 shadow-xl backdrop-blur-md">
-      <div className="flex items-center justify-between border-b border-zinc-800/60 pb-3">
+    <div className="rounded-xl border border-zinc-800 bg-[#0c1017] p-5">
+      <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
         <div>
-          <h4 className="font-display text-sm font-semibold text-white flex items-center gap-2">
-            <span className="h-2 w-2 rounded-full bg-sky-400 shadow-[0_0_8px_#00a3ff]" />
-            24-Hour Telemetry & Event Ingestion Volume
+          <h4 className="text-sm font-semibold text-white">
+            24-Hour Telemetry Volume
           </h4>
-          <p className="font-mono text-[11px] text-zinc-400">
-            Live Stream Ingestion: {eventsTotal ? `${eventsTotal.toLocaleString()} total events recorded` : "Awaiting agent stream"}
+          <p className="font-mono text-xs text-zinc-400">
+            {eventsTotal ? `${eventsTotal.toLocaleString()} total events recorded` : "Awaiting agent stream"}
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="inline-flex items-center gap-1 rounded-md border border-sky-500/30 bg-sky-950/40 px-2 py-0.5 text-[10px] font-mono text-sky-300">
-            Peak: {maxEvents.toLocaleString()} eps
-          </span>
-        </div>
+        <span className="font-mono text-xs text-zinc-400">
+          Peak: {maxEvents.toLocaleString()} eps
+        </span>
       </div>
 
       <div className="mt-4">
         <svg viewBox={`0 0 500 ${height}`} className="w-full overflow-visible">
           <defs>
             <linearGradient id="telemetryGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#00a3ff" stopOpacity="0.4" />
-              <stop offset="100%" stopColor="#00a3ff" stopOpacity="0.0" />
+              <stop offset="0%" stopColor="#38bdf8" stopOpacity="0.15" />
+              <stop offset="100%" stopColor="#38bdf8" stopOpacity="0.0" />
             </linearGradient>
           </defs>
 
           {/* Grid lines */}
-          <line x1="0" y1="20" x2="500" y2="20" stroke="#1e293b" strokeDasharray="3 3" />
-          <line x1="0" y1={height / 2} x2="500" y2={height / 2} stroke="#1e293b" strokeDasharray="3 3" />
-          <line x1="0" y1={height - 10} x2="500" y2={height - 10} stroke="#1e293b" />
+          <line x1="0" y1="20" x2="500" y2="20" stroke="#1f2937" strokeDasharray="2 2" />
+          <line x1="0" y1={height / 2} x2="500" y2={height / 2} stroke="#1f2937" strokeDasharray="2 2" />
+          <line x1="0" y1={height - 10} x2="500" y2={height - 10} stroke="#1f2937" />
 
-          {/* Filled Area */}
+          {/* Area & Stroke */}
           <path d={areaD} fill="url(#telemetryGrad)" />
+          <path d={pathD} fill="none" stroke="#38bdf8" strokeWidth="1.5" />
 
-          {/* Smooth Line */}
-          <path d={pathD} fill="none" stroke="#00a3ff" strokeWidth="2.5" />
-
-          {/* Data Points */}
+          {/* Points */}
           {points.map((p, i) => (
-            <g key={i} className="cursor-pointer" onMouseEnter={() => setHoveredIdx(i)} onMouseLeave={() => setHoveredIdx(null)}>
-              <circle
-                cx={p.x}
-                cy={p.y}
-                r={hoveredIdx === i ? 5 : 3}
-                fill={hoveredIdx === i ? "#ffffff" : "#00a3ff"}
-                stroke="#030712"
-                strokeWidth="2"
-                className="transition-all"
-              />
-            </g>
+            <circle
+              key={i}
+              cx={p.x}
+              cy={p.y}
+              r={hoveredIdx === i ? 4 : 2}
+              fill={hoveredIdx === i ? "#ffffff" : "#38bdf8"}
+              className="cursor-pointer transition-all"
+              onMouseEnter={() => setHoveredIdx(i)}
+              onMouseLeave={() => setHoveredIdx(null)}
+            />
           ))}
         </svg>
 
-        {/* Hover readout */}
         <div className="mt-2 flex items-center justify-between font-mono text-[10px] text-zinc-500">
           <span>00:00 UTC</span>
           {hoveredIdx !== null ? (
-            <span className="font-semibold text-sky-400">
+            <span className="font-medium text-sky-400">
               {data[hoveredIdx].time} — {data[hoveredIdx].events.toLocaleString()} events ({data[hoveredIdx].threats} alerts)
             </span>
           ) : (
-            <span>Hover point for rate breakdown</span>
+            <span>Hover point for details</span>
           )}
           <span>22:00 UTC</span>
         </div>
@@ -136,73 +127,68 @@ export function SecurityPostureGauge({
   alertsOpen?: number;
   criticalAlerts?: number;
 }) {
-  // Dynamically compute score if not explicitly set: 100 base, -8 per open alert, -15 per critical alert
   const calculatedScore = score !== undefined
     ? score
     : Math.max(12, Math.min(100, 100 - (alertsOpen * 6) - (criticalAlerts * 12)));
 
-  const radius = 48;
+  const radius = 46;
   const circ = 2 * Math.PI * radius;
   const strokeDashoffset = circ - (calculatedScore / 100) * (circ * 0.75);
 
   const isGood = calculatedScore >= 80;
   const isFair = calculatedScore >= 50 && calculatedScore < 80;
-  const statusColor = isGood ? "#10b981" : isFair ? "#f59e0b" : "#f43f5e";
-  const statusLabel = isGood ? "NOMINAL" : isFair ? "DEGRADED" : "CRITICAL RISK";
-  const statusBadgeColor = isGood ? "text-emerald-400" : isFair ? "text-amber-400" : "text-rose-400";
+  const strokeColor = isGood ? "#10b981" : isFair ? "#f59e0b" : "#f43f5e";
+  const statusLabel = isGood ? "Nominal" : isFair ? "Degraded" : "Critical";
 
   return (
-    <div className="relative flex flex-col items-center justify-center rounded-2xl border border-zinc-800/80 bg-gradient-to-br from-[#0c1424]/90 to-[#060b16]/90 p-5 shadow-xl backdrop-blur-md">
-      <div className="w-full flex items-center justify-between border-b border-zinc-800/60 pb-3 mb-2">
-        <h4 className="font-display text-sm font-semibold text-white flex items-center gap-2">
-          <span className={`h-2 w-2 rounded-full ${isGood ? "bg-emerald-400" : isFair ? "bg-amber-400" : "bg-rose-400"} animate-pulse`} />
-          Threat Index & Posture
-        </h4>
-        <span className={`font-mono text-[10px] ${statusBadgeColor} font-semibold uppercase`}>
+    <div className="flex flex-col items-center justify-center rounded-xl border border-zinc-800 bg-[#0c1017] p-5">
+      <div className="w-full flex items-center justify-between border-b border-zinc-800 pb-3 mb-2">
+        <h4 className="text-sm font-semibold text-white">Security Posture</h4>
+        <span className="font-mono text-xs font-medium text-zinc-300">
           {statusLabel}
         </span>
       </div>
 
-      <div className="relative flex items-center justify-center my-2">
-        <svg width="128" height="128" className="-rotate-90">
+      <div className="relative flex items-center justify-center my-3">
+        <svg width="120" height="120" className="-rotate-90">
           <circle
-            cx="64"
-            cy="64"
+            cx="60"
+            cy="60"
             r={radius}
-            stroke="#1e293b"
-            strokeWidth="8"
+            stroke="#1f2937"
+            strokeWidth="6"
             fill="transparent"
             strokeDasharray={`${circ * 0.75} ${circ * 0.25}`}
             strokeLinecap="round"
           />
           <circle
-            cx="64"
-            cy="64"
+            cx="60"
+            cy="60"
             r={radius}
-            stroke={statusColor}
-            strokeWidth="8"
+            stroke={strokeColor}
+            strokeWidth="6"
             fill="transparent"
             strokeDasharray={circ}
             strokeDashoffset={strokeDashoffset}
             strokeLinecap="round"
-            className="transition-all duration-1000 ease-out"
+            className="transition-all duration-700 ease-out"
           />
         </svg>
 
         <div className="absolute flex flex-col items-center justify-center text-center">
-          <span className="font-display text-2xl font-bold text-white">{calculatedScore}</span>
-          <span className="font-mono text-[9px] uppercase tracking-wider text-zinc-400">Score</span>
+          <span className="text-2xl font-bold text-white">{calculatedScore}</span>
+          <span className="font-mono text-[10px] text-zinc-500 uppercase">Score</span>
         </div>
       </div>
 
-      <div className="w-full grid grid-cols-2 gap-2 text-center font-mono text-[10px] border-t border-zinc-800/60 pt-2 mt-1">
+      <div className="w-full grid grid-cols-2 gap-2 text-center font-mono text-xs border-t border-zinc-800 pt-3">
         <div>
-          <span className="text-zinc-500 block">OPEN ALERTS</span>
-          <span className={`font-bold ${alertsOpen > 0 ? "text-amber-400" : "text-emerald-400"}`}>{alertsOpen}</span>
+          <span className="text-zinc-500 block text-[10px] uppercase">Open Alerts</span>
+          <span className="font-medium text-zinc-200">{alertsOpen}</span>
         </div>
         <div>
-          <span className="text-zinc-500 block">CRITICAL THREATS</span>
-          <span className={`font-bold ${criticalAlerts > 0 ? "text-rose-400" : "text-sky-400"}`}>{criticalAlerts}</span>
+          <span className="text-zinc-500 block text-[10px] uppercase">Critical</span>
+          <span className="font-medium text-rose-400">{criticalAlerts}</span>
         </div>
       </div>
     </div>
