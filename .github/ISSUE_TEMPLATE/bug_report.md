@@ -12,7 +12,7 @@ A clear description of what went wrong.
 
 ## Environment
 
-- Sentinel version / commit:
+- Defentrax version / commit:
 - Deploy method: Compose / Kubernetes / Helm / bare metal
 - OS (agent host, if relevant):
 - Browser (UI bugs only):

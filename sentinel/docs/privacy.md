@@ -1,8 +1,8 @@
 # Privacy
 
-Sentinel is **self-hosted**. The project maintainers do not operate a hosted cloud for your events. What data exists, where it lives, and who can see it are under **your** operational control.
+Defentrax is **self-hosted**. The project maintainers do not operate a hosted cloud for your events. What data exists, where it lives, and who can see it are under **your** operational control.
 
-## What Sentinel stores
+## What Defentrax stores
 
 Typical categories in PostgreSQL (see migrations under `sentinel/database/migrations/`):
 
@@ -22,7 +22,7 @@ Redis may hold session/rate-limit/window state — treat it as sensitive but **n
 ## What we do not do (project defaults)
 
 - No third-party analytics SDKs in the core UI for product telemetry
-- No shipping of your events to the Sentinel GitHub org
+- No shipping of your events to the Defentrax GitHub org
 - No default “phone home”
 
 Optional future enrichments (e.g. GeoIP) are expected to stay **off by default** when added.

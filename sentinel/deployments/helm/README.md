@@ -1,4 +1,4 @@
-# Helm charts for Sentinel
+# Helm charts for Defentrax
 
 | Chart | Path | Status |
 |-------|------|--------|

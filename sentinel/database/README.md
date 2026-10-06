@@ -1,4 +1,4 @@
-# Sentinel Database
+# Defentrax Database
 
 PostgreSQL schema migrations, constraints, and **development-only** seeds.
 

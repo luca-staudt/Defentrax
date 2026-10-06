@@ -1,10 +1,10 @@
 <p align="center">
-  <img src="sentinel/docs/assets/sentinel-logo.png" alt="Sentinel logo" width="160" />
+  <img src="sentinel/docs/assets/defentrax-logo-full.png" alt="Defentrax logo" width="280" />
 </p>
 
-<h1 align="center">Sentinel</h1>
+<h1 align="center">Defentrax</h1>
 
-<p align="center"><strong>MONITOR • DETECT • PROTECT</strong></p>
+<p align="center"><strong>SECURITY & INFRASTRUCTURE MANAGEMENT</strong></p>
 
 <p align="center">
   Open-source security monitoring and lightweight SIEM for self-hosted infrastructure.
@@ -12,7 +12,7 @@
 
 ---
 
-Sentinel collects security-relevant events from Linux hosts (and optionally Docker), evaluates them with YAML detection rules, and gives operators centralized alerts, investigation workflows, notifications, and an audit trail — all under your control.
+Defentrax collects security-relevant events from Linux hosts (and optionally Docker), evaluates them with YAML detection rules, and gives operators centralized alerts, investigation workflows, notifications, and an audit trail — all under your control.
 
 **Status:** pre-1.0 (`v0.1.0` line). Phases 2–20 are on this branch stack; Phase 21 prepares the **first formal tag `v0.1.0`** (not an honest `v1.0.0` yet). There is **no LICENSE file yet** — see [License](#license).
 
@@ -84,7 +84,7 @@ Expected captures: login, dashboard, alert detail, rules list.
 
 ```bash
 git clone https://github.com/luca-staudt/Defentrax.git
-cd Sentinel
+cd Defentrax
 cp .env.example .env
 
 # Required secrets (never commit .env)
@@ -170,7 +170,7 @@ See [`sentinel/docs/configuration.md`](sentinel/docs/configuration.md) and [`sen
 
 ## License
 
-**No `LICENSE` file is present.** Sentinel is intended as open source, but redistribution terms are **not finalized**.
+**No `LICENSE` file is present.** Defentrax is intended as open source, but redistribution terms are **not finalized**.
 
 **Maintainer recommendation (pending decision):**
 

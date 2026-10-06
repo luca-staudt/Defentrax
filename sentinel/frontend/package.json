@@ -1,7 +1,8 @@
 {
-  "name": "frontend",
+  "name": "defentrax-frontend",
   "version": "0.1.0",
   "private": true,
+  "description": "Defentrax — Security & Infrastructure Management",
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build --turbopack",

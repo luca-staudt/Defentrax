@@ -53,7 +53,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
       {/* Brand Header */}
       <div className="flex items-center gap-3 border-b border-zinc-800/80 px-5 py-4">
         <div className="relative flex h-10 w-10 items-center justify-center rounded-xl border border-sky-500/30 bg-sky-950/40 p-2 shadow-lg shadow-sky-500/10">
-          <Image src="/sentinel-logo.png" alt="Defentrax Core" width={32} height={32} priority className="object-contain" />
+          <Image src="/defentrax-logo.png" alt="Defentrax" width={32} height={32} priority className="object-contain" />
           <span className="absolute -bottom-0.5 -right-0.5 flex h-2.5 w-2.5">
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-sky-400 opacity-75"></span>
             <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-sky-500"></span>
@@ -61,7 +61,9 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
         </div>
         <div>
           <span className="font-display text-base font-bold tracking-[0.18em] text-white">DEFENTRAX</span>
-          <p className="text-[10px] font-mono tracking-[0.25em] text-sky-400 uppercase">CORE GUARD</p>
+          <p className="max-w-[9.5rem] text-[8px] font-mono tracking-[0.08em] text-sky-400 uppercase leading-snug">
+            Security & Infrastructure Management
+          </p>
         </div>
       </div>
 

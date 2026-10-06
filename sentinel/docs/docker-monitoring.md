@@ -1,6 +1,6 @@
 # Docker Monitoring (Phase 11)
 
-Optional **observe-only** Docker Engine event collection on hosts that run the Sentinel agent. The agent never starts, stops, isolates, or deletes containers or images.
+Optional **observe-only** Docker Engine event collection on hosts that run the Defentrax agent. The agent never starts, stops, isolates, or deletes containers or images.
 
 ## Enable
 
@@ -34,7 +34,7 @@ Access to the Docker Engine API socket is powerful (effectively root on many hos
 1. **Dedicated group** — ensure the socket is owned by `root:docker` with mode `660` (Docker’s default).
 2. **Agent user in `docker` group** — add only the agent service account to group `docker`; do not run the agent as root solely for Docker monitoring.
 3. **Socket path** — point `SENTINEL_DOCKER_SOCKET` at the Engine socket you intend to monitor (rootless Docker uses a user-scoped path).
-4. **No write automation** — Sentinel only calls read APIs (`GET /events`, `GET /containers/{id}/json`). Do not grant broader host privileges “just in case.”
+4. **No write automation** — Defentrax only calls read APIs (`GET /events`, `GET /containers/{id}/json`). Do not grant broader host privileges “just in case.”
 5. **Disable when unused** — leave `SENTINEL_DOCKER_ENABLED` unset/`false` on hosts without Docker or where container telemetry is out of scope.
 
 If the socket is missing or permission is denied, the agent logs a warning and retries with backoff; auth log collection continues.

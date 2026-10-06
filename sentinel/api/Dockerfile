@@ -1,4 +1,4 @@
-# Multi-stage build for the Sentinel control-plane API.
+# Multi-stage build for the Defentrax control-plane API.
 # Build context: repository root (see docker-compose.yml).
 # syntax=docker/dockerfile:1
 

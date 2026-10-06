@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	issuer         = "Sentinel"
+	issuer         = "Defentrax"
 	recoveryCount  = 10
 	recoveryLength = 10
 )

@@ -1,4 +1,4 @@
-# Sentinel Detection Rules
+# Defentrax Detection Rules
 
 Shipped YAML rule packs consumed by the detection engine.
 

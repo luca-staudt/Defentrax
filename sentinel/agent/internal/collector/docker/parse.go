@@ -10,7 +10,7 @@ import (
 )
 
 // ParseEngineEvent converts one Docker Engine event JSON object into a canonical
-// Sentinel event. Risk enrichment (privileged, mounts, …) is applied when flags
+// Defentrax event. Risk enrichment (privileged, mounts, …) is applied when flags
 // is non-nil — typically after Inspect on create/start.
 func ParseEngineEvent(raw []byte, host string, now time.Time, flags *RiskFlags) (event.CanonicalEvent, bool, error) {
 	var eng EngineEvent

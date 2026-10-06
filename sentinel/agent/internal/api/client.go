@@ -14,7 +14,7 @@ import (
 	"github.com/luca-staudt/Defentrax/sentinel/pkg/event"
 )
 
-// Client talks to the Sentinel control-plane API.
+// Client talks to the Defentrax control-plane API.
 type Client struct {
 	baseURL    string
 	httpClient *http.Client

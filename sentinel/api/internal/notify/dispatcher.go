@@ -248,8 +248,8 @@ func (d *Dispatcher) SendTest(ctx context.Context, ch store.NotificationChannel)
 	}
 	ev := AlertEvent{
 		AlertID:     uuid.New(),
-		Title:       "Sentinel test notification",
-		Description: "This is a test message from the Sentinel notifications UI.",
+		Title:       "Defentrax test notification",
+		Description: "This is a test message from the Defentrax notifications UI.",
 		Severity:    SeverityInfo,
 		Status:      "open",
 		EventCount:  1,

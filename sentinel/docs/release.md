@@ -1,6 +1,6 @@
 # Release process
 
-How to cut a **tagged** Sentinel release with SBOM, checksums, and notes.
+How to cut a **tagged** Defentrax release with SBOM, checksums, and notes.
 Current product line: **`0.1.0`** (see root [`VERSION`](../../VERSION)).
 
 > **Verdict:** prepare **`v0.1.0`** as the first formal tag. Do **not** tag

@@ -69,7 +69,7 @@ func (s *WebhookSender) postJSON(ctx context.Context, webhookURL string, headers
 		return fmt.Errorf("build request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("User-Agent", "Sentinel-Notifier/1.0")
+	req.Header.Set("User-Agent", "Defentrax-Notifier/1.0")
 	for k, v := range headers {
 		if k == "" {
 			continue

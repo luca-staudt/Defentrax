@@ -1,6 +1,6 @@
 # Configuration
 
-Sentinel is configured primarily via **environment variables**. Compose and Helm map the same names into containers/Secrets.
+Defentrax is configured primarily via **environment variables**. Compose and Helm map the same names into containers/Secrets.
 
 Canonical reference for local/Compose: [`.env.example`](../../.env.example) at the repository root. **Never commit `.env`.**
 

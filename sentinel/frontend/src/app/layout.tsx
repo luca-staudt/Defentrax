@@ -15,8 +15,8 @@ const body = IBM_Plex_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Sentinel",
-  description: "Monitor · Detect · Protect",
+  title: "Defentrax",
+  description: "Security & Infrastructure Management",
 };
 
 export default function RootLayout({

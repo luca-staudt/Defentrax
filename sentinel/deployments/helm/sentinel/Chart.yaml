@@ -1,10 +1,11 @@
 apiVersion: v2
 name: sentinel
-description: Sentinel — MONITOR • DETECT • PROTECT (API, frontend, Postgres, Redis)
+description: Defentrax — SECURITY & INFRASTRUCTURE MANAGEMENT (API, frontend, Postgres, Redis)
 type: application
 version: 0.1.0
 appVersion: "0.1.0"
 keywords:
+  - defentrax
   - sentinel
   - security
   - monitoring
@@ -13,5 +14,5 @@ home: https://github.com/luca-staudt/Defentrax
 sources:
   - https://github.com/luca-staudt/Defentrax
 maintainers:
-  - name: Sentinel maintainers
+  - name: Defentrax maintainers
 kubeVersion: ">=1.27.0-0"

@@ -1,6 +1,6 @@
 # Compatibility notes
 
-Versions Sentinel **expects** for the `VERSION` / `v0.1.0` line. This is an
+Versions Defentrax **expects** for the `VERSION` / `v0.1.0` line. This is an
 operator matrix, not a marketing claim of universal platform support.
 
 ## Product version

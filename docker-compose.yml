@@ -1,4 +1,4 @@
-# Sentinel — production-oriented local stack
+# Defentrax — production-oriented local stack
 # Usage (from repo root):
 #   cp .env.example .env   # fill secrets (see comments)
 #   docker compose up -d --build

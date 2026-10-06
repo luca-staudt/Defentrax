@@ -1,4 +1,4 @@
-# Sentinel plugins (v1)
+# Defentrax plugins (v1)
 
 Extension points for parsers, notifiers, detection rules, and data sources — without forking the core.
 

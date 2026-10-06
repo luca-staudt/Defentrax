@@ -12,7 +12,7 @@ Fastest path for local development and small self-hosted setups.
 
 ```bash
 git clone https://github.com/luca-staudt/Defentrax.git
-cd Sentinel
+cd Defentrax
 cp .env.example .env
 ```
 

@@ -1,6 +1,6 @@
-# Sentinel API (control plane)
+# Defentrax API (control plane)
 
-Go HTTP service for Sentinel’s control plane: REST under `/api/v1`, future WebSockets, authentication, ingestion, and audit (phased delivery).
+Go HTTP service for Defentrax’s control plane: REST under `/api/v1`, future WebSockets, authentication, ingestion, and audit (phased delivery).
 
 **Phase 4 scope:** Argon2id passwords, server-side sessions, RBAC middleware, TOTP 2FA, API keys, audit logging, login rate limits.
 

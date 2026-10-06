@@ -1,8 +1,8 @@
 openapi: 3.0.3
 info:
-  title: Sentinel API
+  title: Defentrax API
   description: |
-    Control-plane REST API for Sentinel (security monitoring / lightweight SIEM).
+    Control-plane REST API for Defentrax (security monitoring / lightweight SIEM).
 
     This specification documents **implemented** routes only (inventory from
     `sentinel/api/internal/server/server.go`). It does **not** invent endpoints.
@@ -20,7 +20,7 @@ info:
     Interactive UI: `GET /api/v1/docs` (Swagger UI). Raw spec: `GET /api/v1/openapi.yaml`.
   version: 0.1.0
   contact:
-    name: Sentinel
+    name: Defentrax
 servers:
   - url: http://localhost:8080
     description: Local default (API_PORT / PORT)

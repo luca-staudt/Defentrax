@@ -61,7 +61,7 @@ func (s *EmailSender) SendEmail(ctx context.Context, cfg EmailConfig, password s
 	_ = ctx
 	subject := cfg.Subject
 	if subject == "" {
-		subject = fmt.Sprintf("[Sentinel] %s (%s)", ev.Title, strings.ToUpper(ev.Severity))
+		subject = fmt.Sprintf("[Defentrax] %s (%s)", ev.Title, strings.ToUpper(ev.Severity))
 	}
 	body := RenderText(ev)
 	msg := []byte(fmt.Sprintf("From: %s\r\nTo: %s\r\nSubject: %s\r\nMIME-Version: 1.0\r\nContent-Type: text/plain; charset=UTF-8\r\n\r\n%s",

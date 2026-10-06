@@ -1,11 +1,11 @@
-# Sentinel Agent
+# Defentrax Agent
 
-The Sentinel agent runs on monitored Linux hosts, enrolls with the control plane, sends heartbeats, and uploads normalized security events (auth/SSH by default; optional Docker Engine events).
+The Defentrax agent runs on monitored Linux hosts, enrolls with the control plane, sends heartbeats, and uploads normalized security events (auth/SSH by default; optional Docker Engine events).
 
 ## Requirements
 
 - Linux for live auth log collection (`/var/log/auth.log` or journald)
-- Network egress to the Sentinel API over **HTTPS** (TLS 1.2+)
+- Network egress to the Defentrax API over **HTTPS** (TLS 1.2+)
 - Read access to auth logs (typically membership in `adm` or `systemd-journal` — no root required)
 - **Optional Docker monitoring:** read access to the Docker Engine API socket (see [Docker monitoring](docker-monitoring.md))
 

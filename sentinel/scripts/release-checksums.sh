@@ -46,7 +46,7 @@ fi
 mapfile -t sorted < <(printf '%s\n' "${files[@]}" | sort)
 
 {
-  echo "# Sentinel release checksums (SHA-256)"
+  echo "# Defentrax release checksums (SHA-256)"
   echo "# Generated: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
   echo "#"
   for f in "${sorted[@]}"; do

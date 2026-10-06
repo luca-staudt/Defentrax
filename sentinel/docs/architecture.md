@@ -1,6 +1,6 @@
 # Architecture
 
-Sentinel is a **single-tenant, self-hosted** security monitoring stack: agents collect host events, the API persists and evaluates them, and operators work through a web UI and REST API.
+Defentrax is a **single-tenant, self-hosted** security monitoring stack: agents collect host events, the API persists and evaluates them, and operators work through a web UI and REST API.
 
 ## High-level components
 

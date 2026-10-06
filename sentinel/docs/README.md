@@ -1,12 +1,12 @@
-# Sentinel documentation (in-repo)
+# Defentrax documentation (in-repo)
 
 Operator and developer documentation living alongside the codebase.
 
 <p align="center">
-  <img src="assets/sentinel-logo.png" alt="Sentinel logo" width="120" />
+  <img src="assets/defentrax-logo-full.png" alt="Defentrax logo" width="240" />
 </p>
 
-**Tagline:** MONITOR • DETECT • PROTECT
+**Tagline:** SECURITY & INFRASTRUCTURE MANAGEMENT
 
 ## Start here
 

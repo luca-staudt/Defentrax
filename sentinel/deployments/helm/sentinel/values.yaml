@@ -1,4 +1,4 @@
-# Default values for Sentinel (Phase 17).
+# Default values for Defentrax (Phase 17).
 # Secure defaults: no production passwords, empty secret fields, plugins disabled.
 # Pass secrets via --set, -f secrets.yaml (gitignored), or secrets.existingSecret.
 

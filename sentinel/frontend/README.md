@@ -1,11 +1,11 @@
-# Sentinel Frontend
+# Defentrax Frontend
 
 Next.js (App Router) operator UI — login, dashboard, alerts, events, servers, and rules.
 
 ## Prerequisites
 
 - Node.js 20+
-- Sentinel API running locally (default `http://127.0.0.1:8080`)
+- Defentrax API running locally (default `http://127.0.0.1:8080`)
 - PostgreSQL migrated and bootstrap admin configured on the API
 
 ## Configuration

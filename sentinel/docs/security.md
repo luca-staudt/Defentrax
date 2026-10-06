@@ -1,6 +1,6 @@
 # Security hardening (Phase 19)
 
-This document describes what Sentinel enforces today, how to deploy it safely, and which risks remain operator-owned.
+This document describes what Defentrax enforces today, how to deploy it safely, and which risks remain operator-owned.
 
 ## Threat model (short)
 
@@ -26,7 +26,7 @@ Single-tenant self-host is assumed. Multi-tenant isolation is **not** in scope f
 
 ## CSRF strategy
 
-Sentinel is a JSON API. Classic HTML-form CSRF cannot set `Content-Type: application/json`. Additional controls:
+Defentrax is a JSON API. Classic HTML-form CSRF cannot set `Content-Type: application/json`. Additional controls:
 
 1. **SameSite** session cookies (Strict behind HTTPS).
 2. **CORS** credentials only for explicitly listed origins.

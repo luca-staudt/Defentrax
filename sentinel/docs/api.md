@@ -1,4 +1,4 @@
-# Sentinel API
+# Defentrax API
 
 REST control plane under `/api/v1`, plus liveness/readiness probes. Interactive docs and the machine-readable contract ship with the API binary.
 

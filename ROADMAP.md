@@ -1,4 +1,4 @@
-# Sentinel roadmap
+# Defentrax roadmap
 
 Living plan from the first tagged pre-release **`v0.1.0`** toward a production-ready
 **`v1.0.0`**. Items below are direction, not delivery dates.

@@ -1,6 +1,6 @@
-# Contributing to Sentinel
+# Contributing to Defentrax
 
-Thanks for helping improve Sentinel. This project prioritizes **security → correctness → data integrity → reliability** over cosmetic polish.
+Thanks for helping improve Defentrax. This project prioritizes **security → correctness → data integrity → reliability** over cosmetic polish.
 
 ## Before you start
 
@@ -13,7 +13,7 @@ Thanks for helping improve Sentinel. This project prioritizes **security → cor
 
 ```bash
 git clone https://github.com/luca-staudt/Defentrax.git
-cd Sentinel
+cd Defentrax
 cp .env.example .env
 # set SESSION_SECRET, DATABASE_URL (or use Docker Compose)
 

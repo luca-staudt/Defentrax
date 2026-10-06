@@ -1,4 +1,4 @@
-# Sentinel Security Policy
+# Defentrax Security Policy
 
 ## Supported versions
 

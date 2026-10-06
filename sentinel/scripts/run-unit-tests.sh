@@ -5,7 +5,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "${ROOT}"
 
-echo "==> Sentinel unit tests (make test)"
+echo "==> Defentrax unit tests (make test)"
 make test
 
 echo "==> OpenAPI validation (when tooling available)"

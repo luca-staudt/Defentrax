@@ -1,5 +1,5 @@
 -- +goose Up
--- Sentinel core schema (Phase 3). All timestamps UTC; UUID primary keys.
+-- Defentrax core schema (Phase 3). All timestamps UTC; UUID primary keys.
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 

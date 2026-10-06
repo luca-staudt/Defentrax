@@ -12,7 +12,7 @@ What operator or security workflow is painful or missing?
 
 ## Proposed solution
 
-How should Sentinel behave?
+How should Defentrax behave?
 
 ## Alternatives considered
 

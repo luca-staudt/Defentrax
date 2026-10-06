@@ -1,4 +1,4 @@
-# Multi-stage build for the Sentinel host agent.
+# Multi-stage build for the Defentrax host agent.
 # Build context: repository root.
 # syntax=docker/dockerfile:1
 

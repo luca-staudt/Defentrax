@@ -1,7 +1,7 @@
-# Gitleaks configuration for Sentinel (Phase 19).
+# Gitleaks configuration for Defentrax (Phase 19).
 # Extends default rules; ignores known placeholder examples only.
 
-title = "Sentinel"
+title = "Defentrax"
 
 [extend]
 useDefault = true

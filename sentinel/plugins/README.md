@@ -1,4 +1,4 @@
-# Sentinel Plugins
+# Defentrax Plugins
 
 Stable v1 plugin SDK, load policy, and example extensions.
 

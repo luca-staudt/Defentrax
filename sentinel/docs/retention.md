@@ -2,7 +2,7 @@
 
 ## Current status (honest)
 
-Sentinel **does not yet ship an automated event/alert retention or purge job**. Event and alert volume will grow with your agents until **you** apply an operational policy (SQL jobs, partitioning later, or external lifecycle tools).
+Defentrax **does not yet ship an automated event/alert retention or purge job**. Event and alert volume will grow with your agents until **you** apply an operational policy (SQL jobs, partitioning later, or external lifecycle tools).
 
 Configurable today:
 

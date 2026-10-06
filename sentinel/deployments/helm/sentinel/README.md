@@ -1,4 +1,4 @@
-# Sentinel Helm chart (Phase 17)
+# Defentrax Helm chart (Phase 17)
 
 Packaged install of the Phase 16 Kubernetes stack: API, frontend, PostgreSQL, Redis, migration Job (Helm hooks), Ingress, PVCs, and NetworkPolicies.
 

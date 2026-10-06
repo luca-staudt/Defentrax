@@ -1,6 +1,6 @@
 # Testing guide
 
-Sentinel tests are split into a **fast unit suite** (default in CI) and **PostgreSQL integration** tests (`//go:build integration`).
+Defentrax tests are split into a **fast unit suite** (default in CI) and **PostgreSQL integration** tests (`//go:build integration`).
 
 ## Quick commands
 

@@ -25,7 +25,7 @@ type AlertEvent struct {
 // RenderText produces a plain-text notification body.
 func RenderText(ev AlertEvent) string {
 	var b strings.Builder
-	fmt.Fprintf(&b, "[Sentinel] %s (%s)\n", ev.Title, strings.ToUpper(ev.Severity))
+	fmt.Fprintf(&b, "[Defentrax] %s (%s)\n", ev.Title, strings.ToUpper(ev.Severity))
 	fmt.Fprintf(&b, "Status: %s\n", ev.Status)
 	if ev.Description != "" {
 		fmt.Fprintf(&b, "%s\n", ev.Description)
@@ -42,7 +42,7 @@ func RenderText(ev AlertEvent) string {
 func RenderDiscordJSON(ev AlertEvent) map[string]any {
 	color := severityColor(ev.Severity)
 	return map[string]any{
-		"content": fmt.Sprintf("**Sentinel** · %s", strings.ToUpper(ev.Severity)),
+		"content": fmt.Sprintf("**Defentrax** · %s", strings.ToUpper(ev.Severity)),
 		"embeds": []map[string]any{
 			{
 				"title":       ev.Title,
@@ -61,7 +61,7 @@ func RenderDiscordJSON(ev AlertEvent) map[string]any {
 
 // RenderSlackJSON builds a Slack incoming-webhook payload.
 func RenderSlackJSON(ev AlertEvent) map[string]any {
-	text := fmt.Sprintf("*Sentinel* · `%s` · %s\n*%s*\n%s", strings.ToUpper(ev.Severity), ev.Status, ev.Title, ev.Description)
+	text := fmt.Sprintf("*Defentrax* · `%s` · %s\n*%s*\n%s", strings.ToUpper(ev.Severity), ev.Status, ev.Title, ev.Description)
 	return map[string]any{
 		"text": text,
 		"blocks": []map[string]any{

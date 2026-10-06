@@ -63,11 +63,11 @@ export default function LoginPage() {
         {/* Header with Logo */}
         <div className="text-center">
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-sky-500/40 bg-sky-950/60 p-2.5 shadow-xl shadow-sky-500/10">
-            <Image src="/sentinel-logo.png" alt="Defentrax Core" width={44} height={44} priority className="object-contain" />
+            <Image src="/defentrax-logo.png" alt="Defentrax" width={44} height={44} priority className="object-contain" />
           </div>
           <h1 className="font-display text-2xl font-bold tracking-widest text-white">DEFENTRAX</h1>
-          <p className="mt-1 font-mono text-[11px] tracking-[0.2em] text-sky-400 uppercase">
-            CORE GUARD SIEM PLATFORM
+          <p className="mt-1 font-mono text-[11px] tracking-[0.15em] text-sky-400 uppercase">
+            Security & Infrastructure Management
           </p>
           <div className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-sky-500/20 bg-sky-950/30 px-3 py-0.5 text-[10px] font-mono text-zinc-400">
             <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />

@@ -1,4 +1,4 @@
-// Package version holds the canonical SemVer for Sentinel binaries and APIs.
+// Package version holds the canonical SemVer for Defentrax binaries and APIs.
 // Keep VERSION in sync with the repository-root VERSION file (enforced by
 // scripts/release-check.sh).
 package version

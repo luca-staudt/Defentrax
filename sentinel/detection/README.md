@@ -1,4 +1,4 @@
-# Sentinel Detection Engine
+# Defentrax Detection Engine
 
 Go package for loading YAML detection rules, matching normalized events, and proposing alerts with possibility-oriented wording.
 
