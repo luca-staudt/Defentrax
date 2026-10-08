@@ -5,14 +5,11 @@ import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { EmptyState } from "@/components/ui/empty-state";
 import { LoadingBlock } from "@/components/ui/loading-block";
+import { PageHeader } from "@/components/ui/page-header";
 import { SeverityBadge } from "@/components/ui/severity-badge";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { useAuth } from "@/context/auth-context";
-import {
-  alertActionLabel,
-  formatAlertTime,
-  nextAlertStatuses,
-} from "@/lib/alerts";
+import { alertActionLabel, formatAlertTime, nextAlertStatuses } from "@/lib/alerts";
 import { apiFetch, ApiRequestError } from "@/lib/api/client";
 import { hasPermission } from "@/lib/permissions";
 import { canSeePage } from "@/lib/pages";
@@ -42,9 +39,7 @@ export default function AlertDetailPage() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await apiFetch<{ alert: Alert; timeline: TimelineEntry[] }>(
-        `/alerts/${id}`,
-      );
+      const res = await apiFetch<{ alert: Alert; timeline: TimelineEntry[] }>(`/alerts/${id}`);
       setAlert(res.alert);
       setTimeline(res.timeline || []);
       setNotes(res.alert.resolution_notes || "");
@@ -66,9 +61,7 @@ export default function AlertDetailPage() {
     setActionError(null);
     try {
       const body: { status: string; resolution_notes?: string } = { status };
-      if (notes.trim()) {
-        body.resolution_notes = notes.trim();
-      }
+      if (notes.trim()) body.resolution_notes = notes.trim();
       await apiFetch(`/alerts/${id}`, {
         method: "PATCH",
         body: JSON.stringify(body),
@@ -77,11 +70,7 @@ export default function AlertDetailPage() {
       router.refresh();
     } catch (e) {
       setActionError(
-        e instanceof ApiRequestError
-          ? e.message
-          : e instanceof Error
-            ? e.message
-            : "Failed to update alert status",
+        e instanceof ApiRequestError ? e.message : e instanceof Error ? e.message : "Failed to update alert status",
       );
     } finally {
       setSaving(false);
@@ -95,10 +84,7 @@ export default function AlertDetailPage() {
         title="Alert not found"
         description={error || undefined}
         action={
-          <Link
-            href="/alerts"
-            className="rounded-lg border border-zinc-700 px-3 py-1.5 text-xs text-zinc-300 hover:border-zinc-500 hover:text-white"
-          >
+          <Link href="/alerts" className="btn btn-light">
             Back to alerts
           </Link>
         }
@@ -109,173 +95,131 @@ export default function AlertDetailPage() {
   const next = nextAlertStatuses(alert.status);
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-500">
-        <Link href="/alerts" className="hover:text-sky-400">
+    <>
+      <PageHeader
+        title={alert.title}
+        subtitle={alert.description || "No description provided."}
+        actions={
+          <div className="d-flex gap-2">
+            <StatusBadge status={alert.status} />
+            <SeverityBadge severity={alert.severity} />
+          </div>
+        }
+      />
+      <p className="mb-3">
+        <Link href="/alerts" className="text-muted">
           Alerts
         </Link>
-        <span>/</span>
-        <span className="font-mono text-zinc-400 truncate max-w-[12rem]">
-          {alert.id.slice(0, 8)}…
-        </span>
-      </div>
+        <span className="text-muted"> / {alert.id.slice(0, 8)}…</span>
+      </p>
 
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="min-w-0 flex-1">
-          <h1 className="font-display text-2xl font-semibold text-white">
-            {alert.title}
-          </h1>
-          <p className="mt-2 max-w-3xl text-sm leading-relaxed text-zinc-400">
-            {alert.description || "No description provided."}
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <StatusBadge status={alert.status} />
-          <SeverityBadge severity={alert.severity} />
-        </div>
-      </div>
-
-      <dl className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 text-sm">
+      <div className="row">
         <MetaCell
           label="Server"
           value={
             canServer ? (
-              <Link
-                href={`/servers/${alert.server_id}`}
-                className="font-mono text-xs text-sky-400 hover:text-sky-300 break-all"
-              >
+              <Link href={`/servers/${alert.server_id}`} className="text-break">
                 {alert.server_id}
               </Link>
             ) : (
-              <span className="font-mono text-xs text-zinc-300 break-all">
-                {alert.server_id}
-              </span>
+              <span className="text-break">{alert.server_id}</span>
             )
           }
         />
-        <MetaCell
-          label="Rule"
-          value={
-            <span className="font-mono text-xs text-zinc-300">
-              {alert.rule_id || "—"}
-            </span>
-          }
-        />
-        <MetaCell
-          label="Event hits"
-          value={<span className="text-lg text-white">{alert.event_count}</span>}
-        />
-        <MetaCell
-          label="Source IP"
-          value={
-            <span className="font-mono text-xs text-zinc-300">
-              {alert.source_ip || "—"}
-            </span>
-          }
-        />
+        <MetaCell label="Rule" value={<span>{alert.rule_id || "—"}</span>} />
+        <MetaCell label="Event hits" value={<span className="fs-16">{alert.event_count}</span>} />
+        <MetaCell label="Source IP" value={<span>{alert.source_ip || "—"}</span>} />
         <MetaCell label="First seen" value={formatAlertTime(alert.first_seen_at)} />
         <MetaCell label="Last seen" value={formatAlertTime(alert.last_seen_at)} />
         <MetaCell label="Opened" value={formatAlertTime(alert.opened_at)} />
-        <MetaCell
-          label="Resolved"
-          value={formatAlertTime(alert.resolved_at)}
-        />
-      </dl>
+        <MetaCell label="Resolved" value={formatAlertTime(alert.resolved_at)} />
+      </div>
 
       {canWrite ? (
-        <section className="rounded-xl border border-zinc-800 bg-zinc-950/40 p-4">
-          <h2 className="text-sm font-medium text-zinc-300">Lifecycle actions</h2>
-          <p className="mt-1 text-xs text-zinc-500">
-            Resolve from any open state, or reopen a closed alert.
-          </p>
-          <textarea
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            rows={3}
-            placeholder="Resolution / investigation notes (optional)"
-            className="mt-3 w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-brand-500/60"
-          />
-          {actionError ? (
-            <p className="mt-2 rounded-lg border border-rose-500/30 bg-rose-950/20 px-3 py-2 text-xs text-rose-300">
-              {actionError}
-            </p>
-          ) : null}
-          <div className="mt-3 flex flex-wrap gap-2">
-            {next.map((s) => {
-              const primary = s === "RESOLVED" || s === "OPEN";
-              return (
-                <button
-                  key={s}
-                  type="button"
-                  disabled={saving}
-                  onClick={() => void patchStatus(s)}
-                  className={
-                    primary
-                      ? "rounded-lg bg-brand-500/90 px-4 py-2 text-sm font-medium text-black hover:bg-brand-400 disabled:opacity-50"
-                      : "rounded-lg border border-zinc-700 bg-zinc-900 px-4 py-2 text-sm font-medium text-zinc-200 hover:border-zinc-500 hover:text-white disabled:opacity-50"
-                  }
-                >
-                  {saving ? "Updating…" : alertActionLabel(s)}
-                </button>
-              );
-            })}
-            {next.length === 0 ? (
-              <p className="text-sm text-zinc-500">No further transitions available.</p>
-            ) : null}
+        <div className="card">
+          <div className="card-header">
+            <h4 className="card-title mb-0">Lifecycle actions</h4>
           </div>
-        </section>
+          <div className="card-body">
+            <p className="text-muted">Resolve from any open state, or reopen a closed alert.</p>
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              rows={3}
+              placeholder="Resolution / investigation notes (optional)"
+              className="form-control"
+            />
+            {actionError ? <div className="alert alert-danger mt-3 mb-0">{actionError}</div> : null}
+            <div className="d-flex flex-wrap gap-2 mt-3">
+              {next.map((s) => {
+                const primary = s === "RESOLVED" || s === "OPEN";
+                return (
+                  <button
+                    key={s}
+                    type="button"
+                    disabled={saving}
+                    onClick={() => void patchStatus(s)}
+                    className={primary ? "btn btn-primary" : "btn btn-light"}
+                  >
+                    {saving ? "Updating…" : alertActionLabel(s)}
+                  </button>
+                );
+              })}
+              {next.length === 0 ? <p className="text-muted mb-0">No further transitions available.</p> : null}
+            </div>
+          </div>
+        </div>
       ) : (
-        <p className="text-sm text-zinc-500">
-          Read-only — you cannot change alert status.
-        </p>
+        <p className="text-muted">Read-only — you cannot change alert status.</p>
       )}
 
       {alert.resolution_notes ? (
-        <section className="rounded-xl border border-zinc-800 bg-zinc-950/40 p-4">
-          <h2 className="text-sm font-medium text-zinc-300">Resolution notes</h2>
-          <p className="mt-2 whitespace-pre-wrap text-sm text-zinc-300">
-            {alert.resolution_notes}
-          </p>
-        </section>
+        <div className="card">
+          <div className="card-header">
+            <h4 className="card-title mb-0">Resolution notes</h4>
+          </div>
+          <div className="card-body">
+            <p className="mb-0" style={{ whiteSpace: "pre-wrap" }}>
+              {alert.resolution_notes}
+            </p>
+          </div>
+        </div>
       ) : null}
 
-      <section>
-        <h2 className="mb-3 text-sm font-medium uppercase tracking-widest text-zinc-400">
-          Timeline
-        </h2>
-        {timeline.length === 0 ? (
-          <p className="text-sm text-zinc-500">No timeline events yet.</p>
-        ) : (
-          <ul className="space-y-2">
-            {timeline.map((t) => (
-              <li
-                key={t.id}
-                className="rounded-lg border border-zinc-800 bg-zinc-950/30 px-4 py-3 text-sm"
-              >
-                <p className="text-zinc-200">{t.message}</p>
-                <p className="mt-1 font-mono text-xs text-zinc-500">
-                  {t.event_type} · {formatAlertTime(t.created_at)}
-                </p>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-    </div>
+      <div className="card">
+        <div className="card-header">
+          <h4 className="card-title mb-0">Timeline</h4>
+        </div>
+        <div className="card-body">
+          {timeline.length === 0 ? (
+            <p className="text-muted mb-0">No timeline events yet.</p>
+          ) : (
+            <div className="list-group">
+              {timeline.map((t) => (
+                <div key={t.id} className="list-group-item">
+                  <p className="mb-1">{t.message}</p>
+                  <p className="text-muted fs-12 mb-0">
+                    {t.event_type} · {formatAlertTime(t.created_at)}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </>
   );
 }
 
-function MetaCell({
-  label,
-  value,
-}: {
-  label: string;
-  value: ReactNode;
-}) {
+function MetaCell({ label, value }: { label: string; value: ReactNode }) {
   return (
-    <div className="rounded-lg border border-zinc-800 bg-zinc-950/40 p-4">
-      <dt className="text-xs uppercase tracking-wider text-zinc-500">{label}</dt>
-      <dd className="mt-1 text-zinc-200">{value}</dd>
+    <div className="col-md-6 col-xl-3">
+      <div className="card">
+        <div className="card-body">
+          <p className="text-muted text-uppercase fs-12 mb-1">{label}</p>
+          <div className="mb-0">{value}</div>
+        </div>
+      </div>
     </div>
   );
 }

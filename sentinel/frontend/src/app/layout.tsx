@@ -1,18 +1,5 @@
 import type { Metadata } from "next";
-import { Exo_2, IBM_Plex_Sans } from "next/font/google";
-import "./globals.css";
-
-const display = Exo_2({
-  subsets: ["latin"],
-  variable: "--font-display",
-  weight: ["500", "600", "700"],
-});
-
-const body = IBM_Plex_Sans({
-  subsets: ["latin"],
-  variable: "--font-body",
-  weight: ["400", "500", "600"],
-});
+import "../assets/scss/themes.scss";
 
 export const metadata: Metadata = {
   title: "Defentrax",
@@ -25,10 +12,23 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
-      <body className={`${display.variable} ${body.variable} antialiased`}>
-        {children}
-      </body>
+    <html
+      lang="en"
+      suppressHydrationWarning
+      data-layout="vertical"
+      data-sidebar="dark"
+      data-sidebar-size="lg"
+      data-bs-theme="dark"
+      data-topbar="dark"
+      data-layout-width="fluid"
+      data-layout-position="fixed"
+      data-layout-style="default"
+      data-sidebar-image="none"
+      data-preloader="disable"
+      data-theme="default"
+      data-theme-colors="default"
+    >
+      <body suppressHydrationWarning>{children}</body>
     </html>
   );
 }

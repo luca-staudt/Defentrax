@@ -1,153 +1,154 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect } from "react";
+import SimpleBar from "simplebar-react";
+import { Container, DropdownMenu, DropdownToggle, UncontrolledDropdown } from "reactstrap";
 import { useAuth } from "@/context/auth-context";
 import { canSeePage, PANEL_PAGES } from "@/lib/pages";
-import {
-  DashboardIcon,
-  AlertTriangleIcon,
-  ActivityIcon,
-  ServerIcon,
-  ShieldCheckIcon,
-  BellIcon,
-  UsersIcon,
-  KeyIcon,
-  FileTextIcon,
-} from "@/components/ui/icons";
 
-const nav = PANEL_PAGES.filter((page) => page.nav && page.href);
-
-const getNavIcon = (action: string) => {
-  switch (action) {
-    case "dashboard":
-      return <DashboardIcon />;
-    case "alerts":
-      return <AlertTriangleIcon />;
-    case "events":
-      return <ActivityIcon />;
-    case "servers":
-      return <ServerIcon />;
-    case "rules":
-      return <ShieldCheckIcon />;
-    case "notifications":
-      return <BellIcon />;
-    case "users":
-      return <UsersIcon />;
-    case "roles":
-      return <KeyIcon />;
-    case "audit":
-      return <FileTextIcon />;
-    default:
-      return <ActivityIcon />;
-  }
+const NAV_ICONS: Record<string, string> = {
+  dashboard: "ri-dashboard-2-line",
+  alerts: "ri-alarm-warning-line",
+  events: "ri-pulse-line",
+  servers: "ri-server-line",
+  rules: "ri-shield-check-line",
+  notifications: "ri-notification-3-line",
+  team: "ri-team-line",
+  roles: "ri-key-2-line",
+  audit: "ri-file-list-3-line",
 };
 
-export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
+export function Sidebar() {
   const pathname = usePathname();
   const { user, logout } = useAuth();
+  const items = PANEL_PAGES.filter((page) => page.nav && page.href && canSeePage(user, page.action));
+  const display = user?.display_name || user?.email || "Operator";
+
+  useEffect(() => {
+    const verticalOverlay = document.getElementsByClassName("vertical-overlay");
+    const overlay = verticalOverlay?.[0];
+    if (!overlay) return;
+    const close = () => document.body.classList.remove("vertical-sidebar-enable");
+    overlay.addEventListener("click", close);
+    return () => overlay.removeEventListener("click", close);
+  }, []);
+
+  useEffect(() => {
+    const ul = document.getElementById("navbar-nav");
+    if (!ul) return;
+    const links = Array.from(ul.querySelectorAll("a"));
+    for (const item of links) item.classList.remove("active");
+    let longest = "";
+    let match: HTMLAnchorElement | null = null;
+    for (const item of links) {
+      const itemPath = item.pathname;
+      if (itemPath && pathname.startsWith(itemPath) && itemPath.length > longest.length && itemPath !== "/") {
+        longest = itemPath;
+        match = item;
+      }
+    }
+    if (match) match.classList.add("active");
+  }, [pathname]);
+
+  const hoverSidebar = () => {
+    const attr = document.documentElement.getAttribute("data-sidebar-size");
+    document.documentElement.setAttribute(
+      "data-sidebar-size",
+      attr === "sm-hover" ? "sm-hover-active" : "sm-hover",
+    );
+  };
 
   return (
-    <aside className="flex h-screen w-64 shrink-0 flex-col border-r border-zinc-800/80 bg-[#060a12]/95 backdrop-blur-xl">
-      {/* Brand Header */}
-      <div className="flex items-center gap-3 border-b border-zinc-800/80 px-5 py-4">
-        <div className="relative flex h-10 w-10 items-center justify-center rounded-xl border border-sky-500/30 bg-sky-950/40 p-2 shadow-lg shadow-sky-500/10">
-          <Image src="/defentrax-logo.png" alt="Defentrax" width={32} height={32} priority className="object-contain" />
-          <span className="absolute -bottom-0.5 -right-0.5 flex h-2.5 w-2.5">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-sky-400 opacity-75"></span>
-            <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-sky-500"></span>
-          </span>
+    <>
+      <div className="app-menu navbar-menu">
+        <div className="navbar-brand-box">
+          <Link href="/dashboard" className="logo logo-dark">
+            <span className="logo-sm">
+              <img src="/defentrax-logo.png" alt="Defentrax" height={22} width={22} />
+            </span>
+            <span className="logo-lg">
+              <img src="/defentrax-logo.png" alt="Defentrax" height={22} width={22} />
+            </span>
+          </Link>
+          <Link href="/dashboard" className="logo logo-light">
+            <span className="logo-sm">
+              <img src="/defentrax-logo.png" alt="Defentrax" height={22} width={22} />
+            </span>
+            <span className="logo-lg d-flex align-items-center gap-2">
+              <img src="/defentrax-logo.png" alt="" height={22} width={22} />
+              <span className="fs-15 fw-semibold">DEFENTRAX</span>
+            </span>
+          </Link>
+          <button
+            onClick={hoverSidebar}
+            type="button"
+            className="btn btn-sm p-0 fs-20 header-item float-end btn-vertical-sm-hover"
+            id="vertical-hover"
+          >
+            <i className="ri-record-circle-line"></i>
+          </button>
         </div>
-        <div>
-          <span className="font-display text-base font-bold tracking-[0.18em] text-white">DEFENTRAX</span>
-          <p className="max-w-[9.5rem] text-[8px] font-mono tracking-[0.08em] text-sky-400 uppercase leading-snug">
-            Security & Infrastructure Management
-          </p>
-        </div>
-      </div>
 
-      {/* System Status Pill */}
-      <div className="mx-3 mt-3 rounded-lg border border-sky-500/20 bg-sky-950/20 px-3 py-2">
-        <div className="flex items-center justify-between text-[10px] font-mono">
-          <span className="text-zinc-400 uppercase">SIEM ENGINE</span>
-          <span className="flex items-center gap-1 text-emerald-400 font-semibold">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-            ONLINE
-          </span>
-        </div>
-      </div>
-
-      {/* Navigation */}
-      <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-3">
-        <p className="px-3 py-1 text-[10px] font-mono uppercase tracking-wider text-zinc-500">Operations & SIEM</p>
-        {nav.map((item) => {
-          if (!item.href || !canSeePage(user, item.action)) return null;
-          const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={onNavigate}
-              className={`group flex items-center justify-between rounded-xl px-3 py-2 text-xs font-medium transition-all ${
-                active
-                  ? "border border-sky-500/40 bg-sky-500/10 text-sky-200 shadow-md shadow-sky-500/5 font-semibold"
-                  : "text-zinc-400 hover:border-zinc-800 hover:bg-zinc-900/60 hover:text-zinc-100"
-              }`}
-            >
-              <div className="flex items-center gap-2.5">
-                <span className={active ? "text-sky-400" : "text-zinc-500 group-hover:text-zinc-300"}>
-                  {getNavIcon(item.action)}
+        <UncontrolledDropdown className="sidebar-user m-1 rounded">
+          <DropdownToggle tag="button" type="button" className="btn material-shadow-none" id="page-header-user-dropdown">
+            <span className="d-flex align-items-center gap-2">
+              <span className="avatar-xs">
+                <span className="avatar-title rounded-circle bg-primary-subtle text-primary">
+                  {display.charAt(0).toUpperCase()}
                 </span>
-                <span>{item.label}</span>
-              </div>
-              {active && <span className="h-1.5 w-1.5 rounded-full bg-sky-400 shadow-[0_0_6px_#38bdf8]" />}
-            </Link>
-          );
-        })}
-      </nav>
-
-      <div className="px-3 pb-3">
-        <a
-          href="https://defentrax.de"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center justify-between rounded-xl border border-zinc-800 px-3 py-2 text-xs text-zinc-300 transition hover:border-sky-500/40 hover:bg-sky-500/10 hover:text-sky-200"
-        >
-          <span>defentrax.de</span>
-          <span className="font-mono text-[10px] text-zinc-500">Website</span>
-        </a>
-      </div>
-
-      {/* User Session Footer */}
-      <div className="border-t border-zinc-800/80 p-3 bg-zinc-950/40">
-        <div className="flex items-center gap-2.5 rounded-xl border border-zinc-800/80 bg-zinc-900/40 p-2.5">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-sky-500/30 bg-sky-950/60 font-display text-xs font-bold text-sky-400">
-            {user?.email?.charAt(0).toUpperCase() || "U"}
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-xs font-medium text-zinc-200">{user?.email}</p>
-            <div className="mt-0.5 flex flex-wrap gap-1">
-              {user?.roles?.map((r) => (
-                <span key={r} className="rounded bg-sky-500/10 px-1 py-0.2 text-[9px] font-mono text-sky-400">
-                  {r}
+              </span>
+              <span className="text-start">
+                <span className="d-block fw-medium sidebar-user-name-text text-truncate" style={{ maxWidth: 140 }}>
+                  {display}
                 </span>
+                <span className="d-block fs-14 sidebar-user-name-sub-text">
+                  <i className="ri ri-circle-fill fs-10 text-success align-baseline"></i>{" "}
+                  <span className="align-middle">Online</span>
+                </span>
+              </span>
+            </span>
+          </DropdownToggle>
+          <DropdownMenu className="dropdown-menu-end">
+            <h6 className="dropdown-header">Welcome {display}</h6>
+            <button type="button" className="dropdown-item" onClick={() => void logout()}>
+              <i className="mdi mdi-logout text-muted fs-16 align-middle me-1"></i>
+              <span className="align-middle">Logout</span>
+            </button>
+          </DropdownMenu>
+        </UncontrolledDropdown>
+
+        <SimpleBar id="scrollbar" className="h-100">
+          <Container fluid>
+            <div id="two-column-menu"></div>
+            <ul className="navbar-nav" id="navbar-nav">
+              <li className="menu-title">
+                <span>Menu</span>
+              </li>
+              {items.map((item) => (
+                <li className="nav-item" key={item.action}>
+                  <Link className="nav-link menu-link" href={item.href!}>
+                    <i className={NAV_ICONS[item.action] || "ri-pages-line"}></i>
+                    <span>{item.label}</span>
+                  </Link>
+                </li>
               ))}
-            </div>
-          </div>
-        </div>
-
-        <button
-          type="button"
-          onClick={() => void logout()}
-          className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border border-zinc-800 px-3 py-1.5 text-xs text-zinc-400 transition hover:border-rose-500/40 hover:bg-rose-500/10 hover:text-rose-300"
-        >
-          <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-          </svg>
-          Sign out
-        </button>
+              <li className="menu-title">
+                <span>Links</span>
+              </li>
+              <li className="nav-item">
+                <a className="nav-link menu-link" href="https://defentrax.de" target="_blank" rel="noopener noreferrer">
+                  <i className="ri-global-line"></i>
+                  <span>defentrax.de</span>
+                </a>
+              </li>
+            </ul>
+          </Container>
+        </SimpleBar>
+        <div className="sidebar-background"></div>
       </div>
-    </aside>
+      <div className="vertical-overlay"></div>
+    </>
   );
 }

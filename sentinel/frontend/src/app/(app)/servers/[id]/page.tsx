@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { EmptyState } from "@/components/ui/empty-state";
 import { LoadingBlock } from "@/components/ui/loading-block";
+import { PageHeader } from "@/components/ui/page-header";
 import { useAuth } from "@/context/auth-context";
 import { apiFetch, ApiRequestError } from "@/lib/api/client";
 import { copyText } from "@/lib/clipboard";
@@ -28,13 +29,6 @@ type ServerDetail = {
   created_at: string;
   agents: Agent[];
 };
-
-const inputClass =
-  "w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-brand-500/60";
-const btnPrimary =
-  "rounded-lg bg-brand-500 px-4 py-2 text-sm font-semibold text-black hover:bg-brand-400 disabled:opacity-50";
-const btnGhost =
-  "rounded-lg border border-zinc-700 px-3 py-1.5 text-xs text-zinc-300 hover:border-brand-500/50";
 
 export default function ServerDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -75,22 +69,17 @@ export default function ServerDetailPage() {
     setIssued(null);
     setIssuing(true);
     try {
-      const tok = await apiFetch<EnrollmentToken>(
-        `/servers/${id}/enrollment-tokens`,
-        {
-          method: "POST",
-          body: JSON.stringify({
-            label: label.trim() || undefined,
-            ttl_minutes: ttl,
-          }),
-        },
-      );
+      const tok = await apiFetch<EnrollmentToken>(`/servers/${id}/enrollment-tokens`, {
+        method: "POST",
+        body: JSON.stringify({
+          label: label.trim() || undefined,
+          ttl_minutes: ttl,
+        }),
+      });
       setIssued(tok);
       await load();
     } catch (err) {
-      setIssueError(
-        err instanceof ApiRequestError ? err.message : "Token create failed",
-      );
+      setIssueError(err instanceof ApiRequestError ? err.message : "Token create failed");
     } finally {
       setIssuing(false);
     }
@@ -114,125 +103,111 @@ export default function ServerDetailPage() {
   }
 
   return (
-    <div className="space-y-8">
-      <header>
-        {canList ? (
-          <Link href="/servers" className="text-xs text-zinc-500 hover:text-brand-300">
-            ← Servers
-          </Link>
-        ) : null}
-        <h1 className="font-display mt-2 text-2xl font-semibold text-white">
-          {server.name}
-        </h1>
-        <p className="text-sm text-zinc-500">
-          {server.hostname || "—"} · {server.environment || "default env"}
-        </p>
-      </header>
-      {server.description ? (
-        <p className="text-sm text-zinc-400">{server.description}</p>
-      ) : null}
+    <>
+      <PageHeader
+        title={server.name}
+        subtitle={`${server.hostname || "—"} · ${server.environment || "default env"}`}
+        actions={
+          canList ? (
+            <Link href="/servers" className="btn btn-light">
+              Back to servers
+            </Link>
+          ) : null
+        }
+      />
+      {server.description ? <p className="text-muted">{server.description}</p> : null}
 
-      <section className="rounded-xl border border-zinc-800 bg-zinc-950/40 p-5">
-        <h2 className="mb-2 text-sm font-medium uppercase tracking-widest text-zinc-400">
-          Enrollment token
-        </h2>
-        <p className="mb-4 text-sm text-zinc-500">
-          One-time <code className="text-zinc-300">senr_…</code> token for the agent on
-          this host. Shown only once — copy it now.
-        </p>
-        <form onSubmit={onIssue} className="grid gap-3 sm:grid-cols-3">
-          <label className="block text-sm text-zinc-400 sm:col-span-2">
-            Label
-            <input
-              className={`${inputClass} mt-1`}
-              value={label}
-              onChange={(e) => setLabel(e.target.value)}
-              placeholder="main-agent"
-            />
-          </label>
-          <label className="block text-sm text-zinc-400">
-            TTL (minutes)
-            <input
-              className={`${inputClass} mt-1`}
-              type="number"
-              min={1}
-              max={1440}
-              value={ttl}
-              onChange={(e) => setTtl(Number(e.target.value) || 60)}
-            />
-          </label>
-          {issueError ? (
-            <p className="text-sm text-red-400 sm:col-span-3">{issueError}</p>
-          ) : null}
-          <div className="sm:col-span-3">
-            <button type="submit" className={btnPrimary} disabled={issuing}>
-              {issuing ? "Issuing…" : "Issue enrollment token"}
-            </button>
-          </div>
-        </form>
+      <div className="card">
+        <div className="card-header">
+          <h4 className="card-title mb-0">Enrollment token</h4>
+        </div>
+        <div className="card-body">
+          <p className="text-muted">
+            One-time <code>senr_…</code> token for the agent on this host. Shown only once — copy it now.
+          </p>
+          <form onSubmit={onIssue}>
+            <div className="row g-3">
+              <div className="col-md-8">
+                <label className="form-label">Label</label>
+                <input className="form-control" value={label} onChange={(e) => setLabel(e.target.value)} placeholder="main-agent" />
+              </div>
+              <div className="col-md-4">
+                <label className="form-label">TTL (minutes)</label>
+                <input className="form-control" type="number" min={1} max={1440} value={ttl} onChange={(e) => setTtl(Number(e.target.value) || 60)} />
+              </div>
+              {issueError ? (
+                <div className="col-12">
+                  <div className="alert alert-danger mb-0">{issueError}</div>
+                </div>
+              ) : null}
+              <div className="col-12">
+                <button type="submit" className="btn btn-primary" disabled={issuing}>
+                  {issuing ? "Issuing…" : "Issue enrollment token"}
+                </button>
+              </div>
+            </div>
+          </form>
 
-        {issued?.token ? (
-          <div className="mt-5 rounded-lg border border-brand-500/40 bg-brand-500/10 p-4">
-            <p className="text-xs uppercase tracking-widest text-brand-300">
-              Copy now — will not be shown again
-            </p>
-            <code
-              ref={tokenRef}
-              className="mt-2 block break-all text-sm text-white select-all"
-            >
-              {issued.token}
-            </code>
-            <p className="mt-2 text-xs text-zinc-500">
-              Expires {issued.expires_at} · prefix {issued.token_prefix}
-            </p>
-            <button type="button" className={`${btnGhost} mt-3`} onClick={() => void copyToken()}>
-              {copied ? "Copied" : "Copy token"}
-            </button>
-            {copyHint ? (
-              <p className="mt-2 text-sm text-amber-300">{copyHint}</p>
-            ) : null}
-            <pre className="mt-4 overflow-x-auto rounded bg-black/50 p-3 text-xs text-zinc-400">
+          {issued?.token ? (
+            <div className="alert alert-success mt-4 mb-0">
+              <p className="fw-medium mb-2">Copy now — will not be shown again</p>
+              <code ref={tokenRef} className="d-block user-select-all">
+                {issued.token}
+              </code>
+              <p className="text-muted mt-2 mb-2">
+                Expires {issued.expires_at} · prefix {issued.token_prefix}
+              </p>
+              <button type="button" className="btn btn-sm btn-light" onClick={() => void copyToken()}>
+                {copied ? "Copied" : "Copy token"}
+              </button>
+              {copyHint ? <p className="text-warning mt-2 mb-0">{copyHint}</p> : null}
+              <pre className="bg-dark text-white p-3 rounded mt-3 mb-0">
 {`# On the monitored host (Defentrax agent):
 export SENTINEL_API_URL=http://YOUR_DEFENTRAX_HOST:8080
 export SENTINEL_ENROLLMENT_TOKEN=${issued.token}
 export SENTINEL_AGENT_NAME=${label || "agent"}
-./sentinel-agent  # Defentrax agent binary`}
-            </pre>
-          </div>
-        ) : null}
-      </section>
+./sentinel-agent`}
+              </pre>
+            </div>
+          ) : null}
+        </div>
+      </div>
 
-      <section>
-        <h2 className="mb-3 text-sm font-medium uppercase tracking-widest text-zinc-400">
-          Agents
-        </h2>
-        {server.agents.length === 0 ? (
-          <EmptyState
-            title="No agents enrolled"
-            description="Issue a token above and start the agent on the host."
-          />
-        ) : (
-          <ul className="divide-y divide-zinc-800 rounded-xl border border-zinc-800">
-            {server.agents.map((a) => (
-              <li
-                key={a.id}
-                className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-sm"
-              >
-                <div>
-                  <p className="text-zinc-100">{a.name || a.id.slice(0, 8)}</p>
-                  <p className="text-xs text-zinc-500">
-                    v{a.agent_version || "?"}
-                    {a.last_heartbeat_at ? ` · last seen ${a.last_heartbeat_at}` : ""}
-                  </p>
-                </div>
-                <span className="rounded border border-zinc-700 px-2 py-0.5 text-xs uppercase text-zinc-400">
-                  {a.status}
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-    </div>
+      <div className="card">
+        <div className="card-header">
+          <h4 className="card-title mb-0">Agents</h4>
+        </div>
+        <div className="card-body">
+          {server.agents.length === 0 ? (
+            <EmptyState title="No agents enrolled" description="Issue a token above and start the agent on the host." />
+          ) : (
+            <div className="table-responsive">
+              <table className="table align-middle mb-0">
+                <thead className="table-light">
+                  <tr>
+                    <th>Name</th>
+                    <th>Version</th>
+                    <th>Last seen</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {server.agents.map((a) => (
+                    <tr key={a.id}>
+                      <td>{a.name || a.id.slice(0, 8)}</td>
+                      <td>v{a.agent_version || "?"}</td>
+                      <td className="text-muted">{a.last_heartbeat_at || "—"}</td>
+                      <td>
+                        <span className="badge bg-secondary-subtle text-secondary">{a.status}</span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
+    </>
   );
 }

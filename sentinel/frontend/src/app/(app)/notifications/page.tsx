@@ -4,8 +4,8 @@ import { FormEvent, useCallback, useEffect, useState } from "react";
 import { EmptyState } from "@/components/ui/empty-state";
 import { LoadingBlock } from "@/components/ui/loading-block";
 import { Modal } from "@/components/ui/modal";
+import { PageHeader } from "@/components/ui/page-header";
 import { CyberCheckbox, CyberSwitch } from "@/components/ui/cyber-checkbox";
-import { BellIcon, SearchIcon, ShieldCheckIcon } from "@/components/ui/icons";
 import { apiFetch, ApiRequestError } from "@/lib/api/client";
 import { hasPermission } from "@/lib/permissions";
 import { useAuth } from "@/context/auth-context";
@@ -29,11 +29,7 @@ export default function NotificationsPage() {
   const [rules, setRules] = useState<NotificationRule[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  // Tab
   const [activeTab, setActiveTab] = useState<"channels" | "rules">("channels");
-
-  // Create Channel Modal
   const [createChannelOpen, setCreateChannelOpen] = useState(false);
   const [chName, setChName] = useState("");
   const [chType, setChType] = useState<ChannelType>("discord");
@@ -46,8 +42,6 @@ export default function NotificationsPage() {
   const [smtpPassword, setSmtpPassword] = useState("");
   const [chSaving, setChSaving] = useState(false);
   const [chError, setChError] = useState<string | null>(null);
-
-  // Create Rule Modal
   const [createRuleOpen, setCreateRuleOpen] = useState(false);
   const [ruleName, setRuleName] = useState("");
   const [minSeverity, setMinSeverity] = useState("high");
@@ -55,14 +49,8 @@ export default function NotificationsPage() {
   const [channelIds, setChannelIds] = useState<string[]>([]);
   const [ruleSaving, setRuleSaving] = useState(false);
   const [ruleError, setRuleError] = useState<string | null>(null);
-
-  // Test Channel Feedback
   const [testBusyId, setTestBusyId] = useState<string | null>(null);
-  const [testFeedback, setTestFeedback] = useState<{
-    channelId: string;
-    ok: boolean;
-    message: string;
-  } | null>(null);
+  const [testFeedback, setTestFeedback] = useState<{ channelId: string; ok: boolean; message: string } | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -102,16 +90,11 @@ export default function NotificationsPage() {
           to: smtpTo.split(",").map((s) => s.trim()).filter(Boolean),
           username: smtpUser.trim() || undefined,
         };
-        if (smtpPassword) {
-          body.secrets = { smtp_password: smtpPassword };
-        }
+        if (smtpPassword) body.secrets = { smtp_password: smtpPassword };
       } else {
         body.secrets = { webhook_url: webhookUrl.trim() };
       }
-      await apiFetch("/notification-channels", {
-        method: "POST",
-        body: JSON.stringify(body),
-      });
+      await apiFetch("/notification-channels", { method: "POST", body: JSON.stringify(body) });
       setChName("");
       setWebhookUrl("");
       setSmtpPassword("");
@@ -154,21 +137,10 @@ export default function NotificationsPage() {
     setTestBusyId(ch.id);
     setTestFeedback(null);
     try {
-      const res = await apiFetch<{ ok: boolean; message: string }>(
-        `/notification-channels/${ch.id}/test`,
-        { method: "POST" }
-      );
-      setTestFeedback({
-        channelId: ch.id,
-        ok: true,
-        message: res.message || "Test dispatch sent successfully",
-      });
+      const res = await apiFetch<{ ok: boolean; message: string }>(`/notification-channels/${ch.id}/test`, { method: "POST" });
+      setTestFeedback({ channelId: ch.id, ok: true, message: res.message || "Test dispatch sent successfully" });
     } catch (err) {
-      setTestFeedback({
-        channelId: ch.id,
-        ok: false,
-        message: err instanceof ApiRequestError ? err.message : "Test failed",
-      });
+      setTestFeedback({ channelId: ch.id, ok: false, message: err instanceof ApiRequestError ? err.message : "Test failed" });
     } finally {
       setTestBusyId(null);
     }
@@ -233,434 +205,231 @@ export default function NotificationsPage() {
   }
 
   function toggleChannelId(id: string) {
-    if (channelIds.includes(id)) {
-      setChannelIds(channelIds.filter((c) => c !== id));
-    } else {
-      setChannelIds([...channelIds, id]);
-    }
+    if (channelIds.includes(id)) setChannelIds(channelIds.filter((c) => c !== id));
+    else setChannelIds([...channelIds, id]);
   }
 
   if (loading) return <LoadingBlock />;
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="font-display flex items-center gap-2 text-2xl font-bold tracking-tight text-white">
-            Dispatch & Incident Notifications
-            <span className="rounded-full border border-sky-500/30 bg-sky-950/40 px-2.5 py-0.5 font-mono text-xs text-sky-400">
-              {channels.length} Channels · {rules.length} Rules
-            </span>
-          </h1>
-          <p className="mt-1 font-mono text-xs text-zinc-400">
-            Real-time webhook relays, Discord/Slack integrations and SIEM severity routing
-          </p>
-        </div>
-        {canWrite && (
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setCreateChannelOpen(true)}
-              className="rounded-xl border border-sky-500/30 bg-sky-950/40 px-3.5 py-2 font-mono text-xs font-semibold text-sky-300 hover:bg-sky-500 hover:text-black transition shadow-[0_0_12px_rgba(0,163,255,0.2)]"
-            >
-              + Add Channel
-            </button>
-            <button
-              onClick={() => setCreateRuleOpen(true)}
-              className="rounded-xl bg-sky-500 px-4 py-2 font-mono text-xs font-semibold text-black hover:bg-sky-400 transition shadow-[0_0_15px_rgba(0,163,255,0.3)]"
-            >
-              + Create Routing Rule
-            </button>
-          </div>
-        )}
-      </div>
-
-      {/* Tabs */}
-      <div className="flex items-center gap-2 border-b border-zinc-800 pb-2">
-        <button
-          onClick={() => setActiveTab("channels")}
-          className={`flex items-center gap-2 rounded-xl px-4 py-2 font-mono text-xs font-semibold transition ${
-            activeTab === "channels"
-              ? "bg-sky-500/10 text-sky-400 border border-sky-500/30"
-              : "text-zinc-400 hover:text-white"
-          }`}
-        >
-          <BellIcon className="h-4 w-4" />
-          <span>Notification Channels ({channels.length})</span>
-        </button>
-        <button
-          onClick={() => setActiveTab("rules")}
-          className={`flex items-center gap-2 rounded-xl px-4 py-2 font-mono text-xs font-semibold transition ${
-            activeTab === "rules"
-              ? "bg-sky-500/10 text-sky-400 border border-sky-500/30"
-              : "text-zinc-400 hover:text-white"
-          }`}
-        >
-          <ShieldCheckIcon className="h-4 w-4" />
-          <span>Dispatch & Routing Rules ({rules.length})</span>
-        </button>
-      </div>
-
-      {/* Channels Tab */}
-      {activeTab === "channels" && (
-        <div className="space-y-4">
-          {channels.length === 0 ? (
-            <EmptyState
-              title="No channels configured"
-              description="Create a Discord, Slack, Webhook or Email channel to receive threat notifications."
-            />
-          ) : (
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {channels.map((ch) => (
-                <div
-                  key={ch.id}
-                  className="rounded-2xl border border-zinc-800/80 bg-gradient-to-br from-[#0c1424]/90 to-[#060b16]/90 p-5 shadow-xl backdrop-blur-md"
-                >
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <h3 className="font-display text-base font-bold text-white">{ch.name}</h3>
-                      <span className="mt-1 inline-block rounded bg-sky-500/10 px-2 py-0.5 font-mono text-[10px] text-sky-400 uppercase">
-                        {ch.channel_type}
-                      </span>
-                    </div>
-                    <CyberSwitch
-                      checked={ch.enabled}
-                      disabled={!canWrite}
-                      onChange={() => void toggleChannel(ch)}
-                    />
-                  </div>
-
-                  <div className="mt-4 flex items-center justify-between border-t border-zinc-800/60 pt-3">
-                    <button
-                      type="button"
-                      disabled={!canWrite || testBusyId === ch.id}
-                      onClick={() => void testChannel(ch)}
-                      className="rounded-lg border border-sky-500/30 bg-sky-950/40 px-2.5 py-1 font-mono text-[11px] text-sky-300 hover:bg-sky-500 hover:text-black transition"
-                    >
-                      {testBusyId === ch.id ? "Sending Ping..." : "Send Test Ping"}
-                    </button>
-                    {canWrite && (
-                      <button
-                        type="button"
-                        onClick={() => void deleteChannel(ch.id)}
-                        className="rounded-lg border border-rose-500/30 bg-rose-950/20 px-2.5 py-1 font-mono text-[11px] text-rose-300 hover:bg-rose-900/40 transition"
-                      >
-                        Delete
-                      </button>
-                    )}
-                  </div>
-
-                  {testFeedback && testFeedback.channelId === ch.id && (
-                    <div
-                      className={`mt-2.5 rounded-lg p-2 font-mono text-[10px] ${
-                        testFeedback.ok
-                          ? "border border-emerald-500/40 bg-emerald-950/40 text-emerald-300"
-                          : "border border-rose-500/40 bg-rose-950/40 text-rose-300"
-                      }`}
-                    >
-                      {testFeedback.message}
-                    </div>
-                  )}
-                </div>
-              ))}
+    <>
+      <PageHeader
+        title="Notifications"
+        subtitle="Webhook, Discord, Slack, and email routing"
+        actions={
+          canWrite ? (
+            <div className="d-flex gap-2">
+              <button type="button" className="btn btn-light" onClick={() => setCreateChannelOpen(true)}>
+                Add channel
+              </button>
+              <button type="button" className="btn btn-primary" onClick={() => setCreateRuleOpen(true)}>
+                Create rule
+              </button>
             </div>
-          )}
-        </div>
-      )}
-
-      {/* Rules Tab */}
-      {activeTab === "rules" && (
-        <div className="space-y-4">
-          {rules.length === 0 ? (
-            <EmptyState
-              title="No dispatch rules configured"
-              description="Define severity thresholds and triggers to automate alert forwarding."
-            />
-          ) : (
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              {rules.map((rule) => (
-                <div
-                  key={rule.id}
-                  className="rounded-2xl border border-zinc-800/80 bg-gradient-to-br from-[#0c1424]/90 to-[#060b16]/90 p-5 shadow-xl backdrop-blur-md"
-                >
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <h3 className="font-display text-base font-bold text-white">{rule.name}</h3>
-                      <div className="mt-1 flex items-center gap-2">
-                        <span className="font-mono text-[10px] text-zinc-400">Min Severity:</span>
-                        <span className="rounded bg-rose-500/20 px-2 py-0.5 font-mono text-[10px] text-rose-300 uppercase font-semibold">
-                          {rule.min_severity}
-                        </span>
-                      </div>
-                    </div>
-                    <CyberSwitch
-                      checked={rule.enabled}
-                      disabled={!canWrite}
-                      onChange={() => void toggleRule(rule)}
-                    />
-                  </div>
-
-                  <div className="mt-3 space-y-2 border-t border-zinc-800/60 pt-3 font-mono text-xs">
-                    <div>
-                      <span className="text-zinc-500 text-[10px] block">TRIGGERS</span>
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        {rule.triggers.map((t) => (
-                          <span key={t} className="rounded border border-zinc-800 bg-zinc-900 px-2 py-0.5 text-[10px] text-zinc-300">
-                            {t}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div>
-                      <span className="text-zinc-500 text-[10px] block">CHANNELS ({rule.channel_ids.length})</span>
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        {rule.channel_ids.map((cid) => {
-                          const ch = channels.find((c) => c.id === cid);
-                          return (
-                            <span key={cid} className="rounded border border-sky-500/30 bg-sky-950/40 px-2 py-0.5 text-[10px] text-sky-300">
-                              {ch ? ch.name : cid}
-                            </span>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  </div>
-
-                  {canWrite && (
-                    <div className="mt-4 flex justify-end border-t border-zinc-800/60 pt-3">
-                      <button
-                        type="button"
-                        onClick={() => void deleteRule(rule.id)}
-                        className="rounded-lg border border-rose-500/30 bg-rose-950/20 px-2.5 py-1 font-mono text-[11px] text-rose-300 hover:bg-rose-900/40 transition"
-                      >
-                        Delete Rule
-                      </button>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Create Channel Modal */}
-      <Modal
-        isOpen={createChannelOpen}
-        onClose={() => setCreateChannelOpen(false)}
-        title="Add Notification Channel"
-        subtitle="Route alerts to Discord, Slack, Webhooks or SMTP Email"
-        maxWidth="max-w-2xl"
-        footer={
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setCreateChannelOpen(false)}
-              className="rounded-lg border border-zinc-700 bg-zinc-900 px-3.5 py-1.5 font-mono text-xs text-zinc-300 hover:text-white"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              disabled={chSaving || !chName.trim()}
-              onClick={onCreateChannel}
-              className="rounded-lg bg-sky-500 px-4 py-1.5 font-mono text-xs font-semibold text-black hover:bg-sky-400 disabled:opacity-50 shadow-[0_0_12px_rgba(0,163,255,0.4)]"
-            >
-              {chSaving ? "Connecting..." : "Connect Channel"}
-            </button>
-          </div>
+          ) : null
         }
-      >
-        <form onSubmit={onCreateChannel} className="space-y-4 font-mono text-xs">
-          {chError && (
-            <div className="rounded-lg border border-rose-500/40 bg-rose-950/30 p-3 text-rose-300">
-              {chError}
-            </div>
-          )}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="text-zinc-400 block mb-1">CHANNEL NAME</label>
-              <input
-                type="text"
-                value={chName}
-                onChange={(e) => setChName(e.target.value)}
-                placeholder="e.g. SecOps-Discord-Alerts"
-                required
-                className="w-full rounded-xl border border-zinc-800 bg-zinc-950/80 px-3 py-2 text-zinc-100 outline-none focus:border-sky-500"
-              />
-            </div>
-            <div>
-              <label className="text-zinc-400 block mb-1">TYPE</label>
-              <select
-                value={chType}
-                onChange={(e) => setChType(e.target.value as ChannelType)}
-                className="w-full rounded-xl border border-zinc-800 bg-zinc-950/80 px-3 py-2 text-zinc-100 outline-none focus:border-sky-500"
-              >
-                <option value="discord">Discord Webhook</option>
-                <option value="slack">Slack Webhook</option>
-                <option value="webhook">Generic Webhook</option>
-                <option value="email">SMTP Email</option>
-              </select>
+      />
+
+      <ul className="nav nav-tabs nav-tabs-custom mb-3">
+        <li className="nav-item">
+          <button type="button" className={`nav-link ${activeTab === "channels" ? "active" : ""}`} onClick={() => setActiveTab("channels")}>
+            Channels ({channels.length})
+          </button>
+        </li>
+        <li className="nav-item">
+          <button type="button" className={`nav-link ${activeTab === "rules" ? "active" : ""}`} onClick={() => setActiveTab("rules")}>
+            Rules ({rules.length})
+          </button>
+        </li>
+      </ul>
+
+      {error ? <div className="alert alert-danger">{error}</div> : null}
+      {chError && activeTab === "channels" ? <div className="alert alert-danger">{chError}</div> : null}
+      {ruleError && activeTab === "rules" ? <div className="alert alert-danger">{ruleError}</div> : null}
+
+      {activeTab === "channels" ? (
+        channels.length === 0 ? (
+          <EmptyState title="No channels configured" description="Create a Discord, Slack, webhook, or email channel." />
+        ) : (
+          <div className="row">
+            {channels.map((ch) => (
+              <div className="col-md-6 col-xl-4" key={ch.id}>
+                <div className="card">
+                  <div className="card-body">
+                    <div className="d-flex justify-content-between">
+                      <div>
+                        <h5 className="mb-1">{ch.name}</h5>
+                        <span className="badge bg-primary-subtle text-primary text-uppercase">{ch.channel_type}</span>
+                      </div>
+                      <CyberSwitch checked={ch.enabled} disabled={!canWrite} onChange={() => void toggleChannel(ch)} />
+                    </div>
+                    <div className="d-flex justify-content-between mt-3">
+                      <button type="button" className="btn btn-sm btn-light" disabled={!canWrite || testBusyId === ch.id} onClick={() => void testChannel(ch)}>
+                        {testBusyId === ch.id ? "Sending…" : "Send test"}
+                      </button>
+                      {canWrite ? (
+                        <button type="button" className="btn btn-sm btn-danger" onClick={() => void deleteChannel(ch.id)}>
+                          Delete
+                        </button>
+                      ) : null}
+                    </div>
+                    {testFeedback && testFeedback.channelId === ch.id ? (
+                      <div className={`alert ${testFeedback.ok ? "alert-success" : "alert-danger"} mt-3 mb-0`}>{testFeedback.message}</div>
+                    ) : null}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )
+      ) : rules.length === 0 ? (
+        <EmptyState title="No dispatch rules" description="Define severity thresholds and triggers to forward alerts." />
+      ) : (
+        <div className="card">
+          <div className="card-body">
+            <div className="table-responsive">
+              <table className="table align-middle mb-0">
+                <thead className="table-light">
+                  <tr>
+                    <th>Name</th>
+                    <th>Min severity</th>
+                    <th>Triggers</th>
+                    <th>Channels</th>
+                    <th>Enabled</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rules.map((rule) => (
+                    <tr key={rule.id}>
+                      <td>{rule.name}</td>
+                      <td className="text-uppercase">{rule.min_severity}</td>
+                      <td>{rule.triggers.join(", ")}</td>
+                      <td>{rule.channel_ids.length}</td>
+                      <td>
+                        <CyberSwitch checked={rule.enabled} disabled={!canWrite} onChange={() => void toggleRule(rule)} />
+                      </td>
+                      <td className="text-end">
+                        {canWrite ? (
+                          <button type="button" className="btn btn-sm btn-light" onClick={() => void deleteRule(rule.id)}>
+                            Delete
+                          </button>
+                        ) : null}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
+        </div>
+      )}
 
-          {chType !== "email" ? (
-            <div>
-              <label className="text-zinc-400 block mb-1">WEBHOOK URL</label>
-              <input
-                type="url"
-                value={webhookUrl}
-                onChange={(e) => setWebhookUrl(e.target.value)}
-                placeholder="https://discord.com/api/webhooks/..."
-                required
-                className="w-full rounded-xl border border-zinc-800 bg-zinc-950/80 px-3 py-2 text-zinc-100 outline-none focus:border-sky-500"
-              />
-            </div>
+      <Modal isOpen={createChannelOpen} onClose={() => setCreateChannelOpen(false)} title="Add channel">
+        <form onSubmit={(e) => void onCreateChannel(e)}>
+          <div className="mb-3">
+            <label className="form-label">Name</label>
+            <input required className="form-control" value={chName} onChange={(e) => setChName(e.target.value)} />
+          </div>
+          <div className="mb-3">
+            <label className="form-label">Type</label>
+            <select className="form-select" value={chType} onChange={(e) => setChType(e.target.value as ChannelType)}>
+              <option value="discord">Discord</option>
+              <option value="slack">Slack</option>
+              <option value="webhook">Webhook</option>
+              <option value="email">Email</option>
+            </select>
+          </div>
+          {chType === "email" ? (
+            <>
+              <div className="row g-2">
+                <div className="col-8 mb-3">
+                  <label className="form-label">SMTP host</label>
+                  <input required className="form-control" value={smtpHost} onChange={(e) => setSmtpHost(e.target.value)} />
+                </div>
+                <div className="col-4 mb-3">
+                  <label className="form-label">Port</label>
+                  <input type="number" className="form-control" value={smtpPort} onChange={(e) => setSmtpPort(Number(e.target.value) || 587)} />
+                </div>
+              </div>
+              <div className="mb-3">
+                <label className="form-label">From</label>
+                <input required className="form-control" value={smtpFrom} onChange={(e) => setSmtpFrom(e.target.value)} />
+              </div>
+              <div className="mb-3">
+                <label className="form-label">To (comma separated)</label>
+                <input required className="form-control" value={smtpTo} onChange={(e) => setSmtpTo(e.target.value)} />
+              </div>
+              <div className="mb-3">
+                <label className="form-label">Username</label>
+                <input className="form-control" value={smtpUser} onChange={(e) => setSmtpUser(e.target.value)} />
+              </div>
+              <div className="mb-3">
+                <label className="form-label">Password</label>
+                <input type="password" className="form-control" value={smtpPassword} onChange={(e) => setSmtpPassword(e.target.value)} />
+              </div>
+            </>
           ) : (
-            <div className="space-y-3">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-zinc-400 block mb-1">SMTP HOST</label>
-                  <input
-                    type="text"
-                    value={smtpHost}
-                    onChange={(e) => setSmtpHost(e.target.value)}
-                    placeholder="smtp.mailgun.org"
-                    className="w-full rounded-xl border border-zinc-800 bg-zinc-950/80 px-3 py-2 text-zinc-100 outline-none focus:border-sky-500"
-                  />
-                </div>
-                <div>
-                  <label className="text-zinc-400 block mb-1">SMTP PORT</label>
-                  <input
-                    type="number"
-                    value={smtpPort}
-                    onChange={(e) => setSmtpPort(Number(e.target.value))}
-                    className="w-full rounded-xl border border-zinc-800 bg-zinc-950/80 px-3 py-2 text-zinc-100 outline-none focus:border-sky-500"
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-zinc-400 block mb-1">FROM EMAIL</label>
-                  <input
-                    type="email"
-                    value={smtpFrom}
-                    onChange={(e) => setSmtpFrom(e.target.value)}
-                    placeholder="alerts@defentrax.org"
-                    className="w-full rounded-xl border border-zinc-800 bg-zinc-950/80 px-3 py-2 text-zinc-100 outline-none focus:border-sky-500"
-                  />
-                </div>
-                <div>
-                  <label className="text-zinc-400 block mb-1">RECIPIENTS (CSV)</label>
-                  <input
-                    type="text"
-                    value={smtpTo}
-                    onChange={(e) => setSmtpTo(e.target.value)}
-                    placeholder="soc@company.com, admin@company.com"
-                    className="w-full rounded-xl border border-zinc-800 bg-zinc-950/80 px-3 py-2 text-zinc-100 outline-none focus:border-sky-500"
-                  />
-                </div>
-              </div>
+            <div className="mb-3">
+              <label className="form-label">Webhook URL</label>
+              <input required className="form-control" value={webhookUrl} onChange={(e) => setWebhookUrl(e.target.value)} />
             </div>
           )}
+          {chError ? <div className="alert alert-danger">{chError}</div> : null}
+          <div className="text-end">
+            <button type="submit" className="btn btn-primary" disabled={chSaving}>
+              {chSaving ? "Saving…" : "Create channel"}
+            </button>
+          </div>
         </form>
       </Modal>
 
-      {/* Create Rule Modal */}
-      <Modal
-        isOpen={createRuleOpen}
-        onClose={() => setCreateRuleOpen(false)}
-        title="Create Incident Routing Rule"
-        subtitle="Filter severity and dispatch to selected destinations"
-        maxWidth="max-w-2xl"
-        footer={
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setCreateRuleOpen(false)}
-              className="rounded-lg border border-zinc-700 bg-zinc-900 px-3.5 py-1.5 font-mono text-xs text-zinc-300 hover:text-white"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              disabled={ruleSaving || !ruleName.trim() || channelIds.length === 0}
-              onClick={onCreateRule}
-              className="rounded-lg bg-sky-500 px-4 py-1.5 font-mono text-xs font-semibold text-black hover:bg-sky-400 disabled:opacity-50 shadow-[0_0_12px_rgba(0,163,255,0.4)]"
-            >
-              {ruleSaving ? "Saving..." : "Create Rule"}
-            </button>
+      <Modal isOpen={createRuleOpen} onClose={() => setCreateRuleOpen(false)} title="Create routing rule">
+        <form onSubmit={(e) => void onCreateRule(e)}>
+          <div className="mb-3">
+            <label className="form-label">Name</label>
+            <input required className="form-control" value={ruleName} onChange={(e) => setRuleName(e.target.value)} />
           </div>
-        }
-      >
-        <form onSubmit={onCreateRule} className="space-y-4 font-mono text-xs">
-          {ruleError && (
-            <div className="rounded-lg border border-rose-500/40 bg-rose-950/30 p-3 text-rose-300">
-              {ruleError}
-            </div>
-          )}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="text-zinc-400 block mb-1">RULE NAME</label>
-              <input
-                type="text"
-                value={ruleName}
-                onChange={(e) => setRuleName(e.target.value)}
-                placeholder="Critical Incidents Relay"
-                required
-                className="w-full rounded-xl border border-zinc-800 bg-zinc-950/80 px-3 py-2 text-zinc-100 outline-none focus:border-sky-500"
-              />
-            </div>
-            <div>
-              <label className="text-zinc-400 block mb-1">MINIMUM SEVERITY</label>
-              <select
-                value={minSeverity}
-                onChange={(e) => setMinSeverity(e.target.value)}
-                className="w-full rounded-xl border border-zinc-800 bg-zinc-950/80 px-3 py-2 text-zinc-100 outline-none focus:border-sky-500 uppercase"
-              >
-                {SEVERITIES.map((s) => (
-                  <option key={s} value={s}>{s.toUpperCase()}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div>
-            <label className="text-zinc-400 block mb-2">EVENT TRIGGERS</label>
-            <div className="flex flex-wrap gap-2">
-              {TRIGGERS.map((t) => (
-                <CyberCheckbox
-                  key={t.id}
-                  variant="pill"
-                  label={t.label}
-                  checked={triggers.includes(t.id)}
-                  onChange={() => toggleTrigger(t.id)}
-                />
+          <div className="mb-3">
+            <label className="form-label">Minimum severity</label>
+            <select className="form-select" value={minSeverity} onChange={(e) => setMinSeverity(e.target.value)}>
+              {SEVERITIES.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
               ))}
-            </div>
+            </select>
           </div>
-
-          <div>
-            <label className="text-zinc-400 block mb-2">TARGET NOTIFICATION CHANNELS</label>
+          <div className="mb-3">
+            <label className="form-label d-block">Triggers</label>
+            {TRIGGERS.map((t) => (
+              <CyberCheckbox key={t.id} variant="pill" label={t.label} checked={triggers.includes(t.id)} onChange={() => toggleTrigger(t.id)} />
+            ))}
+          </div>
+          <div className="mb-3">
+            <label className="form-label d-block">Channels</label>
             {channels.length === 0 ? (
-              <p className="text-zinc-500 text-xs">No channels available. Create a channel first.</p>
+              <p className="text-muted">Create a channel first.</p>
             ) : (
-              <div className="flex flex-wrap gap-2">
-                {channels.map((ch) => (
-                  <CyberCheckbox
-                    key={ch.id}
-                    variant="pill"
-                    label={`${ch.name} (${ch.channel_type})`}
-                    checked={channelIds.includes(ch.id)}
-                    onChange={() => toggleChannelId(ch.id)}
-                  />
-                ))}
-              </div>
+              channels.map((ch) => (
+                <CyberCheckbox
+                  key={ch.id}
+                  variant="pill"
+                  label={`${ch.name} (${ch.channel_type})`}
+                  checked={channelIds.includes(ch.id)}
+                  onChange={() => toggleChannelId(ch.id)}
+                />
+              ))
             )}
           </div>
+          {ruleError ? <div className="alert alert-danger">{ruleError}</div> : null}
+          <div className="text-end">
+            <button type="submit" className="btn btn-primary" disabled={ruleSaving}>
+              {ruleSaving ? "Saving…" : "Create rule"}
+            </button>
+          </div>
         </form>
       </Modal>
-    </div>
+    </>
   );
 }

@@ -7,14 +7,8 @@ import { LoadingBlock } from "@/components/ui/loading-block";
 import { SeverityBadge } from "@/components/ui/severity-badge";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Modal } from "@/components/ui/modal";
-import { SearchIcon, FilterIcon, CopyIcon } from "@/components/ui/icons";
-import {
-  alertActionLabel,
-  formatAlertTime,
-  formatAlertTimeShort,
-  isAlertActive,
-  nextAlertStatuses,
-} from "@/lib/alerts";
+import { PageHeader } from "@/components/ui/page-header";
+import { alertActionLabel, formatAlertTime, formatAlertTimeShort, isAlertActive, nextAlertStatuses } from "@/lib/alerts";
 import { apiFetch, ApiRequestError } from "@/lib/api/client";
 import { copyText } from "@/lib/clipboard";
 import { useAuth } from "@/context/auth-context";
@@ -48,12 +42,8 @@ export default function AlertsPage() {
     try {
       const params = new URLSearchParams({ limit: "100" });
       if (selectedStatus !== "ALL") params.set("status", selectedStatus);
-      if (selectedSeverity !== "ALL") {
-        params.set("severity", selectedSeverity.toLowerCase());
-      }
-      const res = await apiFetch<{ alerts: Alert[]; total: number }>(
-        `/alerts?${params}`,
-      );
+      if (selectedSeverity !== "ALL") params.set("severity", selectedSeverity.toLowerCase());
+      const res = await apiFetch<{ alerts: Alert[]; total: number }>(`/alerts?${params}`);
       setAlerts(res.alerts || []);
       setTotal(res.total ?? (res.alerts || []).length);
       setError(null);
@@ -105,99 +95,72 @@ export default function AlertsPage() {
         setInspectAlert(res.alert);
       }
     } catch (e) {
-      setActionError(
-        e instanceof ApiRequestError
-          ? e.message
-          : e instanceof Error
-            ? e.message
-            : "Failed to update alert",
-      );
+      setActionError(e instanceof ApiRequestError ? e.message : e instanceof Error ? e.message : "Failed to update alert");
     } finally {
       setActionBusy(null);
     }
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="font-display text-2xl font-bold tracking-tight text-white flex flex-wrap items-center gap-2">
-            Alerts
-            <span className="rounded-md border border-sky-500/30 bg-sky-950/40 px-2.5 py-0.5 font-mono text-xs text-sky-400">
-              {activeCount} active
-            </span>
-            <span className="rounded-md border border-zinc-700 bg-zinc-900/60 px-2.5 py-0.5 font-mono text-xs text-zinc-400">
-              {total} total
-            </span>
-          </h1>
-          <p className="mt-1 font-mono text-xs text-zinc-400">
-            Detection matches across enrolled servers — acknowledge, investigate, or resolve
-          </p>
-        </div>
-      </div>
-
-      <div className="flex flex-col gap-3 rounded-xl border border-zinc-800/80 bg-zinc-950/50 p-4 md:flex-row md:items-center md:justify-between">
-        <div className="relative flex-1">
-          <SearchIcon className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Filter by title, rule, server, or source IP…"
-            className="w-full rounded-lg border border-zinc-800 bg-zinc-950/70 py-2.5 pl-10 pr-4 font-mono text-xs text-zinc-200 placeholder-zinc-500 outline-none transition focus:border-sky-500 focus:ring-1 focus:ring-sky-500/40"
-          />
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex flex-wrap items-center gap-1 rounded-lg border border-zinc-800 bg-zinc-950/50 p-1">
-            {STATUS_FILTERS.map((st) => (
-              <button
-                key={st}
-                type="button"
-                onClick={() => setSelectedStatus(st)}
-                className={`rounded-md px-2.5 py-1 font-mono text-[11px] font-semibold transition ${
-                  selectedStatus === st
-                    ? "bg-sky-500 text-black"
-                    : "text-zinc-400 hover:text-white"
-                }`}
-              >
-                {st === "ACKNOWLEDGED" ? "ACK" : st === "INVESTIGATING" ? "INV" : st}
-              </button>
-            ))}
+    <>
+      <PageHeader
+        title="Alerts"
+        subtitle="Detection matches across enrolled servers — acknowledge, investigate, or resolve"
+        actions={
+          <div className="d-flex gap-2">
+            <span className="badge bg-primary-subtle text-primary">{activeCount} active</span>
+            <span className="badge bg-secondary-subtle text-secondary">{total} total</span>
           </div>
+        }
+      />
 
-          <div className="flex flex-wrap items-center gap-1 rounded-lg border border-zinc-800 bg-zinc-950/50 p-1">
-            <FilterIcon className="ml-1 h-3.5 w-3.5 text-zinc-500" />
-            {SEVERITY_FILTERS.map((sev) => (
-              <button
-                key={sev}
-                type="button"
-                onClick={() => setSelectedSeverity(sev)}
-                className={`rounded-md px-2 py-0.5 font-mono text-[10px] font-semibold transition ${
-                  selectedSeverity === sev
-                    ? "border border-sky-500/40 bg-zinc-800 text-sky-400"
-                    : "text-zinc-400 hover:text-white"
-                }`}
-              >
-                {sev}
-              </button>
-            ))}
+      <div className="card">
+        <div className="card-body">
+          <div className="row g-3">
+            <div className="col-lg-4">
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Filter by title, rule, server, or source IP…"
+                className="form-control"
+              />
+            </div>
+            <div className="col-lg-8">
+              <div className="d-flex flex-wrap gap-2">
+                {STATUS_FILTERS.map((st) => (
+                  <button
+                    key={st}
+                    type="button"
+                    onClick={() => setSelectedStatus(st)}
+                    className={`btn btn-sm ${selectedStatus === st ? "btn-primary" : "btn-light"}`}
+                  >
+                    {st === "ACKNOWLEDGED" ? "ACK" : st === "INVESTIGATING" ? "INV" : st}
+                  </button>
+                ))}
+                <span className="vr mx-1" />
+                {SEVERITY_FILTERS.map((sev) => (
+                  <button
+                    key={sev}
+                    type="button"
+                    onClick={() => setSelectedSeverity(sev)}
+                    className={`btn btn-sm ${selectedSeverity === sev ? "btn-soft-primary" : "btn-light"}`}
+                  >
+                    {sev}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      {actionError ? (
-        <div className="rounded-xl border border-rose-500/30 bg-rose-950/20 p-3 font-mono text-xs text-rose-300">
-          {actionError}
-        </div>
-      ) : null}
+      {actionError ? <div className="alert alert-danger">{actionError}</div> : null}
 
       {loading ? (
         <LoadingBlock label="Loading alerts…" />
       ) : error ? (
-        <div className="rounded-xl border border-rose-500/30 bg-rose-950/20 p-4 font-mono text-xs text-rose-300">
-          {error}
-        </div>
+        <div className="alert alert-danger">{error}</div>
       ) : filteredAlerts.length === 0 ? (
         <EmptyState
           title={alerts.length === 0 ? "No alerts yet" : "No alerts match"}
@@ -210,12 +173,12 @@ export default function AlertsPage() {
             selectedStatus !== "ALL" || selectedSeverity !== "ALL" || search ? (
               <button
                 type="button"
+                className="btn btn-light"
                 onClick={() => {
                   setSelectedStatus("ALL");
                   setSelectedSeverity("ALL");
                   setSearch("");
                 }}
-                className="rounded-lg border border-zinc-700 px-3 py-1.5 text-xs text-zinc-300 hover:border-zinc-500 hover:text-white"
               >
                 Clear filters
               </button>
@@ -223,120 +186,98 @@ export default function AlertsPage() {
           }
         />
       ) : (
-        <div className="overflow-hidden rounded-xl border border-zinc-800/80 bg-zinc-950/40">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left font-mono text-xs">
-              <thead className="border-b border-zinc-800/80 bg-zinc-950/60 text-[11px] uppercase tracking-wider text-zinc-400">
-                <tr>
-                  <th className="px-4 py-3">Severity</th>
-                  <th className="px-4 py-3">Title</th>
-                  <th className="px-4 py-3">Status</th>
-                  <th className="px-4 py-3">Server</th>
-                  <th className="px-4 py-3">Hits</th>
-                  <th className="px-4 py-3">First / Last</th>
-                  <th className="px-4 py-3 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-zinc-800/50">
-                {filteredAlerts.map((alert) => {
-                  const quick = nextAlertStatuses(alert.status);
-                  const resolveTarget = quick.includes("RESOLVED")
-                    ? "RESOLVED"
-                    : quick.includes("OPEN")
-                      ? "OPEN"
-                      : null;
-                  return (
-                    <tr key={alert.id} className="transition-colors hover:bg-sky-950/15">
-                      <td className="px-4 py-3 whitespace-nowrap">
-                        <SeverityBadge severity={alert.severity} />
-                      </td>
-                      <td className="px-4 py-3 min-w-[14rem]">
-                        <div className="font-semibold text-white">{alert.title}</div>
-                        <div className="mt-0.5 max-w-md truncate text-[11px] text-zinc-400">
-                          {alert.description}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap">
-                        <StatusBadge status={alert.status} />
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap">
-                        {canServer ? (
-                          <Link
-                            href={`/servers/${alert.server_id}`}
-                            className="text-sky-400 hover:text-sky-300"
-                            title={alert.server_id}
-                          >
-                            {alert.server_id.slice(0, 8)}…
-                          </Link>
-                        ) : (
-                          <span className="text-zinc-400" title={alert.server_id}>
-                            {alert.server_id.slice(0, 8)}…
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-zinc-300">
-                        {alert.event_count || 1}
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-[11px] text-zinc-400">
-                        <div>{formatAlertTimeShort(alert.first_seen_at)}</div>
-                        <div className="text-zinc-500">
-                          {formatAlertTimeShort(alert.last_seen_at)}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-right whitespace-nowrap">
-                        <div className="inline-flex flex-wrap items-center justify-end gap-1.5">
+        <div className="card">
+          <div className="card-body">
+            <div className="table-responsive">
+              <table className="table table-hover align-middle mb-0">
+                <thead className="table-light">
+                  <tr>
+                    <th>Severity</th>
+                    <th>Title</th>
+                    <th>Status</th>
+                    <th>Server</th>
+                    <th>Hits</th>
+                    <th>First / Last</th>
+                    <th className="text-end">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredAlerts.map((alert) => {
+                    const quick = nextAlertStatuses(alert.status);
+                    const resolveTarget = quick.includes("RESOLVED") ? "RESOLVED" : quick.includes("OPEN") ? "OPEN" : null;
+                    return (
+                      <tr key={alert.id}>
+                        <td>
+                          <SeverityBadge severity={alert.severity} />
+                        </td>
+                        <td>
+                          <div className="fw-medium">{alert.title}</div>
+                          <div className="text-muted text-truncate" style={{ maxWidth: 360 }}>
+                            {alert.description}
+                          </div>
+                        </td>
+                        <td>
+                          <StatusBadge status={alert.status} />
+                        </td>
+                        <td>
+                          {canServer ? (
+                            <Link href={`/servers/${alert.server_id}`} title={alert.server_id}>
+                              {alert.server_id.slice(0, 8)}…
+                            </Link>
+                          ) : (
+                            <span title={alert.server_id}>{alert.server_id.slice(0, 8)}…</span>
+                          )}
+                        </td>
+                        <td>{alert.event_count || 1}</td>
+                        <td className="text-muted fs-12">
+                          <div>{formatAlertTimeShort(alert.first_seen_at)}</div>
+                          <div>{formatAlertTimeShort(alert.last_seen_at)}</div>
+                        </td>
+                        <td className="text-end">
                           {canWrite && resolveTarget ? (
                             <button
                               type="button"
                               disabled={actionBusy === alert.id}
                               onClick={() => void patchAlert(alert, resolveTarget)}
-                              className="rounded-md border border-emerald-500/30 bg-emerald-950/30 px-2.5 py-1 text-[11px] font-semibold text-emerald-300 transition hover:bg-emerald-500/20 disabled:opacity-50"
+                              className="btn btn-sm btn-success me-1"
                             >
-                              {actionBusy === alert.id
-                                ? "…"
-                                : alertActionLabel(resolveTarget)}
+                              {actionBusy === alert.id ? "…" : alertActionLabel(resolveTarget)}
                             </button>
                           ) : null}
                           <button
                             type="button"
+                            className="btn btn-sm btn-light me-1"
                             onClick={() => {
                               setInspectAlert(alert);
                               setModalTab("overview");
                             }}
-                            className="rounded-md border border-sky-500/30 bg-sky-950/40 px-2.5 py-1 text-[11px] font-semibold text-sky-400 transition hover:bg-sky-500 hover:text-black"
                           >
                             Inspect
                           </button>
-                          <Link
-                            href={`/alerts/${alert.id}`}
-                            className="rounded-md border border-zinc-700 bg-zinc-900/80 px-2.5 py-1 text-[11px] text-zinc-300 transition hover:border-zinc-500 hover:text-white"
-                          >
+                          <Link href={`/alerts/${alert.id}`} className="btn btn-sm btn-primary">
                             Details
                           </Link>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}
 
-      {inspectAlert ? (
-        <Modal
-          isOpen={true}
-          onClose={() => setInspectAlert(null)}
-          title={inspectAlert.title}
-          subtitle={`Server ${inspectAlert.server_id.slice(0, 8)}… · Rule ${inspectAlert.rule_id || "—"}`}
-          maxWidth="max-w-3xl"
-          footer={
-            <div className="flex w-full flex-wrap items-center justify-between gap-2">
-              <span className="font-mono text-[11px] text-zinc-500">
-                Opened {formatAlertTime(inspectAlert.opened_at)}
-              </span>
-              <div className="flex flex-wrap items-center gap-2">
+      <Modal
+        isOpen={!!inspectAlert}
+        onClose={() => setInspectAlert(null)}
+        title={inspectAlert?.title || "Alert"}
+        subtitle={inspectAlert ? `Server ${inspectAlert.server_id.slice(0, 8)}… · Rule ${inspectAlert.rule_id || "—"}` : undefined}
+        footer={
+          inspectAlert ? (
+            <div className="d-flex flex-wrap justify-content-between w-100 gap-2">
+              <span className="text-muted">Opened {formatAlertTime(inspectAlert.opened_at)}</span>
+              <div className="d-flex flex-wrap gap-2">
                 {canWrite
                   ? nextAlertStatuses(inspectAlert.status).map((s) => (
                       <button
@@ -344,162 +285,106 @@ export default function AlertsPage() {
                         type="button"
                         disabled={actionBusy === inspectAlert.id}
                         onClick={() => void patchAlert(inspectAlert, s)}
-                        className={
-                          s === "RESOLVED" || s === "OPEN"
-                            ? "rounded-lg bg-brand-500 px-3 py-1.5 font-mono text-xs font-semibold text-black hover:bg-brand-400 disabled:opacity-50"
-                            : "rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-1.5 font-mono text-xs text-zinc-300 hover:border-zinc-500 disabled:opacity-50"
-                        }
+                        className={s === "RESOLVED" || s === "OPEN" ? "btn btn-primary btn-sm" : "btn btn-light btn-sm"}
                       >
                         {alertActionLabel(s)}
                       </button>
                     ))
                   : null}
-                <button
-                  type="button"
-                  onClick={() =>
-                    void handleCopy(JSON.stringify(inspectAlert, null, 2))
-                  }
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-1.5 font-mono text-xs text-zinc-300 transition hover:border-sky-500 hover:text-white"
-                >
-                  <CopyIcon className="h-3.5 w-3.5 text-sky-400" />
+                <button type="button" className="btn btn-light btn-sm" onClick={() => void handleCopy(JSON.stringify(inspectAlert, null, 2))}>
                   {copied ? "Copied" : "Copy JSON"}
                 </button>
-                <Link
-                  href={`/alerts/${inspectAlert.id}`}
-                  className="rounded-lg bg-sky-500 px-4 py-1.5 font-mono text-xs font-semibold text-black transition hover:bg-sky-400"
-                >
+                <Link href={`/alerts/${inspectAlert.id}`} className="btn btn-primary btn-sm">
                   Open detail
                 </Link>
               </div>
             </div>
-          }
-        >
-          <div className="space-y-4">
-            <div className="flex items-center gap-1 rounded-lg border border-zinc-800 bg-zinc-950/70 p-1">
-              {[
-                { id: "overview" as const, label: "Overview" },
-                { id: "raw" as const, label: "Raw JSON" },
-                { id: "remediation" as const, label: "Response" },
-              ].map((tab) => (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => setModalTab(tab.id)}
-                  className={`flex-1 rounded-md py-1.5 text-center font-mono text-xs font-semibold transition ${
-                    modalTab === tab.id
-                      ? "bg-sky-500 text-black"
-                      : "text-zinc-400 hover:bg-zinc-900/60 hover:text-zinc-200"
-                  }`}
-                >
-                  {tab.label}
-                </button>
+          ) : null
+        }
+      >
+        {inspectAlert ? (
+          <>
+            <ul className="nav nav-tabs nav-tabs-custom mb-3">
+              {(
+                [
+                  ["overview", "Overview"],
+                  ["raw", "Raw JSON"],
+                  ["remediation", "Response"],
+                ] as const
+              ).map(([id, label]) => (
+                <li className="nav-item" key={id}>
+                  <button type="button" className={`nav-link ${modalTab === id ? "active" : ""}`} onClick={() => setModalTab(id)}>
+                    {label}
+                  </button>
+                </li>
               ))}
-            </div>
-
-            {modalTab === "overview" && (
-              <div className="space-y-4 font-mono text-xs">
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                  <Stat label="Severity">
-                    <SeverityBadge severity={inspectAlert.severity} />
-                  </Stat>
-                  <Stat label="Status">
-                    <StatusBadge status={inspectAlert.status} />
-                  </Stat>
-                  <Stat label="Hits">
-                    <span className="font-display text-lg font-bold text-sky-400">
-                      {inspectAlert.event_count || 1}
-                    </span>
-                  </Stat>
-                  <Stat label="Rule">
-                    <span className="truncate text-white">
-                      {inspectAlert.rule_id || "—"}
-                    </span>
-                  </Stat>
+            </ul>
+            {modalTab === "overview" ? (
+              <div className="row g-3">
+                <Stat label="Severity">
+                  <SeverityBadge severity={inspectAlert.severity} />
+                </Stat>
+                <Stat label="Status">
+                  <StatusBadge status={inspectAlert.status} />
+                </Stat>
+                <Stat label="Hits">
+                  <span className="fs-16">{inspectAlert.event_count || 1}</span>
+                </Stat>
+                <Stat label="Rule">
+                  <span>{inspectAlert.rule_id || "—"}</span>
+                </Stat>
+                <div className="col-12">
+                  <p className="text-muted mb-1">Summary</p>
+                  <p className="mb-0">{inspectAlert.description || "No description."}</p>
                 </div>
-
-                <div className="rounded-lg border border-zinc-800/80 bg-zinc-950/60 p-4">
-                  <span className="mb-1 block text-[10px] uppercase text-zinc-500">
-                    Summary
-                  </span>
-                  <p className="font-sans text-sm leading-relaxed text-zinc-200">
-                    {inspectAlert.description || "No description."}
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <Stat label="Server">
-                    {canServer ? (
-                      <Link
-                        href={`/servers/${inspectAlert.server_id}`}
-                        className="break-all text-[11px] text-sky-400 hover:text-sky-300"
-                      >
-                        {inspectAlert.server_id}
-                      </Link>
-                    ) : (
-                      <span className="break-all text-[11px] text-zinc-300">
-                        {inspectAlert.server_id}
-                      </span>
-                    )}
-                  </Stat>
-                  <Stat label="Alert ID">
-                    <span className="break-all text-[11px] text-zinc-300">
-                      {inspectAlert.id}
-                    </span>
-                  </Stat>
-                  <Stat label="First seen">
-                    <span className="text-zinc-300">
-                      {formatAlertTime(inspectAlert.first_seen_at)}
-                    </span>
-                  </Stat>
-                  <Stat label="Last seen">
-                    <span className="text-zinc-300">
-                      {formatAlertTime(inspectAlert.last_seen_at)}
-                    </span>
-                  </Stat>
-                </div>
+                <Stat label="Server">
+                  {canServer ? (
+                    <Link href={`/servers/${inspectAlert.server_id}`} className="text-break">
+                      {inspectAlert.server_id}
+                    </Link>
+                  ) : (
+                    <span className="text-break">{inspectAlert.server_id}</span>
+                  )}
+                </Stat>
+                <Stat label="Alert ID">
+                  <span className="text-break">{inspectAlert.id}</span>
+                </Stat>
+                <Stat label="First seen">{formatAlertTime(inspectAlert.first_seen_at)}</Stat>
+                <Stat label="Last seen">{formatAlertTime(inspectAlert.last_seen_at)}</Stat>
               </div>
-            )}
-
-            {modalTab === "raw" && (
-              <pre className="max-h-80 overflow-auto rounded-lg border border-zinc-800 bg-[#04070d] p-4 font-mono text-xs text-sky-300">
+            ) : null}
+            {modalTab === "raw" ? (
+              <pre className="bg-light p-3 rounded mb-0" style={{ maxHeight: 320, overflow: "auto" }}>
                 {JSON.stringify(inspectAlert, null, 2)}
               </pre>
-            )}
-
-            {modalTab === "remediation" && (
-              <div className="rounded-lg border border-amber-500/30 bg-amber-950/20 p-4 font-mono text-xs">
-                <h5 className="font-semibold text-amber-400">Suggested next steps</h5>
-                <ol className="mt-2 list-decimal space-y-1 pl-4 font-sans text-xs leading-relaxed text-zinc-300">
+            ) : null}
+            {modalTab === "remediation" ? (
+              <div className="alert alert-warning mb-0">
+                <h6>Suggested next steps</h6>
+                <ol className="mb-0">
                   <li>
-                    Review processes and auth activity on server{" "}
-                    <span className="font-mono">{inspectAlert.server_id.slice(0, 8)}…</span>{" "}
-                    around {formatAlertTime(inspectAlert.first_seen_at)}.
+                    Review processes and auth activity on server {inspectAlert.server_id.slice(0, 8)}… around{" "}
+                    {formatAlertTime(inspectAlert.first_seen_at)}.
                   </li>
                   <li>Correlate related events under Events filtered by this host.</li>
-                  <li>
-                    Acknowledge while investigating, then mark resolved with notes when closed.
-                  </li>
+                  <li>Acknowledge while investigating, then mark resolved with notes when closed.</li>
                 </ol>
               </div>
-            )}
-          </div>
-        </Modal>
-      ) : null}
-    </div>
+            ) : null}
+          </>
+        ) : null}
+      </Modal>
+    </>
   );
 }
 
-function Stat({
-  label,
-  children,
-}: {
-  label: string;
-  children: ReactNode;
-}) {
+function Stat({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div className="rounded-lg border border-zinc-800/80 bg-zinc-950/60 p-3">
-      <span className="mb-1 block text-[10px] uppercase text-zinc-500">{label}</span>
-      <div className="mt-1">{children}</div>
+    <div className="col-md-6 col-xl-3">
+      <div className="border rounded p-3 h-100">
+        <span className="text-muted text-uppercase fs-12 d-block mb-1">{label}</span>
+        {children}
+      </div>
     </div>
   );
 }

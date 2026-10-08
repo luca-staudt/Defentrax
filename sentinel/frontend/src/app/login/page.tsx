@@ -1,14 +1,47 @@
 "use client";
 
-import { useState } from "react";
-import Image from "next/image";
+import { FormEvent, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { Alert, Button, Card, CardBody, Col, Container, Form, Input, Label, Row, Spinner } from "reactstrap";
 import { apiFetch, ApiRequestError } from "@/lib/api/client";
 
 type LoginResponse = {
   requires_totp?: boolean;
   login_challenge?: string;
 };
+
+function ParticlesAuth({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="auth-page-wrapper pt-5">
+      <div className="auth-one-bg-position auth-one-bg" id="auth-particles">
+        <div className="bg-overlay"></div>
+        <div className="shape">
+          <svg xmlns="http://www.w3.org/2000/svg" version="1.1" xmlnsXlink="http://www.w3.org/1999/xlink" viewBox="0 0 1440 120">
+            <path d="M 0,36 C 144,53.6 432,123.2 720,124 C 1008,124.8 1296,56.8 1440,40L1440 140L0 140z"></path>
+          </svg>
+        </div>
+        {children}
+      </div>
+      <footer className="footer">
+        <div className="container">
+          <div className="row">
+            <div className="col-lg-12">
+              <div className="text-center">
+                <p className="mb-0 text-muted">
+                  &copy; {new Date().getFullYear()} Defentrax.{" "}
+                  <a href="https://defentrax.de" className="text-muted">
+                    defentrax.de
+                  </a>
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </footer>
+    </div>
+  );
+}
 
 export default function LoginPage() {
   const router = useRouter();
@@ -18,8 +51,9 @@ export default function LoginPage() {
   const [challenge, setChallenge] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [passwordShow, setPasswordShow] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
     setSubmitting(true);
@@ -52,95 +86,108 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center bg-[#030712] p-4">
-      {/* Cyber Background Glow */}
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute -top-40 left-1/2 -translate-x-1/2 h-[500px] w-[800px] rounded-full bg-sky-600/10 blur-[140px]" />
-        <div className="cyber-grid absolute inset-0 opacity-40" />
+    <ParticlesAuth>
+      <div className="auth-page-content mt-lg-5">
+        <Container>
+          <Row>
+            <Col lg={12}>
+              <div className="text-center mt-sm-5 mb-4 text-white-50">
+                <div>
+                  <Link href="/" className="d-inline-block auth-logo">
+                    <img src="/defentrax-logo.png" alt="Defentrax" height={28} width={28} />
+                  </Link>
+                </div>
+                <p className="mt-3 fs-15 fw-medium">Security & Infrastructure Management</p>
+              </div>
+            </Col>
+          </Row>
+
+          <Row className="justify-content-center">
+            <Col md={8} lg={6} xl={5}>
+              <Card className="mt-4 card-bg-fill">
+                <CardBody className="p-4">
+                  <div className="text-center mt-2">
+                    <h5 className="text-primary">Welcome Back !</h5>
+                    <p className="text-muted">Sign in to continue to Defentrax.</p>
+                  </div>
+                  {error ? <Alert color="danger">{error}</Alert> : null}
+                  <div className="p-2 mt-4">
+                    <Form onSubmit={handleSubmit}>
+                      <div className="mb-3">
+                        <Label htmlFor="email" className="form-label">
+                          Email
+                        </Label>
+                        <Input
+                          id="email"
+                          name="email"
+                          className="form-control"
+                          placeholder="Enter email"
+                          type="email"
+                          required
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          disabled={Boolean(challenge)}
+                        />
+                      </div>
+
+                      <div className="mb-3">
+                        <Label className="form-label" htmlFor="password-input">
+                          Password
+                        </Label>
+                        <div className="position-relative auth-pass-inputgroup mb-3">
+                          <Input
+                            name="password"
+                            type={passwordShow ? "text" : "password"}
+                            className="form-control pe-5 password-input"
+                            placeholder="Enter password"
+                            id="password-input"
+                            required
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            disabled={Boolean(challenge)}
+                          />
+                          <button
+                            className="btn btn-link position-absolute end-0 top-0 text-decoration-none text-muted password-addon material-shadow-none"
+                            type="button"
+                            id="password-addon"
+                            onClick={() => setPasswordShow(!passwordShow)}
+                          >
+                            <i className="ri-eye-fill align-middle"></i>
+                          </button>
+                        </div>
+                      </div>
+
+                      {challenge ? (
+                        <div className="mb-3">
+                          <Label htmlFor="totp" className="form-label">
+                            Authenticator code
+                          </Label>
+                          <Input
+                            id="totp"
+                            inputMode="numeric"
+                            autoComplete="one-time-code"
+                            required
+                            value={totp}
+                            onChange={(e) => setTotp(e.target.value)}
+                            placeholder="123456"
+                          />
+                        </div>
+                      ) : null}
+
+                      <div className="mt-4">
+                        <Button color="success" className="w-100" type="submit" disabled={submitting}>
+                          {submitting ? <Spinner size="sm" className="me-2" /> : null}
+                          {challenge ? "Verify code" : "Sign In"}
+                        </Button>
+                      </div>
+                    </Form>
+                  </div>
+                </CardBody>
+              </Card>
+            </Col>
+          </Row>
+        </Container>
       </div>
-
-      <div className="relative w-full max-w-md overflow-hidden rounded-3xl border border-sky-500/20 bg-[#070b14]/90 p-8 shadow-2xl shadow-sky-950/60 backdrop-blur-2xl">
-        {/* Header with Logo */}
-        <div className="text-center">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-sky-500/40 bg-sky-950/60 p-2.5 shadow-xl shadow-sky-500/10">
-            <Image src="/defentrax-logo.png" alt="Defentrax" width={44} height={44} priority className="object-contain" />
-          </div>
-          <h1 className="font-display text-2xl font-bold tracking-widest text-white">DEFENTRAX</h1>
-          <p className="mt-1 font-mono text-[11px] tracking-[0.15em] text-sky-400 uppercase">
-            Security & Infrastructure Management
-          </p>
-          <div className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-sky-500/20 bg-sky-950/30 px-3 py-0.5 text-[10px] font-mono text-zinc-400">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-            OPERATOR AUTHENTICATION GATEWAY
-          </div>
-        </div>
-
-        {error ? (
-          <div className="mt-6 rounded-xl border border-rose-500/40 bg-rose-950/30 p-3 text-center text-xs font-mono text-rose-300">
-            {error}
-          </div>
-        ) : null}
-
-        <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-          <div>
-            <label className="block font-mono text-xs text-zinc-400 uppercase">Operator Email</label>
-            <input
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="operator@defentrax.internal"
-              className="mt-1.5 w-full rounded-xl border border-zinc-800 bg-zinc-900/60 px-4 py-2.5 text-sm text-white placeholder-zinc-600 transition focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
-            />
-          </div>
-
-          <div>
-            <label className="block font-mono text-xs text-zinc-400 uppercase">Access Key / Password</label>
-            <input
-              type="password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••••••"
-              disabled={Boolean(challenge)}
-              className="mt-1.5 w-full rounded-xl border border-zinc-800 bg-zinc-900/60 px-4 py-2.5 text-sm text-white placeholder-zinc-600 transition focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500 disabled:opacity-60"
-            />
-          </div>
-
-          {challenge ? (
-            <div>
-              <label className="block font-mono text-xs text-zinc-400 uppercase">Authenticator code</label>
-              <input
-                inputMode="numeric"
-                autoComplete="one-time-code"
-                required
-                value={totp}
-                onChange={(e) => setTotp(e.target.value)}
-                placeholder="123456"
-                className="mt-1.5 w-full rounded-xl border border-zinc-800 bg-zinc-900/60 px-4 py-2.5 text-sm text-white placeholder-zinc-600 transition focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
-              />
-            </div>
-          ) : null}
-
-          <button
-            type="submit"
-            disabled={submitting}
-            className="mt-2 w-full rounded-xl border border-sky-400/40 bg-gradient-to-r from-sky-500 to-sky-600 py-2.5 text-sm font-semibold text-white shadow-lg shadow-sky-500/25 transition hover:brightness-110 disabled:opacity-50"
-          >
-            {submitting
-              ? "Authenticating Session..."
-              : challenge
-                ? "Verify code"
-                : "Authorize Operator Access"}
-          </button>
-        </form>
-
-        <div className="mt-6 border-t border-zinc-800/60 pt-4 text-center">
-          <p className="font-mono text-[10px] text-zinc-500">
-            SECURED TELEMETRY ENCLAVE · DEFENTRAX CORE
-          </p>
-        </div>
-      </div>
-    </div>
+    </ParticlesAuth>
   );
 }
