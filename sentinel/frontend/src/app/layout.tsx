@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "../assets/scss/themes.scss";
+import { LocaleProvider } from "@/lib/i18n";
 
 export const metadata: Metadata = {
   title: "Defentrax",
@@ -28,7 +29,9 @@ export default function RootLayout({
       data-theme="default"
       data-theme-colors="default"
     >
-      <body suppressHydrationWarning>{children}</body>
+      <body suppressHydrationWarning>
+        <LocaleProvider>{children}</LocaleProvider>
+      </body>
     </html>
   );
 }
