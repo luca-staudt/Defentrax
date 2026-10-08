@@ -47,6 +47,36 @@ html[data-theme="default"][data-bs-theme="light"] {
   }
 }
 
+.dx-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+// Bootstrap's .d-flex is !important and was keeping the full wordmark
+// visible after the sidebar collapsed into the icon rail.
+html[data-sidebar-size="sm"],
+html[data-sidebar-size="sm-hover"] {
+  .app-menu {
+    .logo-lg {
+      display: none !important;
+    }
+
+    .logo-sm {
+      display: inline-block !important;
+    }
+
+    .navbar-brand-box {
+      overflow: hidden;
+      text-align: center;
+    }
+
+    .sidebar-user .text-start {
+      display: none !important;
+    }
+  }
+}
+
 #page-topbar .app-search .form-control {
   border-radius: 999px;
 }

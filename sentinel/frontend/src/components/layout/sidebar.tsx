@@ -76,7 +76,7 @@ export function Sidebar() {
             <span className="logo-sm">
               <img src="/defentrax-logo.png" alt="Defentrax" height={22} width={22} />
             </span>
-            <span className="logo-lg d-flex align-items-center gap-2">
+            <span className="logo-lg dx-brand">
               <img src="/defentrax-logo.png" alt="" height={22} width={22} />
               <span className="fs-15 fw-semibold">DEFENTRAX</span>
             </span>
