@@ -25,7 +25,7 @@ export const PANEL_PAGES: PanelPage[] = [
   { action: "rules", label: "Rules", href: "/rules", nav: true },
   { action: "notifications", label: "Notifications", href: "/notifications", nav: true },
   { action: "team", label: "Team", href: "/users", nav: true },
-  { action: "roles", label: "Roles", href: "/roles", nav: true },
+  { action: "roles", label: "Access", href: "/roles", nav: true },
   { action: "audit", label: "Audit logs", href: "/audit", nav: true },
 ];
 

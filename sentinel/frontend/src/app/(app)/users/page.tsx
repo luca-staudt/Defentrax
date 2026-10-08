@@ -5,7 +5,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { LoadingBlock } from "@/components/ui/loading-block";
 import { Modal } from "@/components/ui/modal";
 import { PageHeader } from "@/components/ui/page-header";
-import { CyberCheckbox } from "@/components/ui/cyber-checkbox";
+import { RoleAssignList } from "@/components/access/role-assign";
 import { apiFetch, ApiRequestError } from "@/lib/api/client";
 import { useQuery } from "@/lib/panel/use-query";
 import { hasPermission, roleDisplayName } from "@/lib/permissions";
@@ -36,23 +36,26 @@ export default function TeamUsersPage() {
     refreshMs: 20000,
   });
   const rolesQuery = useQuery("roles", async () => (await apiFetch<{ roles: Role[] }>("/roles")).roles || []);
+  const roleCatalog = rolesQuery.data ?? [];
   const users = usersQuery.data ?? [];
-  const roles = rolesQuery.data ?? [];
+  const roles = roleCatalog;
   const loading = usersQuery.loading;
   const loadError = usersQuery.error;
   const load = useCallback(async () => {
     await Promise.all([usersQuery.reload(), rolesQuery.reload()]);
   }, [usersQuery, rolesQuery]);
 
-  const roleOptions = roles.length > 0 ? roles.map((r) => r.name) : ["ADMIN", "ANALYST", "OPERATOR", "VIEWER"];
-
-  function toggleRole(list: string[], name: string, setList: (v: string[]) => void) {
-    if (list.includes(name)) {
-      if (list.length > 1) setList(list.filter((x) => x !== name));
-    } else {
-      setList([...list, name]);
-    }
-  }
+  const roleOptions = roles.length > 0 ? roles.map((r) => r.name) : ["ADMIN", "SECURITY_ANALYST", "OPERATOR", "VIEWER"];
+  const assignableRoles: Role[] =
+    roleCatalog.length > 0
+      ? roleCatalog
+      : roleOptions.map((name) => ({
+          id: name,
+          name,
+          description: "",
+          is_system: true,
+          created_at: "",
+        }));
 
   async function openDetail(u: User) {
     setSelected(u);
@@ -333,15 +336,7 @@ export default function TeamUsersPage() {
           </div>
           <div className="mb-3">
             <label className="form-label d-block">Roles</label>
-            {roleOptions.map((name) => (
-              <CyberCheckbox
-                key={name}
-                variant="pill"
-                label={roleDisplayName(name)}
-                checked={createRoles.includes(name)}
-                onChange={() => toggleRole(createRoles, name, setCreateRoles)}
-              />
-            ))}
+            <RoleAssignList roles={assignableRoles} selected={createRoles} onChange={setCreateRoles} />
           </div>
           {formError ? <div className="alert alert-danger">{formError}</div> : null}
           <div className="text-end">
@@ -365,16 +360,7 @@ export default function TeamUsersPage() {
             </div>
             <div className="mb-3">
               <label className="form-label d-block">Roles</label>
-              {roleOptions.map((name) => (
-                <CyberCheckbox
-                  key={name}
-                  variant="pill"
-                  disabled={!canWrite || detailBusy}
-                  label={roleDisplayName(name)}
-                  checked={editRoles.includes(name)}
-                  onChange={() => toggleRole(editRoles, name, setEditRoles)}
-                />
-              ))}
+              <RoleAssignList roles={assignableRoles} selected={editRoles} disabled={!canWrite || detailBusy} onChange={setEditRoles} />
             </div>
             <div className="d-flex flex-wrap gap-2 mb-3">
               <button type="button" className="btn btn-primary" disabled={!canWrite || detailBusy} onClick={() => void saveProfile()}>
