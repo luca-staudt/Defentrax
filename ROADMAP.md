@@ -34,18 +34,20 @@ Living plan from the first tagged pre-release **`v0.1.0`** toward a production-r
 | Tag | Theme | What landed |
 |-----|-------|-------------|
 | **v0.2.0** (2026-10-06) | **Operator depth + Defentrax brand** | Team accounts, custom roles, page permissions, audit UI, notification test, custom/editable rules, Defentrax rebrand + UI remake, repo rename |
+| **v0.3.0** (2026-10-08) | **Operator panel** | Velzon panel, shared data cache, access workspace, list/detail pages, dashboard charts, silence windows, silent hosts, saved views, notification delivery log, English/German UI |
 
 ## Release line concept
 
 | Release | Theme | Focus |
 |---------|-------|--------|
 | **v0.1.0** | **Preview foundation** | Self-hostable Compose stack: API, agent enrollment, detection, alerts, operator UI, notifications |
-| **v0.2.0** (current pre-release) | **Operator depth** | Team/RBAC admin, page permissions, audit UI, custom rules, Defentrax brand |
-| **v0.2.x** | **Stabilize** | Bugfixes, install/upgrade polish, clearer operator docs |
-| **v0.3.0** | **Collectors + hardening** | Broader log collectors, automated retention, agent mTLS, cosign/signed images |
+| **v0.2.0** | **Operator depth** | Team/RBAC admin, page permissions, audit UI, custom rules, Defentrax brand |
+| **v0.3.0** (current pre-release) | **Operator panel** | Shared cache, access workspace, list/detail workspaces, Velzon dashboard, silence, saved views, delivery log, EN/DE |
+| **v0.3.x** | **Stabilize** | Bugfixes, install/upgrade polish, clearer operator docs |
+| **v0.4.0** | **Collectors + hardening** | Broader log collectors, automated retention, agent mTLS, cosign/signed images |
 | **v1.0.0** | **Production public** | LICENSE decided, readiness checklist green, stable upgrade path |
 
-## After `v0.2.0` (candidates — not promises)
+## After `v0.3.0` (candidates — not promises)
 
 - Close v1.0 checklist gaps (license, collectors, retention job, mTLS, cosign)
 - Automated retention / purge jobs with operator policy

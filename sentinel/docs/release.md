@@ -1,12 +1,13 @@
 # Release process
 
 How to cut a **tagged** Defentrax release with SBOM, checksums, and notes.
-Current product line: **`0.2.0`** (see root [`VERSION`](../../VERSION)).
+Current product line: **`0.3.0`** (see root [`VERSION`](../../VERSION)).
 
-> **Verdict:** ship **`v0.2.0`** as the second formal pre-release after operator-depth
-> work landed on `main`. Do **not** tag **`v1.0.0`** until the readiness report is
-> honestly green (license, collector coverage, residual security items). Details:
-> project store `docs/v1-readiness.md`.
+> **Verdict:** ship **`v0.3.0`** as the third formal pre-release after the operator
+> panel feature set (shared cache, access workspace, list/detail pages, Velzon
+> dashboard, silence windows, saved views, delivery log, English/German). Do **not**
+> tag **`v1.0.0`** until the readiness report is honestly green (license, collector
+> coverage, residual security items). Details: project store `docs/v1-readiness.md`.
 
 ## Versions (single bump)
 
@@ -29,7 +30,7 @@ make release-check
 Optional link-time override for binaries:
 
 ```text
--X github.com/luca-staudt/Defentrax/sentinel/pkg/version.buildVersion=0.2.0
+-X github.com/luca-staudt/Defentrax/sentinel/pkg/version.buildVersion=0.3.0
 ```
 
 ## Preconditions

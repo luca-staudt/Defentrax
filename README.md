@@ -14,7 +14,7 @@
 
 Defentrax collects security-relevant events from Linux hosts (and optionally Docker), evaluates them with YAML detection rules, and gives operators centralized alerts, investigation workflows, notifications, and an audit trail — all under your control.
 
-**Status:** pre-1.0 (`v0.2.0` line). Second tagged pre-release after operator-depth work (team accounts, Defentrax rebrand). Still **not** an honest `v1.0.0`. There is **no LICENSE file yet** — see [License](#license).
+**Status:** pre-1.0 (`v0.3.0` line). Third tagged pre-release: Velzon operator panel, shared cache, access workspace, silence windows, saved views, and English/German UI. Still **not** an honest `v1.0.0`. There is **no LICENSE file yet** — see [License](#license).
 
 ## Features
 

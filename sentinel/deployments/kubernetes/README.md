@@ -34,7 +34,7 @@ openssl rand -base64 32   # → SESSION_SECRET / TOTP_ENCRYPTION_KEY / SECRETS_E
 
 ```bash
 # aus dem Repo-Root
-export SENTINEL_IMAGE_TAG=0.2.0
+export SENTINEL_IMAGE_TAG=0.3.0
 docker compose build sentinel-api sentinel-frontend migrate
 
 # kind

@@ -7,6 +7,58 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.3.0] — 2026-10-08
+
+Third tagged **pre-release**. Operator-panel feature set on top of `v0.2.0`,
+including the Velzon theme rebuild that landed after that tag. Still **not** a
+finished `v1.0.0` — expect gaps and breaking changes before production-ready.
+
+**SemVer choice:** minor bump (`0.2.0` → `0.3.0`, not `0.2.1`). `v0.2.0` is already
+a published pre-release (tag on `99718fa`, 2026-10-06). This delta
+is a feature set — shared panel cache, access workspace, list/detail pages,
+dashboard charts, silence windows, saved views, delivery history, and
+English/German — not a patch-only line of fixes. The earlier sketch that reserved
+`v0.3.0` for collectors and hardening has not shipped; that work moves to `v0.4.0`.
+
+### Added
+
+- Shared panel data cache so dashboard stats, alerts, events, and the header read one copy, refreshed by a single poll and the alert socket
+- Access workspace: grant pages, view and change rights, and people from one screen; team assignment uses the same role cards
+- List-and-detail operator pages for overview, alerts, events, audit, fleet, rules, dispatch, people, and sign-in
+- Velzon dashboard charts from live stats (open alerts, 24h events, servers, coverage), template header with the notification bell, and a sidebar profile pinned in the rail
+- Silence windows for detection rules and hosts (matching events still arrive; no new alert opens during the window)
+- Silent hosts count beside open alerts (no recent heartbeat or event)
+- Saved alert and event views (named filters, optional default for the queue)
+- Notification delivery log on each channel
+- English / German language select
+
+### Changed
+
+- Operator panel rebuilt on the Velzon theme (layout, styles, and icons) with the existing Defentrax auth, page permissions, and API behavior
+- Sidebar wordmark hides when the rail is collapsed
+- Alert resolve can skip forward states and reopen; the Alerts and Events pages surface the API error
+
+### Upgrade
+
+- Rebuild and restart `sentinel-api` and `sentinel-frontend` (`SENTINEL_IMAGE_TAG=0.3.0`)
+- Migration `00010_silence_and_views.sql` (silence windows and saved views) runs with the API before the new process serves traffic
+
+### Known gaps (unchanged blockers for `v1.0.0`)
+
+- No `LICENSE` file (maintainer decision pending)
+- No dedicated nginx / apache / firewall / full systemd collectors
+- No automated event retention job yet
+- No agent mTLS; cosign image signing not in CI
+- Production HTTPS / cookie hardening still operator-owned
+
+### Forward path
+
+| Tag | Intent |
+|-----|--------|
+| **v0.3.x** | Stabilize this panel line: bugfixes, install/upgrade polish |
+| **v0.4.0** | Broader collectors + automated retention + hardening (mTLS, signed images) |
+| **v1.0.0** | Production-ready public release once LICENSE + readiness checklist are green |
+
 ## [0.2.0] — 2026-10-06
 
 Second tagged **pre-release**. Product rebrand to **Defentrax**, GitHub repo rename,
@@ -110,6 +162,7 @@ rough edges, and breaking changes before a production-ready line.
 
 ---
 
-[Unreleased]: https://github.com/luca-staudt/Defentrax/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/luca-staudt/Defentrax/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/luca-staudt/Defentrax/releases/tag/v0.3.0
 [0.2.0]: https://github.com/luca-staudt/Defentrax/releases/tag/v0.2.0
 [0.1.0]: https://github.com/luca-staudt/Defentrax/releases/tag/v0.1.0
