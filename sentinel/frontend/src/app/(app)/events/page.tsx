@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { EmptyState } from "@/components/ui/empty-state";
 import { LoadingBlock } from "@/components/ui/loading-block";
 import { SeverityBadge } from "@/components/ui/severity-badge";
@@ -11,6 +11,7 @@ import { formatAlertTimeShort } from "@/lib/alerts";
 import { apiFetch } from "@/lib/api/client";
 import { useAuth } from "@/context/auth-context";
 import { canSeePage } from "@/lib/pages";
+import { useQuery } from "@/lib/panel/use-query";
 import type { EventRow } from "@/lib/types";
 
 const SEVERITY_FILTERS = ["", "critical", "high", "medium", "low", "info"] as const;
@@ -19,16 +20,12 @@ export default function EventsPage() {
   const { user } = useAuth();
   const canServer = canSeePage(user, "server_detail");
 
-  const [events, setEvents] = useState<EventRow[]>([]);
-  const [total, setTotal] = useState(0);
   const [offset, setOffset] = useState(0);
   const [q, setQ] = useState("");
   const [qDraft, setQDraft] = useState("");
   const [severity, setSeverity] = useState("");
   const [source, setSource] = useState("");
   const [sourceDraft, setSourceDraft] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [inspect, setInspect] = useState<EventRow | null>(null);
   const [ready, setReady] = useState(false);
   const limit = 40;
@@ -42,9 +39,10 @@ export default function EventsPage() {
     setReady(true);
   }, []);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
+  const eventKey = ready ? `events?q=${q}&severity=${severity}&source=${source}&offset=${offset}` : null;
+  const eventsQuery = useQuery(
+    eventKey,
+    () => {
       const params = new URLSearchParams({
         limit: String(limit),
         offset: String(offset),
@@ -52,21 +50,14 @@ export default function EventsPage() {
       if (q) params.set("q", q);
       if (severity) params.set("severity", severity);
       if (source) params.set("source", source);
-      const res = await apiFetch<{ events: EventRow[]; total: number }>(`/events?${params}`);
-      setEvents(res.events || []);
-      setTotal(res.total || 0);
-      setError(null);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load events");
-    } finally {
-      setLoading(false);
-    }
-  }, [offset, q, severity, source]);
-
-  useEffect(() => {
-    if (!ready) return;
-    void load();
-  }, [load, ready]);
+      return apiFetch<{ events: EventRow[]; total: number }>(`/events?${params}`);
+    },
+    { refreshMs: 15000 },
+  );
+  const events = eventsQuery.data?.events || [];
+  const total = eventsQuery.data?.total || 0;
+  const loading = !ready || eventsQuery.loading;
+  const error = eventsQuery.error;
 
   function applyFilters(e?: FormEvent) {
     e?.preventDefault();

@@ -1,3 +1,4 @@
+import { countSeverity } from "@/lib/alerts";
 import type { DashboardStats } from "@/lib/types";
 import { SecurityPostureGauge, ThreatTimelineChart } from "@/components/ui/telemetry-chart";
 
@@ -43,7 +44,7 @@ function StatCard({
 }
 
 export function StatsGrid({ stats }: { stats: DashboardStats }) {
-  const criticalCount = stats.alerts_by_severity?.CRITICAL || stats.alerts_by_severity?.critical || 0;
+  const criticalCount = countSeverity(stats.alerts_by_severity, "critical");
   const coverage =
     stats.servers_total > 0 ? `${Math.round((stats.agents_active / stats.servers_total) * 100)}%` : "0%";
 

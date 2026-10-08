@@ -53,3 +53,13 @@ export function formatAlertTimeShort(value?: string | null): string {
 export function isAlertActive(status: string): boolean {
   return status !== "RESOLVED";
 }
+
+export function countSeverity(counts: Record<string, number> | undefined, severity: string): number {
+  if (!counts) return 0;
+  const want = severity.toLowerCase();
+  let total = 0;
+  for (const [key, value] of Object.entries(counts)) {
+    if (key.toLowerCase() === want) total += value;
+  }
+  return total;
+}

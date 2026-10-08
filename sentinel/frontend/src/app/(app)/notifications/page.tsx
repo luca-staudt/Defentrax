@@ -1,12 +1,13 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useState } from "react";
+import { FormEvent, useCallback, useState } from "react";
 import { EmptyState } from "@/components/ui/empty-state";
 import { LoadingBlock } from "@/components/ui/loading-block";
 import { Modal } from "@/components/ui/modal";
 import { PageHeader } from "@/components/ui/page-header";
 import { CyberCheckbox, CyberSwitch } from "@/components/ui/cyber-checkbox";
 import { apiFetch, ApiRequestError } from "@/lib/api/client";
+import { useQuery } from "@/lib/panel/use-query";
 import { hasPermission } from "@/lib/permissions";
 import { useAuth } from "@/context/auth-context";
 import type { NotificationChannel, NotificationRule } from "@/lib/types";
@@ -25,10 +26,6 @@ export default function NotificationsPage() {
   const { user } = useAuth();
   const canWrite = hasPermission(user, "notifications", "write");
 
-  const [channels, setChannels] = useState<NotificationChannel[]>([]);
-  const [rules, setRules] = useState<NotificationRule[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"channels" | "rules">("channels");
   const [createChannelOpen, setCreateChannelOpen] = useState(false);
   const [chName, setChName] = useState("");
@@ -52,24 +49,21 @@ export default function NotificationsPage() {
   const [testBusyId, setTestBusyId] = useState<string | null>(null);
   const [testFeedback, setTestFeedback] = useState<{ channelId: string; ok: boolean; message: string } | null>(null);
 
+  const channelsQuery = useQuery(
+    "notification-channels",
+    async () => (await apiFetch<{ channels: NotificationChannel[] }>("/notification-channels")).channels || [],
+  );
+  const rulesQuery = useQuery(
+    "notification-rules",
+    async () => (await apiFetch<{ rules: NotificationRule[] }>("/notification-rules")).rules || [],
+  );
+  const channels = channelsQuery.data ?? [];
+  const rules = rulesQuery.data ?? [];
+  const loading = channelsQuery.loading || rulesQuery.loading;
+  const loadError = channelsQuery.error || rulesQuery.error;
   const load = useCallback(async () => {
-    try {
-      const [c, r] = await Promise.all([
-        apiFetch<{ channels: NotificationChannel[] }>("/notification-channels"),
-        apiFetch<{ rules: NotificationRule[] }>("/notification-rules"),
-      ]);
-      setChannels(c.channels || []);
-      setRules(r.rules || []);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load notifications");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
+    await Promise.all([channelsQuery.reload(), rulesQuery.reload()]);
+  }, [channelsQuery, rulesQuery]);
 
   async function onCreateChannel(e: FormEvent) {
     e.preventDefault();
@@ -243,7 +237,7 @@ export default function NotificationsPage() {
         </li>
       </ul>
 
-      {error ? <div className="alert alert-danger">{error}</div> : null}
+      {loadError ? <div className="alert alert-danger">{loadError}</div> : null}
       {chError && activeTab === "channels" ? <div className="alert alert-danger">{chError}</div> : null}
       {ruleError && activeTab === "rules" ? <div className="alert alert-danger">{ruleError}</div> : null}
 

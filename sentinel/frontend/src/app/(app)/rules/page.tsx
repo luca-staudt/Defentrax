@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useMemo, useState } from "react";
 import { EmptyState } from "@/components/ui/empty-state";
 import { LoadingBlock } from "@/components/ui/loading-block";
 import { Modal } from "@/components/ui/modal";
@@ -9,8 +9,12 @@ import { SeverityBadge } from "@/components/ui/severity-badge";
 import { CyberSwitch } from "@/components/ui/cyber-checkbox";
 import { useAuth } from "@/context/auth-context";
 import { apiFetch, ApiRequestError } from "@/lib/api/client";
+import { patchQuery } from "@/lib/panel/cache";
+import { useQuery } from "@/lib/panel/use-query";
 import { hasPermission } from "@/lib/permissions";
 import type { Rule } from "@/lib/types";
+
+const EMPTY_RULES: Rule[] = [];
 
 function Hint({ children }: { children: React.ReactNode }) {
   return <p className="form-text">{children}</p>;
@@ -19,8 +23,6 @@ function Hint({ children }: { children: React.ReactNode }) {
 export default function RulesPage() {
   const { user } = useAuth();
   const canWrite = hasPermission(user, "rules", "write");
-  const [rules, setRules] = useState<Rule[]>([]);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [severityFilter, setSeverityFilter] = useState("ALL");
@@ -43,18 +45,12 @@ export default function RulesPage() {
   const [actionTitle, setActionTitle] = useState("");
   const [actionDescription, setActionDescription] = useState("");
 
-  useEffect(() => {
-    void (async () => {
-      try {
-        const res = await apiFetch<{ rules: Rule[] }>("/rules");
-        setRules(res.rules || []);
-      } catch (e) {
-        setError(e instanceof Error ? e.message : "Failed to load rules");
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, []);
+  const rulesQuery = useQuery("rules", async () => (await apiFetch<{ rules: Rule[] }>("/rules")).rules || [], {
+    refreshMs: 20000,
+  });
+  const rules = rulesQuery.data ?? EMPTY_RULES;
+  const loading = rulesQuery.loading;
+  const loadError = rulesQuery.error;
 
   async function toggleRule(id: string, enabled: boolean) {
     if (!canWrite) return;
@@ -64,7 +60,7 @@ export default function RulesPage() {
         method: "PATCH",
         body: JSON.stringify({ enabled: !enabled }),
       });
-      setRules((prev) => prev.map((r) => (r.id === id ? { ...r, enabled: !enabled } : r)));
+      patchQuery<Rule[]>("rules", (prev) => prev.map((r) => (r.id === id ? { ...r, enabled: !enabled } : r)));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Toggle failed");
     } finally {
@@ -164,9 +160,10 @@ export default function RulesPage() {
           action_description: actionDescription.trim(),
         }),
       });
-      setRules((prev) =>
+      patchQuery<Rule[]>("rules", (prev) =>
         editingId ? prev.map((r) => (r.id === created.id ? created : r)) : [created, ...prev.filter((r) => r.id !== created.id)],
       );
+      if (!rulesQuery.data) await rulesQuery.reload();
       setComposerOpen(false);
       resetComposer();
     } catch (err) {
@@ -256,7 +253,7 @@ export default function RulesPage() {
         </div>
       </div>
 
-      {error ? <div className="alert alert-danger">{error}</div> : null}
+      {error || loadError ? <div className="alert alert-danger">{error || loadError}</div> : null}
       {filtered.length === 0 ? (
         <EmptyState title="No rules match" description="Adjust your search or severity filter." />
       ) : (

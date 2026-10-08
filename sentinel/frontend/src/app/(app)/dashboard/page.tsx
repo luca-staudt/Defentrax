@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { StatsGrid } from "@/components/dashboard/stats-grid";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -12,50 +12,24 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { useAuth } from "@/context/auth-context";
 import { apiFetch } from "@/lib/api/client";
 import { canSeePage } from "@/lib/pages";
+import { useQuery } from "@/lib/panel/use-query";
 import type { Alert, DashboardStats } from "@/lib/types";
-import { connectAlertSocket } from "@/lib/ws";
 
 export default function DashboardPage() {
   const { user } = useAuth();
   const canAlerts = canSeePage(user, "alerts");
   const canAlertDetail = canSeePage(user, "alert_detail");
-  const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [alerts, setAlerts] = useState<Alert[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
   const [selectedAlert, setSelectedAlert] = useState<Alert | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const s = await apiFetch<DashboardStats>("/dashboard/stats");
-        if (cancelled) return;
-        setStats(s);
-        if (canAlerts) {
-          const a = await apiFetch<{ alerts: Alert[] }>("/alerts?limit=8&status=OPEN");
-          if (!cancelled) setAlerts(a.alerts || []);
-        }
-      } catch (e) {
-        if (!cancelled) setError(e instanceof Error ? e.message : "Failed to load dashboard");
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [canAlerts]);
-
-  useEffect(() => {
-    if (!user || !canAlerts) return;
-    return connectAlertSocket(user, () => {
-      void apiFetch<DashboardStats>("/dashboard/stats").then(setStats).catch(() => undefined);
-      void apiFetch<{ alerts: Alert[] }>("/alerts?limit=8&status=OPEN")
-        .then((r) => setAlerts(r.alerts || []))
-        .catch(() => undefined);
-    });
-  }, [user, canAlerts]);
+  const statsQuery = useQuery("stats", () => apiFetch<DashboardStats>("/dashboard/stats"));
+  const alertsQuery = useQuery(
+    canAlerts ? "alerts?limit=8&status=OPEN" : null,
+    () => apiFetch<{ alerts: Alert[] }>("/alerts?limit=8&status=OPEN"),
+    { refreshMs: 15000 },
+  );
+  const stats = statsQuery.data ?? null;
+  const alerts = alertsQuery.data?.alerts || [];
+  const error = statsQuery.error;
+  const loading = statsQuery.loading;
 
   return (
     <>

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { EmptyState } from "@/components/ui/empty-state";
 import { LoadingBlock } from "@/components/ui/loading-block";
 import { PageHeader } from "@/components/ui/page-header";
@@ -13,6 +13,8 @@ import { alertActionLabel, formatAlertTime, nextAlertStatuses } from "@/lib/aler
 import { apiFetch, ApiRequestError } from "@/lib/api/client";
 import { hasPermission } from "@/lib/permissions";
 import { canSeePage } from "@/lib/pages";
+import { invalidateQueries } from "@/lib/panel/cache";
+import { useQuery } from "@/lib/panel/use-query";
 import type { Alert } from "@/lib/types";
 
 type TimelineEntry = {
@@ -28,32 +30,24 @@ export default function AlertDetailPage() {
   const { user } = useAuth();
   const canWrite = hasPermission(user, "alerts", "write");
   const canServer = canSeePage(user, "server_detail");
-  const [alert, setAlert] = useState<Alert | null>(null);
-  const [timeline, setTimeline] = useState<TimelineEntry[]>([]);
   const [notes, setNotes] = useState("");
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const detailQuery = useQuery(
+    id ? `alert:${id}` : null,
+    () => apiFetch<{ alert: Alert; timeline: TimelineEntry[] }>(`/alerts/${id}`),
+    { refreshMs: 15000 },
+  );
+  const alert = detailQuery.data?.alert ?? null;
+  const timeline = detailQuery.data?.timeline || [];
+  const loading = detailQuery.loading;
+  const error = detailQuery.error;
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await apiFetch<{ alert: Alert; timeline: TimelineEntry[] }>(`/alerts/${id}`);
-      setAlert(res.alert);
-      setTimeline(res.timeline || []);
-      setNotes(res.alert.resolution_notes || "");
-      setError(null);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Not found");
-    } finally {
-      setLoading(false);
-    }
-  }, [id]);
-
+  const alertId = alert?.id;
+  const serverNotes = alert?.resolution_notes || "";
   useEffect(() => {
-    void load();
-  }, [load]);
+    setNotes(serverNotes);
+  }, [alertId, serverNotes]);
 
   async function patchStatus(status: string) {
     if (!canWrite || saving) return;
@@ -66,7 +60,8 @@ export default function AlertDetailPage() {
         method: "PATCH",
         body: JSON.stringify(body),
       });
-      await load();
+      invalidateQueries(["stats", "alerts"]);
+      await detailQuery.reload();
       router.refresh();
     } catch (e) {
       setActionError(

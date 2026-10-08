@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import { EmptyState } from "@/components/ui/empty-state";
 import { LoadingBlock } from "@/components/ui/loading-block";
@@ -14,6 +14,8 @@ import { copyText } from "@/lib/clipboard";
 import { useAuth } from "@/context/auth-context";
 import { hasPermission } from "@/lib/permissions";
 import { canSeePage } from "@/lib/pages";
+import { invalidateQueries } from "@/lib/panel/cache";
+import { useQuery } from "@/lib/panel/use-query";
 import type { Alert } from "@/lib/types";
 
 const STATUS_FILTERS = ["ALL", "OPEN", "ACKNOWLEDGED", "INVESTIGATING", "RESOLVED"] as const;
@@ -24,10 +26,6 @@ export default function AlertsPage() {
   const canWrite = hasPermission(user, "alerts", "write");
   const canServer = canSeePage(user, "server_detail");
 
-  const [alerts, setAlerts] = useState<Alert[]>([]);
-  const [total, setTotal] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [selectedStatus, setSelectedStatus] = useState<string>("ALL");
   const [selectedSeverity, setSelectedSeverity] = useState<string>("ALL");
@@ -37,26 +35,21 @@ export default function AlertsPage() {
   const [actionBusy, setActionBusy] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
+  const alertKey = `alerts?status=${selectedStatus}&severity=${selectedSeverity}`;
+  const alertsQuery = useQuery(
+    alertKey,
+    () => {
       const params = new URLSearchParams({ limit: "100" });
       if (selectedStatus !== "ALL") params.set("status", selectedStatus);
       if (selectedSeverity !== "ALL") params.set("severity", selectedSeverity.toLowerCase());
-      const res = await apiFetch<{ alerts: Alert[]; total: number }>(`/alerts?${params}`);
-      setAlerts(res.alerts || []);
-      setTotal(res.total ?? (res.alerts || []).length);
-      setError(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load alerts");
-    } finally {
-      setLoading(false);
-    }
-  }, [selectedStatus, selectedSeverity]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
+      return apiFetch<{ alerts: Alert[]; total: number }>(`/alerts?${params}`);
+    },
+    { refreshMs: 15000 },
+  );
+  const alerts = alertsQuery.data?.alerts || [];
+  const total = alertsQuery.data?.total ?? alerts.length;
+  const loading = alertsQuery.loading;
+  const error = alertsQuery.error;
 
   const filteredAlerts = alerts.filter((a) => {
     if (search === "") return true;
@@ -89,7 +82,8 @@ export default function AlertsPage() {
         method: "PATCH",
         body: JSON.stringify({ status }),
       });
-      await load();
+      invalidateQueries(["stats", "alert:"]);
+      await alertsQuery.reload();
       if (inspectAlert?.id === alert.id) {
         const res = await apiFetch<{ alert: Alert }>(`/alerts/${alert.id}`);
         setInspectAlert(res.alert);

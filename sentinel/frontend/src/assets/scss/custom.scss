@@ -5,3 +5,171 @@ Website: https://themesbrand.com/
 Contact: support@themesbrand.com
 File: Custom Css File
 */
+
+// Header follows the page surface in both themes. The stock Velzon
+// dark topbar paints the bar in primary blue, which sits apart from
+// the dark content.
+html[data-theme="default"][data-bs-theme="dark"] {
+  --#{$prefix}header-bg: #171b20;
+  --#{$prefix}header-border: rgba(255, 255, 255, 0.08);
+  --#{$prefix}header-item-color: #e8eaed;
+  --#{$prefix}header-item-bg: rgba(255, 255, 255, 0.06);
+  --#{$prefix}header-item-sub-color: #9aa3ad;
+  --#{$prefix}topbar-user-bg: rgba(255, 255, 255, 0.06);
+  --#{$prefix}topbar-search-bg: rgba(255, 255, 255, 0.06);
+  --#{$prefix}topbar-search-color: #f3f6f9;
+}
+
+html[data-theme="default"][data-bs-theme="light"] {
+  --#{$prefix}header-bg: #ffffff;
+  --#{$prefix}header-border: #e9ebec;
+  --#{$prefix}header-item-color: #212529;
+  --#{$prefix}header-item-bg: #f3f3f9;
+  --#{$prefix}header-item-sub-color: #878a99;
+  --#{$prefix}topbar-user-bg: #f3f3f9;
+  --#{$prefix}topbar-search-bg: #f3f3f9;
+  --#{$prefix}topbar-search-color: #212529;
+}
+
+#page-topbar {
+  box-shadow: none;
+
+  &::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--#{$prefix}primary) 35%, #45cb85 65%, transparent);
+    opacity: 0.9;
+    pointer-events: none;
+  }
+}
+
+#page-topbar .app-search .form-control {
+  border-radius: 999px;
+}
+
+.dx-search-kbd {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 5px;
+  border: 1px solid var(--#{$prefix}header-border);
+  color: var(--#{$prefix}header-item-sub-color);
+  font-family: inherit;
+  font-size: 11px;
+  line-height: 16px;
+  text-align: center;
+}
+
+.dx-topbar-meta {
+  align-items: center;
+  gap: 0.45rem;
+  margin-right: 0.35rem;
+}
+
+.dx-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  height: 32px;
+  padding: 0 0.7rem;
+  border-radius: 999px;
+  background: var(--#{$prefix}header-item-bg);
+  color: var(--#{$prefix}header-item-color);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  text-decoration: none;
+  white-space: nowrap;
+
+  &:hover {
+    color: var(--#{$prefix}header-item-color);
+    filter: brightness(1.12);
+  }
+
+  &.is-ok {
+    color: #45cb85;
+    background: rgba(69, 203, 133, 0.14);
+  }
+
+  &.is-warn {
+    color: #f7b84b;
+    background: rgba(247, 184, 75, 0.16);
+  }
+
+  &.is-danger {
+    color: #f06548;
+    background: rgba(240, 101, 72, 0.16);
+  }
+}
+
+.dx-chip-label,
+.dx-chip-muted {
+  color: var(--#{$prefix}header-item-sub-color);
+  font-weight: 500;
+}
+
+.dx-chip.is-ok .dx-chip-label,
+.dx-chip.is-warn .dx-chip-label,
+.dx-chip.is-danger .dx-chip-label {
+  color: inherit;
+  opacity: 0.75;
+}
+
+.dx-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #878a99;
+}
+
+.dx-chip-live.is-live .dx-dot {
+  background: #45cb85;
+  box-shadow: 0 0 0 0 rgba(69, 203, 133, 0.55);
+  animation: dx-pulse 1.8s ease-out infinite;
+}
+
+.dx-chip-live.is-offline .dx-dot {
+  background: #f06548;
+}
+
+.dx-clock {
+  min-width: 5.6rem;
+  padding-left: 0.15rem;
+  color: var(--#{$prefix}header-item-sub-color);
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+}
+
+.dx-alert-count {
+  position: absolute;
+  top: 4px;
+  right: 2px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: #f06548;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 16px;
+}
+
+@keyframes dx-pulse {
+  70% {
+    box-shadow: 0 0 0 6px rgba(69, 203, 133, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(69, 203, 133, 0);
+  }
+}

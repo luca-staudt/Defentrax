@@ -1,24 +1,23 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useMemo, useState } from "react";
 import { EmptyState } from "@/components/ui/empty-state";
 import { LoadingBlock } from "@/components/ui/loading-block";
 import { Modal } from "@/components/ui/modal";
 import { PageHeader } from "@/components/ui/page-header";
 import { CyberCheckbox } from "@/components/ui/cyber-checkbox";
 import { apiFetch, ApiRequestError } from "@/lib/api/client";
+import { useQuery } from "@/lib/panel/use-query";
 import { hasPermission } from "@/lib/permissions";
 import { useAuth } from "@/context/auth-context";
 import type { Permission, Role } from "@/lib/types";
+
+const EMPTY_PERMISSIONS: Permission[] = [];
 
 export default function RolesPage() {
   const { user } = useAuth();
   const canWrite = hasPermission(user, "roles", "write");
 
-  const [roles, setRoles] = useState<Role[]>([]);
-  const [permissions, setPermissions] = useState<Permission[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [selectedRole, setSelectedRole] = useState<Role | null>(null);
   const [name, setName] = useState("");
@@ -32,24 +31,18 @@ export default function RolesPage() {
   const [detailMsg, setDetailMsg] = useState<string | null>(null);
   const [search, setSearch] = useState("");
 
+  const rolesQuery = useQuery("roles", async () => (await apiFetch<{ roles: Role[] }>("/roles")).roles || []);
+  const permissionsQuery = useQuery(
+    "permissions",
+    async () => (await apiFetch<{ permissions: Permission[] }>("/permissions")).permissions || [],
+  );
+  const roles = rolesQuery.data ?? [];
+  const permissions = permissionsQuery.data ?? EMPTY_PERMISSIONS;
+  const loading = rolesQuery.loading || permissionsQuery.loading;
+  const loadError = rolesQuery.error || permissionsQuery.error;
   const load = useCallback(async () => {
-    try {
-      const [r, p] = await Promise.all([
-        apiFetch<{ roles: Role[] }>("/roles"),
-        apiFetch<{ permissions: Permission[] }>("/permissions"),
-      ]);
-      setRoles(r.roles || []);
-      setPermissions(p.permissions || []);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load roles");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
+    await Promise.all([rolesQuery.reload(), permissionsQuery.reload()]);
+  }, [rolesQuery, permissionsQuery]);
 
   const permsByResource = useMemo(() => {
     const map = new Map<string, Permission[]>();
@@ -171,7 +164,7 @@ export default function RolesPage() {
         </div>
       </div>
 
-      {error ? <div className="alert alert-danger">{error}</div> : null}
+      {loadError ? <div className="alert alert-danger">{loadError}</div> : null}
       {filteredRoles.length === 0 ? (
         <EmptyState title="No roles" description="No roles match this search." />
       ) : (

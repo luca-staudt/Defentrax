@@ -1,61 +1,47 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useState } from "react";
+import { FormEvent, useState } from "react";
 import { EmptyState } from "@/components/ui/empty-state";
 import { LoadingBlock } from "@/components/ui/loading-block";
 import { Modal } from "@/components/ui/modal";
 import { PageHeader } from "@/components/ui/page-header";
 import { apiFetch } from "@/lib/api/client";
+import { useQuery } from "@/lib/panel/use-query";
 import type { AuditLog } from "@/lib/types";
 
 export default function AuditLogsPage() {
-  const [rows, setRows] = useState<AuditLog[]>([]);
-  const [total, setTotal] = useState(0);
   const [offset, setOffset] = useState(0);
   const [q, setQ] = useState("");
   const [action, setAction] = useState("");
   const [user, setUser] = useState("");
   const [since, setSince] = useState("");
   const [until, setUntil] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<AuditLog | null>(null);
   const limit = 30;
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const params = new URLSearchParams({
-        limit: String(limit),
-        offset: String(offset),
-      });
-      if (q.trim()) params.set("q", q.trim());
-      if (action.trim()) params.set("action", action.trim());
-      if (user.trim()) params.set("user", user.trim());
-      if (since) {
-        const d = new Date(since);
-        if (!Number.isNaN(d.getTime())) params.set("since", d.toISOString());
-      }
-      if (until) {
-        const d = new Date(until);
-        if (!Number.isNaN(d.getTime())) params.set("until", d.toISOString());
-      }
-      const res = await apiFetch<{ audit_logs: AuditLog[]; total: number }>(`/audit-logs?${params}`);
-      setRows(res.audit_logs || []);
-      setTotal(res.total || 0);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load audit logs");
-      setRows([]);
-      setTotal(0);
-    } finally {
-      setLoading(false);
+  const auditKey = `audit?q=${q}&action=${action}&user=${user}&since=${since}&until=${until}&offset=${offset}`;
+  const auditQuery = useQuery(auditKey, () => {
+    const params = new URLSearchParams({
+      limit: String(limit),
+      offset: String(offset),
+    });
+    if (q.trim()) params.set("q", q.trim());
+    if (action.trim()) params.set("action", action.trim());
+    if (user.trim()) params.set("user", user.trim());
+    if (since) {
+      const d = new Date(since);
+      if (!Number.isNaN(d.getTime())) params.set("since", d.toISOString());
     }
-  }, [offset, q, action, user, since, until]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
+    if (until) {
+      const d = new Date(until);
+      if (!Number.isNaN(d.getTime())) params.set("until", d.toISOString());
+    }
+    return apiFetch<{ audit_logs: AuditLog[]; total: number }>(`/audit-logs?${params}`);
+  });
+  const rows = auditQuery.data?.audit_logs || [];
+  const total = auditQuery.data?.total || 0;
+  const loading = auditQuery.loading;
+  const error = auditQuery.error;
 
   return (
     <>
@@ -68,7 +54,7 @@ export default function AuditLogsPage() {
             onSubmit={(e: FormEvent) => {
               e.preventDefault();
               setOffset(0);
-              void load();
+              void auditQuery.reload();
             }}
           >
             <div className="col-md-3">

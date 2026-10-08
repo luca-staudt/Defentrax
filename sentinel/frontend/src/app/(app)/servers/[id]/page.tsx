@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
+import { FormEvent, useRef, useState } from "react";
 import { EmptyState } from "@/components/ui/empty-state";
 import { LoadingBlock } from "@/components/ui/loading-block";
 import { PageHeader } from "@/components/ui/page-header";
@@ -10,6 +10,8 @@ import { useAuth } from "@/context/auth-context";
 import { apiFetch, ApiRequestError } from "@/lib/api/client";
 import { copyText } from "@/lib/clipboard";
 import { canSeePage } from "@/lib/pages";
+import { invalidateQueries } from "@/lib/panel/cache";
+import { useQuery } from "@/lib/panel/use-query";
 import type { EnrollmentToken } from "@/lib/types";
 
 type Agent = {
@@ -34,9 +36,6 @@ export default function ServerDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
   const canList = canSeePage(user, "servers");
-  const [server, setServer] = useState<ServerDetail | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [label, setLabel] = useState("default-agent");
   const [ttl, setTtl] = useState(60);
   const [issuing, setIssuing] = useState(false);
@@ -46,21 +45,12 @@ export default function ServerDetailPage() {
   const [copyHint, setCopyHint] = useState<string | null>(null);
   const tokenRef = useRef<HTMLElement>(null);
 
-  const load = useCallback(async () => {
-    try {
-      const res = await apiFetch<ServerDetail>(`/servers/${id}`);
-      setServer(res);
-      setError(null);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Not found");
-    } finally {
-      setLoading(false);
-    }
-  }, [id]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
+  const serverQuery = useQuery(id ? `server:${id}` : null, () => apiFetch<ServerDetail>(`/servers/${id}`), {
+    refreshMs: 20000,
+  });
+  const server = serverQuery.data ?? null;
+  const loading = serverQuery.loading;
+  const error = serverQuery.error;
 
   async function onIssue(e: FormEvent) {
     e.preventDefault();
@@ -77,7 +67,8 @@ export default function ServerDetailPage() {
         }),
       });
       setIssued(tok);
-      await load();
+      invalidateQueries(["stats", "servers"]);
+      await serverQuery.reload();
     } catch (err) {
       setIssueError(err instanceof ApiRequestError ? err.message : "Token create failed");
     } finally {

@@ -1,11 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useCallback, useEffect, useState } from "react";
+import { FormEvent, useState } from "react";
 import { EmptyState } from "@/components/ui/empty-state";
 import { LoadingBlock } from "@/components/ui/loading-block";
 import { PageHeader } from "@/components/ui/page-header";
+import { formatAlertTime } from "@/lib/alerts";
 import { apiFetch, ApiRequestError } from "@/lib/api/client";
+import { invalidateQueries } from "@/lib/panel/cache";
+import { useQuery } from "@/lib/panel/use-query";
 import { hasPermission } from "@/lib/permissions";
 import { canSeePage } from "@/lib/pages";
 import { useAuth } from "@/context/auth-context";
@@ -17,7 +20,7 @@ function ServerCard({ server }: { server: Server }) {
       <h5 className="mb-1">{server.name}</h5>
       <p className="text-muted mb-2">{server.hostname || "—"}</p>
       <p className="text-muted fs-12 mb-0">
-        {server.environment || "default"} · Added {server.created_at}
+        {server.environment || "default"} · Added {formatAlertTime(server.created_at)}
       </p>
     </>
   );
@@ -28,9 +31,6 @@ export default function ServersPage() {
   const canWrite = hasPermission(user, "servers", "write");
   const canDetail = canSeePage(user, "server_detail");
 
-  const [servers, setServers] = useState<Server[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [hostname, setHostname] = useState("");
   const [description, setDescription] = useState("");
@@ -38,21 +38,10 @@ export default function ServersPage() {
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
-    try {
-      const res = await apiFetch<{ servers: Server[] }>("/servers");
-      setServers(res.servers || []);
-      setError(null);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load servers");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
+  const serversQuery = useQuery("servers", () => apiFetch<{ servers: Server[] }>("/servers"), { refreshMs: 20000 });
+  const servers = serversQuery.data?.servers || [];
+  const loading = serversQuery.loading;
+  const error = serversQuery.error;
 
   async function onCreate(e: FormEvent) {
     e.preventDefault();
@@ -72,7 +61,8 @@ export default function ServersPage() {
       setName("");
       setHostname("");
       setDescription("");
-      await load();
+      invalidateQueries(["stats", "server:"]);
+      await serversQuery.reload();
     } catch (err) {
       setFormError(err instanceof ApiRequestError ? err.message : "Create failed");
     } finally {

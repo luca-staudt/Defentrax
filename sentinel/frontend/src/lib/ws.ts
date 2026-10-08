@@ -26,6 +26,7 @@ export function connectAlertSocket(
   _user: User | null,
   onMessage: (msg: AlertWsMessage) => void,
   onError?: () => void,
+  onOpen?: () => void,
 ): () => void {
   const base = wsBase();
   if (!base) return () => undefined;
@@ -52,6 +53,7 @@ export function connectAlertSocket(
     };
     socket.onopen = () => {
       retryMs = 1000;
+      onOpen?.();
     };
   };
 

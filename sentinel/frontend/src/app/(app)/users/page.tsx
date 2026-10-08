@@ -1,12 +1,13 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useState } from "react";
+import { FormEvent, useCallback, useState } from "react";
 import { EmptyState } from "@/components/ui/empty-state";
 import { LoadingBlock } from "@/components/ui/loading-block";
 import { Modal } from "@/components/ui/modal";
 import { PageHeader } from "@/components/ui/page-header";
 import { CyberCheckbox } from "@/components/ui/cyber-checkbox";
 import { apiFetch, ApiRequestError } from "@/lib/api/client";
+import { useQuery } from "@/lib/panel/use-query";
 import { hasPermission, roleDisplayName } from "@/lib/permissions";
 import { useAuth } from "@/context/auth-context";
 import type { Role, User, UserSession } from "@/lib/types";
@@ -15,10 +16,6 @@ export default function TeamUsersPage() {
   const { user: me } = useAuth();
   const canWrite = hasPermission(me, "users", "write");
 
-  const [users, setUsers] = useState<User[]>([]);
-  const [roles, setRoles] = useState<Role[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
   const [email, setEmail] = useState("");
@@ -35,24 +32,17 @@ export default function TeamUsersPage() {
   const [detailBusy, setDetailBusy] = useState(false);
   const [detailMsg, setDetailMsg] = useState<string | null>(null);
 
+  const usersQuery = useQuery("users", async () => (await apiFetch<{ users: User[] }>("/users")).users || [], {
+    refreshMs: 20000,
+  });
+  const rolesQuery = useQuery("roles", async () => (await apiFetch<{ roles: Role[] }>("/roles")).roles || []);
+  const users = usersQuery.data ?? [];
+  const roles = rolesQuery.data ?? [];
+  const loading = usersQuery.loading;
+  const loadError = usersQuery.error;
   const load = useCallback(async () => {
-    try {
-      const [uRes, rRes] = await Promise.all([
-        apiFetch<{ users: User[] }>("/users"),
-        apiFetch<{ roles: Role[] }>("/roles").catch(() => ({ roles: [] as Role[] })),
-      ]);
-      setUsers(uRes.users || []);
-      setRoles(rRes.roles || []);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load team users");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
+    await Promise.all([usersQuery.reload(), rolesQuery.reload()]);
+  }, [usersQuery, rolesQuery]);
 
   const roleOptions = roles.length > 0 ? roles.map((r) => r.name) : ["ADMIN", "ANALYST", "OPERATOR", "VIEWER"];
 
@@ -276,7 +266,7 @@ export default function TeamUsersPage() {
         </div>
       </div>
 
-      {error ? <div className="alert alert-danger">{error}</div> : null}
+      {loadError ? <div className="alert alert-danger">{loadError}</div> : null}
       {filteredUsers.length === 0 ? (
         <EmptyState title="No operators found" description="Try refining your search keyword." />
       ) : (
