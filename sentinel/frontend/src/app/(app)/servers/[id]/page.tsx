@@ -101,102 +101,131 @@ export default function ServerDetailPage() {
         actions={
           canList ? (
             <Link href="/servers" className="btn btn-light">
-              Back to servers
+              Fleet
             </Link>
           ) : null
         }
       />
-      {server.description ? <p className="text-muted">{server.description}</p> : null}
 
-      <div className="card">
-        <div className="card-header">
-          <h4 className="card-title mb-0">Enrollment token</h4>
-        </div>
-        <div className="card-body">
-          <p className="text-muted">
-            One-time <code>senr_…</code> token for the agent on this host. Shown only once — copy it now.
-          </p>
-          <form onSubmit={onIssue}>
-            <div className="row g-3">
-              <div className="col-md-8">
-                <label className="form-label">Label</label>
-                <input className="form-control" value={label} onChange={(e) => setLabel(e.target.value)} placeholder="main-agent" />
+      <div className="row">
+        <div className="col-xl-7">
+          <div className="row g-3 mb-3">
+            <div className="col-md-4">
+              <div className="dx-metric">
+                <span className="text-muted text-uppercase fs-12">Agents</span>
+                <strong>{server.agents.length}</strong>
               </div>
-              <div className="col-md-4">
-                <label className="form-label">TTL (minutes)</label>
-                <input className="form-control" type="number" min={1} max={1440} value={ttl} onChange={(e) => setTtl(Number(e.target.value) || 60)} />
+            </div>
+            <div className="col-md-4">
+              <div className="dx-metric">
+                <span className="text-muted text-uppercase fs-12">Environment</span>
+                <strong className="fs-14">{server.environment || "default"}</strong>
               </div>
-              {issueError ? (
-                <div className="col-12">
-                  <div className="alert alert-danger mb-0">{issueError}</div>
+            </div>
+            <div className="col-md-4">
+              <div className="dx-metric">
+                <span className="text-muted text-uppercase fs-12">Enrolled</span>
+                <strong className="fs-14">{server.created_at}</strong>
+              </div>
+            </div>
+          </div>
+
+          {server.description ? (
+            <div className="card">
+              <div className="card-body">
+                <p className="mb-0">{server.description}</p>
+              </div>
+            </div>
+          ) : null}
+
+          <div className="card">
+            <div className="card-header">
+              <h4 className="card-title mb-0">Agents on this host</h4>
+            </div>
+            <div className="card-body">
+              {server.agents.length === 0 ? (
+                <EmptyState title="No agents enrolled" description="Issue a token and start the agent on the host." />
+              ) : (
+                <div className="dx-log">
+                  {server.agents.map((agent) => (
+                    <div key={agent.id} className="dx-metric">
+                      <span className="d-flex justify-content-between gap-2">
+                        <span className="fw-medium">{agent.name || agent.id.slice(0, 8)}</span>
+                        <span className="badge bg-secondary-subtle text-secondary">{agent.status}</span>
+                      </span>
+                      <span className="d-block text-muted fs-12 mt-1">
+                        v{agent.agent_version || "?"} · {agent.last_heartbeat_at || "no heartbeat yet"}
+                      </span>
+                    </div>
+                  ))}
                 </div>
-              ) : null}
-              <div className="col-12">
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="col-xl-5">
+          <div className="card dx-detail">
+            <div className="card-header">
+              <h4 className="card-title mb-0">Enroll an agent</h4>
+            </div>
+            <div className="card-body">
+              <p className="text-muted">
+                One-time <code>senr_…</code> token for the agent on this host. Shown only once — copy it now.
+              </p>
+              <form onSubmit={onIssue}>
+                <label className="form-label" htmlFor="enroll-label">
+                  Label
+                </label>
+                <input
+                  id="enroll-label"
+                  className="form-control mb-3"
+                  value={label}
+                  onChange={(e) => setLabel(e.target.value)}
+                  placeholder="main-agent"
+                />
+                <label className="form-label" htmlFor="enroll-ttl">
+                  TTL (minutes)
+                </label>
+                <input
+                  id="enroll-ttl"
+                  className="form-control mb-3"
+                  type="number"
+                  min={1}
+                  max={1440}
+                  value={ttl}
+                  onChange={(e) => setTtl(Number(e.target.value) || 60)}
+                />
+                {issueError ? <div className="alert alert-danger">{issueError}</div> : null}
                 <button type="submit" className="btn btn-primary" disabled={issuing}>
                   {issuing ? "Issuing…" : "Issue enrollment token"}
                 </button>
-              </div>
-            </div>
-          </form>
+              </form>
 
-          {issued?.token ? (
-            <div className="alert alert-success mt-4 mb-0">
-              <p className="fw-medium mb-2">Copy now — will not be shown again</p>
-              <code ref={tokenRef} className="d-block user-select-all">
-                {issued.token}
-              </code>
-              <p className="text-muted mt-2 mb-2">
-                Expires {issued.expires_at} · prefix {issued.token_prefix}
-              </p>
-              <button type="button" className="btn btn-sm btn-light" onClick={() => void copyToken()}>
-                {copied ? "Copied" : "Copy token"}
-              </button>
-              {copyHint ? <p className="text-warning mt-2 mb-0">{copyHint}</p> : null}
-              <pre className="bg-dark text-white p-3 rounded mt-3 mb-0">
+              {issued?.token ? (
+                <div className="alert alert-success mt-4 mb-0">
+                  <p className="fw-medium mb-2">Copy now — will not be shown again</p>
+                  <code ref={tokenRef} className="d-block user-select-all">
+                    {issued.token}
+                  </code>
+                  <p className="text-muted mt-2 mb-2">
+                    Expires {issued.expires_at} · prefix {issued.token_prefix}
+                  </p>
+                  <button type="button" className="btn btn-sm btn-light" onClick={() => void copyToken()}>
+                    {copied ? "Copied" : "Copy token"}
+                  </button>
+                  {copyHint ? <p className="text-warning mt-2 mb-0">{copyHint}</p> : null}
+                  <pre className="bg-dark text-white p-3 rounded mt-3 mb-0">
 {`# On the monitored host (Defentrax agent):
 export SENTINEL_API_URL=http://YOUR_DEFENTRAX_HOST:8080
 export SENTINEL_ENROLLMENT_TOKEN=${issued.token}
 export SENTINEL_AGENT_NAME=${label || "agent"}
 ./sentinel-agent`}
-              </pre>
+                  </pre>
+                </div>
+              ) : null}
             </div>
-          ) : null}
-        </div>
-      </div>
-
-      <div className="card">
-        <div className="card-header">
-          <h4 className="card-title mb-0">Agents</h4>
-        </div>
-        <div className="card-body">
-          {server.agents.length === 0 ? (
-            <EmptyState title="No agents enrolled" description="Issue a token above and start the agent on the host." />
-          ) : (
-            <div className="table-responsive">
-              <table className="table align-middle mb-0">
-                <thead className="table-light">
-                  <tr>
-                    <th>Name</th>
-                    <th>Version</th>
-                    <th>Last seen</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {server.agents.map((a) => (
-                    <tr key={a.id}>
-                      <td>{a.name || a.id.slice(0, 8)}</td>
-                      <td>v{a.agent_version || "?"}</td>
-                      <td className="text-muted">{a.last_heartbeat_at || "—"}</td>
-                      <td>
-                        <span className="badge bg-secondary-subtle text-secondary">{a.status}</span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+          </div>
         </div>
       </div>
     </>

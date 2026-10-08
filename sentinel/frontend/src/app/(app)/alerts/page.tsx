@@ -1,14 +1,13 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { EmptyState } from "@/components/ui/empty-state";
 import { LoadingBlock } from "@/components/ui/loading-block";
 import { SeverityBadge } from "@/components/ui/severity-badge";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { Modal } from "@/components/ui/modal";
 import { PageHeader } from "@/components/ui/page-header";
-import { alertActionLabel, formatAlertTime, formatAlertTimeShort, isAlertActive, nextAlertStatuses } from "@/lib/alerts";
+import { alertActionLabel, formatAlertTime, isAlertActive, nextAlertStatuses } from "@/lib/alerts";
 import { apiFetch, ApiRequestError } from "@/lib/api/client";
 import { copyText } from "@/lib/clipboard";
 import { useAuth } from "@/context/auth-context";
@@ -25,12 +24,12 @@ export default function AlertsPage() {
   const { user } = useAuth();
   const canWrite = hasPermission(user, "alerts", "write");
   const canServer = canSeePage(user, "server_detail");
+  const canDetail = canSeePage(user, "alert_detail");
 
   const [search, setSearch] = useState("");
   const [selectedStatus, setSelectedStatus] = useState<string>("ALL");
   const [selectedSeverity, setSelectedSeverity] = useState<string>("ALL");
-  const [inspectAlert, setInspectAlert] = useState<Alert | null>(null);
-  const [modalTab, setModalTab] = useState<"overview" | "raw" | "remediation">("overview");
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [actionBusy, setActionBusy] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -48,30 +47,20 @@ export default function AlertsPage() {
   );
   const alerts = alertsQuery.data?.alerts || [];
   const total = alertsQuery.data?.total ?? alerts.length;
-  const loading = alertsQuery.loading;
-  const error = alertsQuery.error;
 
-  const filteredAlerts = alerts.filter((a) => {
+  const filteredAlerts = alerts.filter((alert) => {
     if (search === "") return true;
     const q = search.toLowerCase();
     return (
-      a.title.toLowerCase().includes(q) ||
-      (a.description || "").toLowerCase().includes(q) ||
-      (a.rule_id && a.rule_id.toLowerCase().includes(q)) ||
-      (a.server_id && a.server_id.toLowerCase().includes(q)) ||
-      (a.source_ip && a.source_ip.toLowerCase().includes(q))
+      alert.title.toLowerCase().includes(q) ||
+      (alert.description || "").toLowerCase().includes(q) ||
+      (alert.rule_id && alert.rule_id.toLowerCase().includes(q)) ||
+      (alert.server_id && alert.server_id.toLowerCase().includes(q)) ||
+      (alert.source_ip && alert.source_ip.toLowerCase().includes(q))
     );
   });
-
-  const activeCount = filteredAlerts.filter((a) => isAlertActive(a.status)).length;
-
-  async function handleCopy(payload: string) {
-    const result = await copyText(payload);
-    if (result.ok) {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    }
-  }
+  const selected = filteredAlerts.find((alert) => alert.id === selectedId) ?? filteredAlerts[0] ?? null;
+  const activeCount = filteredAlerts.filter((alert) => isAlertActive(alert.status)).length;
 
   async function patchAlert(alert: Alert, status: string) {
     if (!canWrite || actionBusy) return;
@@ -84,10 +73,6 @@ export default function AlertsPage() {
       });
       invalidateQueries(["stats", "alert:"]);
       await alertsQuery.reload();
-      if (inspectAlert?.id === alert.id) {
-        const res = await apiFetch<{ alert: Alert }>(`/alerts/${alert.id}`);
-        setInspectAlert(res.alert);
-      }
     } catch (e) {
       setActionError(e instanceof ApiRequestError ? e.message : e instanceof Error ? e.message : "Failed to update alert");
     } finally {
@@ -95,290 +80,156 @@ export default function AlertsPage() {
     }
   }
 
+  async function copyJson(alert: Alert) {
+    const result = await copyText(JSON.stringify(alert, null, 2));
+    if (result.ok) {
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1500);
+    }
+  }
+
   return (
     <>
       <PageHeader
         title="Alerts"
-        subtitle="Detection matches across enrolled servers — acknowledge, investigate, or resolve"
+        subtitle="Work one detection at a time. Filters stay on the API, the search narrows this page."
         actions={
-          <div className="d-flex gap-2">
-            <span className="badge bg-primary-subtle text-primary">{activeCount} active</span>
-            <span className="badge bg-secondary-subtle text-secondary">{total} total</span>
-          </div>
+          <span className="text-muted">
+            {activeCount} active · {total} loaded
+          </span>
         }
       />
 
       <div className="card">
         <div className="card-body">
-          <div className="row g-3">
-            <div className="col-lg-4">
+          <div className="row g-2">
+            <div className="col-lg-6">
               <input
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Filter by title, rule, server, or source IP…"
                 className="form-control"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Title, rule, server, or source IP"
               />
             </div>
-            <div className="col-lg-8">
-              <div className="d-flex flex-wrap gap-2">
-                {STATUS_FILTERS.map((st) => (
-                  <button
-                    key={st}
-                    type="button"
-                    onClick={() => setSelectedStatus(st)}
-                    className={`btn btn-sm ${selectedStatus === st ? "btn-primary" : "btn-light"}`}
-                  >
-                    {st === "ACKNOWLEDGED" ? "ACK" : st === "INVESTIGATING" ? "INV" : st}
-                  </button>
+            <div className="col-md-3">
+              <select className="form-select" value={selectedStatus} onChange={(event) => setSelectedStatus(event.target.value)}>
+                {STATUS_FILTERS.map((status) => (
+                  <option key={status} value={status}>
+                    Status: {status}
+                  </option>
                 ))}
-                <span className="vr mx-1" />
-                {SEVERITY_FILTERS.map((sev) => (
-                  <button
-                    key={sev}
-                    type="button"
-                    onClick={() => setSelectedSeverity(sev)}
-                    className={`btn btn-sm ${selectedSeverity === sev ? "btn-soft-primary" : "btn-light"}`}
-                  >
-                    {sev}
-                  </button>
+              </select>
+            </div>
+            <div className="col-md-3">
+              <select className="form-select" value={selectedSeverity} onChange={(event) => setSelectedSeverity(event.target.value)}>
+                {SEVERITY_FILTERS.map((severity) => (
+                  <option key={severity} value={severity}>
+                    Severity: {severity}
+                  </option>
                 ))}
-              </div>
+              </select>
             </div>
           </div>
         </div>
       </div>
 
       {actionError ? <div className="alert alert-danger">{actionError}</div> : null}
+      {alertsQuery.loading ? <LoadingBlock label="Loading alerts…" /> : null}
+      {alertsQuery.error ? <div className="alert alert-danger">{alertsQuery.error}</div> : null}
 
-      {loading ? (
-        <LoadingBlock label="Loading alerts…" />
-      ) : error ? (
-        <div className="alert alert-danger">{error}</div>
-      ) : filteredAlerts.length === 0 ? (
+      {!alertsQuery.loading && !alertsQuery.error && filteredAlerts.length === 0 ? (
         <EmptyState
-          title={alerts.length === 0 ? "No alerts yet" : "No alerts match"}
-          description={
-            alerts.length === 0
-              ? "When detection rules fire, incidents will appear here."
-              : "Try clearing status or severity filters, or broaden your search."
-          }
+          title={alerts.length === 0 ? "No alerts yet" : "Nothing in this view"}
+          description="Clear the search or widen the status and severity."
           action={
-            selectedStatus !== "ALL" || selectedSeverity !== "ALL" || search ? (
-              <button
-                type="button"
-                className="btn btn-light"
-                onClick={() => {
-                  setSelectedStatus("ALL");
-                  setSelectedSeverity("ALL");
-                  setSearch("");
-                }}
-              >
-                Clear filters
-              </button>
-            ) : null
+            <button
+              type="button"
+              className="btn btn-light"
+              onClick={() => {
+                setSelectedStatus("ALL");
+                setSelectedSeverity("ALL");
+                setSearch("");
+              }}
+            >
+              Reset
+            </button>
           }
         />
-      ) : (
-        <div className="card">
-          <div className="card-body">
-            <div className="table-responsive">
-              <table className="table table-hover align-middle mb-0">
-                <thead className="table-light">
-                  <tr>
-                    <th>Severity</th>
-                    <th>Title</th>
-                    <th>Status</th>
-                    <th>Server</th>
-                    <th>Hits</th>
-                    <th>First / Last</th>
-                    <th className="text-end">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredAlerts.map((alert) => {
-                    const quick = nextAlertStatuses(alert.status);
-                    const resolveTarget = quick.includes("RESOLVED") ? "RESOLVED" : quick.includes("OPEN") ? "OPEN" : null;
-                    return (
-                      <tr key={alert.id}>
-                        <td>
-                          <SeverityBadge severity={alert.severity} />
-                        </td>
-                        <td>
-                          <div className="fw-medium">{alert.title}</div>
-                          <div className="text-muted text-truncate" style={{ maxWidth: 360 }}>
-                            {alert.description}
-                          </div>
-                        </td>
-                        <td>
-                          <StatusBadge status={alert.status} />
-                        </td>
-                        <td>
-                          {canServer ? (
-                            <Link href={`/servers/${alert.server_id}`} title={alert.server_id}>
-                              {alert.server_id.slice(0, 8)}…
-                            </Link>
-                          ) : (
-                            <span title={alert.server_id}>{alert.server_id.slice(0, 8)}…</span>
-                          )}
-                        </td>
-                        <td>{alert.event_count || 1}</td>
-                        <td className="text-muted fs-12">
-                          <div>{formatAlertTimeShort(alert.first_seen_at)}</div>
-                          <div>{formatAlertTimeShort(alert.last_seen_at)}</div>
-                        </td>
-                        <td className="text-end">
-                          {canWrite && resolveTarget ? (
-                            <button
-                              type="button"
-                              disabled={actionBusy === alert.id}
-                              onClick={() => void patchAlert(alert, resolveTarget)}
-                              className="btn btn-sm btn-success me-1"
-                            >
-                              {actionBusy === alert.id ? "…" : alertActionLabel(resolveTarget)}
-                            </button>
-                          ) : null}
-                          <button
-                            type="button"
-                            className="btn btn-sm btn-light me-1"
-                            onClick={() => {
-                              setInspectAlert(alert);
-                              setModalTab("overview");
-                            }}
-                          >
-                            Inspect
-                          </button>
-                          <Link href={`/alerts/${alert.id}`} className="btn btn-sm btn-primary">
-                            Details
-                          </Link>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+      ) : null}
+
+      {filteredAlerts.length > 0 ? (
+        <div className="row">
+          <div className="col-xl-7">
+            <div className="dx-log">
+              {filteredAlerts.map((alert) => (
+                <button key={alert.id} type="button" className={selected?.id === alert.id ? "is-on" : ""} onClick={() => setSelectedId(alert.id)}>
+                  <span className="d-flex justify-content-between gap-2">
+                    <span className="fw-medium">{alert.title}</span>
+                    <SeverityBadge severity={alert.severity} />
+                  </span>
+                  <span className="d-block text-muted fs-12 mt-1">
+                    {alert.status} · {alert.event_count || 1} hits · {formatAlertTime(alert.last_seen_at)}
+                  </span>
+                </button>
+              ))}
             </div>
           </div>
-        </div>
-      )}
-
-      <Modal
-        isOpen={!!inspectAlert}
-        onClose={() => setInspectAlert(null)}
-        title={inspectAlert?.title || "Alert"}
-        subtitle={inspectAlert ? `Server ${inspectAlert.server_id.slice(0, 8)}… · Rule ${inspectAlert.rule_id || "—"}` : undefined}
-        footer={
-          inspectAlert ? (
-            <div className="d-flex flex-wrap justify-content-between w-100 gap-2">
-              <span className="text-muted">Opened {formatAlertTime(inspectAlert.opened_at)}</span>
-              <div className="d-flex flex-wrap gap-2">
-                {canWrite
-                  ? nextAlertStatuses(inspectAlert.status).map((s) => (
-                      <button
-                        key={s}
-                        type="button"
-                        disabled={actionBusy === inspectAlert.id}
-                        onClick={() => void patchAlert(inspectAlert, s)}
-                        className={s === "RESOLVED" || s === "OPEN" ? "btn btn-primary btn-sm" : "btn btn-light btn-sm"}
-                      >
-                        {alertActionLabel(s)}
-                      </button>
-                    ))
-                  : null}
-                <button type="button" className="btn btn-light btn-sm" onClick={() => void handleCopy(JSON.stringify(inspectAlert, null, 2))}>
-                  {copied ? "Copied" : "Copy JSON"}
-                </button>
-                <Link href={`/alerts/${inspectAlert.id}`} className="btn btn-primary btn-sm">
-                  Open detail
-                </Link>
-              </div>
-            </div>
-          ) : null
-        }
-      >
-        {inspectAlert ? (
-          <>
-            <ul className="nav nav-tabs nav-tabs-custom mb-3">
-              {(
-                [
-                  ["overview", "Overview"],
-                  ["raw", "Raw JSON"],
-                  ["remediation", "Response"],
-                ] as const
-              ).map(([id, label]) => (
-                <li className="nav-item" key={id}>
-                  <button type="button" className={`nav-link ${modalTab === id ? "active" : ""}`} onClick={() => setModalTab(id)}>
-                    {label}
-                  </button>
-                </li>
-              ))}
-            </ul>
-            {modalTab === "overview" ? (
-              <div className="row g-3">
-                <Stat label="Severity">
-                  <SeverityBadge severity={inspectAlert.severity} />
-                </Stat>
-                <Stat label="Status">
-                  <StatusBadge status={inspectAlert.status} />
-                </Stat>
-                <Stat label="Hits">
-                  <span className="fs-16">{inspectAlert.event_count || 1}</span>
-                </Stat>
-                <Stat label="Rule">
-                  <span>{inspectAlert.rule_id || "—"}</span>
-                </Stat>
-                <div className="col-12">
-                  <p className="text-muted mb-1">Summary</p>
-                  <p className="mb-0">{inspectAlert.description || "No description."}</p>
+          <div className="col-xl-5">
+            {selected ? (
+              <div className="card dx-detail">
+                <div className="card-body">
+                  <div className="d-flex gap-2 mb-2">
+                    <StatusBadge status={selected.status} />
+                    <SeverityBadge severity={selected.severity} />
+                  </div>
+                  <h4>{selected.title}</h4>
+                  <p className="text-muted">{selected.description || "No description."}</p>
+                  <dl className="row">
+                    <dt className="col-4 text-muted">Server</dt>
+                    <dd className="col-8 text-break">
+                      {canServer ? <Link href={`/servers/${selected.server_id}`}>{selected.server_id}</Link> : selected.server_id}
+                    </dd>
+                    <dt className="col-4 text-muted">Rule</dt>
+                    <dd className="col-8">{selected.rule_id || "—"}</dd>
+                    <dt className="col-4 text-muted">Source IP</dt>
+                    <dd className="col-8">{selected.source_ip || "—"}</dd>
+                    <dt className="col-4 text-muted">First seen</dt>
+                    <dd className="col-8">{formatAlertTime(selected.first_seen_at)}</dd>
+                    <dt className="col-4 text-muted">Last seen</dt>
+                    <dd className="col-8">{formatAlertTime(selected.last_seen_at)}</dd>
+                  </dl>
+                  <p className="text-muted fs-12">
+                    Review the host around {formatAlertTime(selected.first_seen_at)}, then acknowledge while you look and resolve when it is closed.
+                  </p>
+                  <div className="d-flex flex-wrap gap-2">
+                    {canWrite
+                      ? nextAlertStatuses(selected.status).map((status) => (
+                          <button
+                            key={status}
+                            type="button"
+                            className={status === "RESOLVED" || status === "OPEN" ? "btn btn-primary btn-sm" : "btn btn-light btn-sm"}
+                            disabled={actionBusy === selected.id}
+                            onClick={() => void patchAlert(selected, status)}
+                          >
+                            {alertActionLabel(status)}
+                          </button>
+                        ))
+                      : null}
+                    <button type="button" className="btn btn-light btn-sm" onClick={() => void copyJson(selected)}>
+                      {copied ? "Copied" : "Copy JSON"}
+                    </button>
+                    {canDetail ? (
+                      <Link href={`/alerts/${selected.id}`} className="btn btn-primary btn-sm">
+                        Full record
+                      </Link>
+                    ) : null}
+                  </div>
                 </div>
-                <Stat label="Server">
-                  {canServer ? (
-                    <Link href={`/servers/${inspectAlert.server_id}`} className="text-break">
-                      {inspectAlert.server_id}
-                    </Link>
-                  ) : (
-                    <span className="text-break">{inspectAlert.server_id}</span>
-                  )}
-                </Stat>
-                <Stat label="Alert ID">
-                  <span className="text-break">{inspectAlert.id}</span>
-                </Stat>
-                <Stat label="First seen">{formatAlertTime(inspectAlert.first_seen_at)}</Stat>
-                <Stat label="Last seen">{formatAlertTime(inspectAlert.last_seen_at)}</Stat>
               </div>
             ) : null}
-            {modalTab === "raw" ? (
-              <pre className="bg-light p-3 rounded mb-0" style={{ maxHeight: 320, overflow: "auto" }}>
-                {JSON.stringify(inspectAlert, null, 2)}
-              </pre>
-            ) : null}
-            {modalTab === "remediation" ? (
-              <div className="alert alert-warning mb-0">
-                <h6>Suggested next steps</h6>
-                <ol className="mb-0">
-                  <li>
-                    Review processes and auth activity on server {inspectAlert.server_id.slice(0, 8)}… around{" "}
-                    {formatAlertTime(inspectAlert.first_seen_at)}.
-                  </li>
-                  <li>Correlate related events under Events filtered by this host.</li>
-                  <li>Acknowledge while investigating, then mark resolved with notes when closed.</li>
-                </ol>
-              </div>
-            ) : null}
-          </>
-        ) : null}
-      </Modal>
+          </div>
+        </div>
+      ) : null}
     </>
-  );
-}
-
-function Stat({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div className="col-md-6 col-xl-3">
-      <div className="border rounded p-3 h-100">
-        <span className="text-muted text-uppercase fs-12 d-block mb-1">{label}</span>
-        {children}
-      </div>
-    </div>
   );
 }

@@ -3,7 +3,6 @@
 import { FormEvent, useCallback, useState } from "react";
 import { EmptyState } from "@/components/ui/empty-state";
 import { LoadingBlock } from "@/components/ui/loading-block";
-import { Modal } from "@/components/ui/modal";
 import { PageHeader } from "@/components/ui/page-header";
 import { RoleAssignList } from "@/components/access/role-assign";
 import { apiFetch, ApiRequestError } from "@/lib/api/client";
@@ -17,7 +16,7 @@ export default function TeamUsersPage() {
   const canWrite = hasPermission(me, "users", "write");
 
   const [search, setSearch] = useState("");
-  const [createOpen, setCreateOpen] = useState(false);
+  const [creating, setCreating] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
@@ -58,6 +57,7 @@ export default function TeamUsersPage() {
         }));
 
   async function openDetail(u: User) {
+    setCreating(false);
     setSelected(u);
     setEditName(u.display_name || "");
     setEditRoles(u.roles || []);
@@ -93,7 +93,7 @@ export default function TeamUsersPage() {
       setPassword("");
       setDisplayName("");
       setCreateRoles(["VIEWER"]);
-      setCreateOpen(false);
+      setCreating(false);
       await load();
     } catch (err) {
       setFormError(err instanceof ApiRequestError ? err.message : "Create failed");
@@ -234,183 +234,175 @@ export default function TeamUsersPage() {
   return (
     <>
       <PageHeader
-        title="Team"
-        subtitle="Operators, roles, and authentication"
+        title="People"
+        subtitle="Who can sign in, what they can do, and which sessions are live."
         actions={
           canWrite ? (
-            <button type="button" className="btn btn-primary" onClick={() => setCreateOpen(true)}>
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={() => {
+                setCreating(true);
+                setFormError(null);
+              }}
+            >
               Add operator
             </button>
           ) : null
         }
       />
 
-      <div className="row">
-        {[
-          ["Operators", users.length],
-          ["Active", activeCount],
-          ["2FA enabled", totpCount],
-          ["Roles", roles.length || roleOptions.length],
-        ].map(([label, value]) => (
-          <div className="col-md-3" key={String(label)}>
-            <div className="card">
-              <div className="card-body">
-                <p className="text-muted text-uppercase fs-12 mb-1">{label}</p>
-                <h4 className="mb-0">{value}</h4>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <div className="card">
-        <div className="card-body">
-          <input className="form-control" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Filter by email, name, or role" />
-        </div>
+      <div className="row g-3 mb-3">
+        <Stat label="Operators" value={users.length} />
+        <Stat label="Active" value={activeCount} />
+        <Stat label="2FA" value={totpCount} />
+        <Stat label="Roles" value={roles.length || roleOptions.length} />
       </div>
 
       {loadError ? <div className="alert alert-danger">{loadError}</div> : null}
-      {filteredUsers.length === 0 ? (
-        <EmptyState title="No operators found" description="Try refining your search keyword." />
-      ) : (
-        <div className="card">
-          <div className="card-body">
-            <div className="table-responsive">
-              <table className="table table-hover align-middle mb-0">
-                <thead className="table-light">
-                  <tr>
-                    <th>Operator</th>
-                    <th>Roles</th>
-                    <th>Status</th>
-                    <th>2FA</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredUsers.map((u) => (
-                    <tr key={u.id}>
-                      <td>
-                        <div className="fw-medium">{u.display_name || u.email}</div>
-                        <div className="text-muted fs-12">{u.email}</div>
-                      </td>
-                      <td>
-                        {(u.roles || []).map((r) => (
-                          <span key={r} className="badge bg-primary-subtle text-primary me-1">
-                            {roleDisplayName(r)}
+
+      <div className="row">
+        <div className="col-xl-5">
+          <div className="card">
+            <div className="card-body">
+              <input
+                className="form-control mb-3"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Filter by email, name, or role"
+              />
+              {filteredUsers.length === 0 ? (
+                <EmptyState title="No operators found" description="Try refining your search keyword." />
+              ) : (
+                <div className="dx-log">
+                  {filteredUsers.map((person) => (
+                    <button
+                      key={person.id}
+                      type="button"
+                      className={!creating && selected?.id === person.id ? "is-on" : ""}
+                      onClick={() => void openDetail(person)}
+                    >
+                      <span className="d-flex justify-content-between gap-2">
+                        <span className="fw-medium">{person.display_name || person.email}</span>
+                        <span className={`badge ${person.is_active ? "bg-success-subtle text-success" : "bg-danger-subtle text-danger"}`}>
+                          {person.is_active ? "Active" : "Suspended"}
+                        </span>
+                      </span>
+                      <span className="d-block text-muted fs-12 mt-1">{person.email}</span>
+                      <span className="d-block mt-2">
+                        {(person.roles || []).map((role) => (
+                          <span key={role} className="badge bg-primary-subtle text-primary me-1">
+                            {roleDisplayName(role)}
                           </span>
                         ))}
-                      </td>
-                      <td>
-                        <span className={`badge ${u.is_active ? "bg-success-subtle text-success" : "bg-danger-subtle text-danger"}`}>
-                          {u.is_active ? "Active" : "Suspended"}
-                        </span>
-                      </td>
-                      <td>{u.totp_enabled ? "On" : "Off"}</td>
-                      <td className="text-end">
-                        <button type="button" className="btn btn-sm btn-light" onClick={() => void openDetail(u)}>
-                          Manage
-                        </button>
-                      </td>
-                    </tr>
+                        <span className="text-muted fs-12">{person.totp_enabled ? "2FA on" : "2FA off"}</span>
+                      </span>
+                    </button>
                   ))}
-                </tbody>
-              </table>
+                </div>
+              )}
             </div>
           </div>
         </div>
-      )}
 
-      <Modal isOpen={createOpen} onClose={() => setCreateOpen(false)} title="Add operator">
-        <form onSubmit={(e) => void onCreate(e)}>
-          <div className="mb-3">
-            <label className="form-label">Email</label>
-            <input required type="email" className="form-control" value={email} onChange={(e) => setEmail(e.target.value)} />
-          </div>
-          <div className="mb-3">
-            <label className="form-label">Display name</label>
-            <input className="form-control" value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
-          </div>
-          <div className="mb-3">
-            <label className="form-label">Password</label>
-            <input required type="password" minLength={12} className="form-control" value={password} onChange={(e) => setPassword(e.target.value)} />
-          </div>
-          <div className="mb-3">
-            <label className="form-label d-block">Roles</label>
-            <RoleAssignList roles={assignableRoles} selected={createRoles} onChange={setCreateRoles} />
-          </div>
-          {formError ? <div className="alert alert-danger">{formError}</div> : null}
-          <div className="text-end">
-            <button type="button" className="btn btn-light me-2" onClick={() => setCreateOpen(false)}>
-              Cancel
-            </button>
-            <button type="submit" className="btn btn-primary" disabled={saving}>
-              {saving ? "Saving…" : "Create"}
-            </button>
-          </div>
-        </form>
-      </Modal>
-
-      <Modal isOpen={!!selected} onClose={() => setSelected(null)} title={selected?.email || "Operator"}>
-        {selected ? (
-          <>
-            {detailMsg ? <div className="alert alert-info">{detailMsg}</div> : null}
-            <div className="mb-3">
-              <label className="form-label">Display name</label>
-              <input className="form-control" value={editName} onChange={(e) => setEditName(e.target.value)} disabled={!canWrite || detailBusy} />
+        <div className="col-xl-7">
+          <div className="card dx-detail">
+            <div className="card-header">
+              <h4 className="card-title mb-0">{creating ? "New operator" : selected?.email || "Operator"}</h4>
             </div>
-            <div className="mb-3">
-              <label className="form-label d-block">Roles</label>
-              <RoleAssignList roles={assignableRoles} selected={editRoles} disabled={!canWrite || detailBusy} onChange={setEditRoles} />
-            </div>
-            <div className="d-flex flex-wrap gap-2 mb-3">
-              <button type="button" className="btn btn-primary" disabled={!canWrite || detailBusy} onClick={() => void saveProfile()}>
-                Save
-              </button>
-              <button type="button" className="btn btn-light" disabled={!canWrite || detailBusy} onClick={() => void setActive(!selected.is_active)}>
-                {selected.is_active ? "Suspend" : "Activate"}
-              </button>
-              <button type="button" className="btn btn-light" disabled={!canWrite || detailBusy} onClick={() => void resetTotp()}>
-                Reset 2FA
-              </button>
-            </div>
-            <div className="mb-3">
-              <label className="form-label">New password</label>
-              <div className="input-group">
-                <input type="password" className="form-control" value={editPassword} onChange={(e) => setEditPassword(e.target.value)} disabled={!canWrite || detailBusy} />
-                <button type="button" className="btn btn-light" disabled={!canWrite || detailBusy} onClick={() => void resetPassword()}>
-                  Reset password
-                </button>
-              </div>
-            </div>
-            {canWrite ? (
-              <div>
-                <div className="d-flex justify-content-between align-items-center mb-2">
-                  <h6 className="mb-0">Sessions</h6>
-                  <button type="button" className="btn btn-sm btn-light" disabled={detailBusy || sessions.length === 0} onClick={() => void revokeAllSessions()}>
-                    Revoke all
-                  </button>
-                </div>
-                {sessions.length === 0 ? (
-                  <p className="text-muted mb-0">No active sessions.</p>
-                ) : (
-                  <ul className="list-group">
-                    {sessions.map((s) => (
-                      <li key={s.id} className="list-group-item d-flex justify-content-between align-items-center">
-                        <span>
-                          {s.ip_address || "unknown"} · {s.created_at}
-                        </span>
-                        <button type="button" className="btn btn-sm btn-light" onClick={() => void revokeSession(s.id)}>
-                          Revoke
+            <div className="card-body">
+              {creating && canWrite ? (
+                <form onSubmit={(e) => void onCreate(e)}>
+                  <label className="form-label">Email</label>
+                  <input required type="email" className="form-control mb-3" value={email} onChange={(e) => setEmail(e.target.value)} />
+                  <label className="form-label">Display name</label>
+                  <input className="form-control mb-3" value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
+                  <label className="form-label">Password</label>
+                  <input required type="password" minLength={12} className="form-control mb-3" value={password} onChange={(e) => setPassword(e.target.value)} />
+                  <p className="form-label">Roles</p>
+                  <RoleAssignList roles={assignableRoles} selected={createRoles} onChange={setCreateRoles} />
+                  {formError ? <div className="alert alert-danger mt-3">{formError}</div> : null}
+                  <div className="d-flex gap-2 mt-3">
+                    <button type="button" className="btn btn-light" onClick={() => setCreating(false)}>
+                      Cancel
+                    </button>
+                    <button type="submit" className="btn btn-primary" disabled={saving}>
+                      {saving ? "Saving…" : "Create"}
+                    </button>
+                  </div>
+                </form>
+              ) : selected ? (
+                <>
+                  {detailMsg ? <div className="alert alert-info">{detailMsg}</div> : null}
+                  <label className="form-label">Display name</label>
+                  <input className="form-control mb-3" value={editName} onChange={(e) => setEditName(e.target.value)} disabled={!canWrite || detailBusy} />
+                  <p className="form-label">Roles</p>
+                  <RoleAssignList roles={assignableRoles} selected={editRoles} disabled={!canWrite || detailBusy} onChange={setEditRoles} />
+                  <div className="d-flex flex-wrap gap-2 my-3">
+                    <button type="button" className="btn btn-primary" disabled={!canWrite || detailBusy} onClick={() => void saveProfile()}>
+                      Save
+                    </button>
+                    <button type="button" className="btn btn-light" disabled={!canWrite || detailBusy} onClick={() => void setActive(!selected.is_active)}>
+                      {selected.is_active ? "Suspend" : "Activate"}
+                    </button>
+                    <button type="button" className="btn btn-light" disabled={!canWrite || detailBusy} onClick={() => void resetTotp()}>
+                      Reset 2FA
+                    </button>
+                  </div>
+                  <label className="form-label">New password</label>
+                  <div className="input-group mb-3">
+                    <input type="password" className="form-control" value={editPassword} onChange={(e) => setEditPassword(e.target.value)} disabled={!canWrite || detailBusy} />
+                    <button type="button" className="btn btn-light" disabled={!canWrite || detailBusy} onClick={() => void resetPassword()}>
+                      Reset password
+                    </button>
+                  </div>
+                  {canWrite ? (
+                    <div>
+                      <div className="d-flex justify-content-between align-items-center mb-2">
+                        <h6 className="mb-0">Sessions</h6>
+                        <button type="button" className="btn btn-sm btn-light" disabled={detailBusy || sessions.length === 0} onClick={() => void revokeAllSessions()}>
+                          Revoke all
                         </button>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            ) : null}
-          </>
-        ) : null}
-      </Modal>
+                      </div>
+                      {sessions.length === 0 ? (
+                        <p className="text-muted mb-0">No active sessions.</p>
+                      ) : (
+                        <div className="dx-log">
+                          {sessions.map((session) => (
+                            <div key={session.id} className="dx-metric">
+                              <span className="d-flex justify-content-between align-items-center gap-2">
+                                <span>
+                                  {session.ip_address || "unknown"} · {session.created_at}
+                                </span>
+                                <button type="button" className="btn btn-sm btn-light" onClick={() => void revokeSession(session.id)}>
+                                  Revoke
+                                </button>
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ) : null}
+                </>
+              ) : (
+                <EmptyState title="Select a person" description="Open someone from the list, or add an operator." />
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
     </>
+  );
+}
+
+function Stat({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="col-6 col-xl-3">
+      <div className="dx-metric">
+        <span className="text-muted text-uppercase fs-12">{label}</span>
+        <strong>{value}</strong>
+      </div>
+    </div>
   );
 }

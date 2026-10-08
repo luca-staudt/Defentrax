@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState } from "react";
 import { EmptyState } from "@/components/ui/empty-state";
 import { LoadingBlock } from "@/components/ui/loading-block";
 import { PageHeader } from "@/components/ui/page-header";
@@ -95,125 +95,136 @@ export default function AlertDetailPage() {
         title={alert.title}
         subtitle={alert.description || "No description provided."}
         actions={
-          <div className="d-flex gap-2">
+          <div className="d-flex align-items-center gap-2">
             <StatusBadge status={alert.status} />
             <SeverityBadge severity={alert.severity} />
+            <Link href="/alerts" className="btn btn-light">
+              Queue
+            </Link>
           </div>
         }
       />
-      <p className="mb-3">
-        <Link href="/alerts" className="text-muted">
-          Alerts
-        </Link>
-        <span className="text-muted"> / {alert.id.slice(0, 8)}…</span>
-      </p>
 
       <div className="row">
-        <MetaCell
-          label="Server"
-          value={
-            canServer ? (
-              <Link href={`/servers/${alert.server_id}`} className="text-break">
-                {alert.server_id}
-              </Link>
-            ) : (
-              <span className="text-break">{alert.server_id}</span>
-            )
-          }
-        />
-        <MetaCell label="Rule" value={<span>{alert.rule_id || "—"}</span>} />
-        <MetaCell label="Event hits" value={<span className="fs-16">{alert.event_count}</span>} />
-        <MetaCell label="Source IP" value={<span>{alert.source_ip || "—"}</span>} />
-        <MetaCell label="First seen" value={formatAlertTime(alert.first_seen_at)} />
-        <MetaCell label="Last seen" value={formatAlertTime(alert.last_seen_at)} />
-        <MetaCell label="Opened" value={formatAlertTime(alert.opened_at)} />
-        <MetaCell label="Resolved" value={formatAlertTime(alert.resolved_at)} />
-      </div>
-
-      {canWrite ? (
-        <div className="card">
-          <div className="card-header">
-            <h4 className="card-title mb-0">Lifecycle actions</h4>
+        <div className="col-xl-7">
+          <div className="row g-3 mb-3">
+            <Fact label="Hits" value={String(alert.event_count)} />
+            <Fact label="Source IP" value={alert.source_ip || "—"} />
+            <Fact label="First seen" value={formatAlertTime(alert.first_seen_at)} />
+            <Fact label="Last seen" value={formatAlertTime(alert.last_seen_at)} />
+            <Fact label="Opened" value={formatAlertTime(alert.opened_at)} />
+            <Fact label="Resolved" value={formatAlertTime(alert.resolved_at)} />
           </div>
-          <div className="card-body">
-            <p className="text-muted">Resolve from any open state, or reopen a closed alert.</p>
-            <textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              rows={3}
-              placeholder="Resolution / investigation notes (optional)"
-              className="form-control"
-            />
-            {actionError ? <div className="alert alert-danger mt-3 mb-0">{actionError}</div> : null}
-            <div className="d-flex flex-wrap gap-2 mt-3">
-              {next.map((s) => {
-                const primary = s === "RESOLVED" || s === "OPEN";
-                return (
-                  <button
-                    key={s}
-                    type="button"
-                    disabled={saving}
-                    onClick={() => void patchStatus(s)}
-                    className={primary ? "btn btn-primary" : "btn btn-light"}
-                  >
-                    {saving ? "Updating…" : alertActionLabel(s)}
-                  </button>
-                );
-              })}
-              {next.length === 0 ? <p className="text-muted mb-0">No further transitions available.</p> : null}
+
+          <div className="card">
+            <div className="card-header">
+              <h4 className="card-title mb-0">Record</h4>
+            </div>
+            <div className="card-body">
+              <p className="mb-2">
+                <span className="text-muted">Server · </span>
+                {canServer ? (
+                  <Link href={`/servers/${alert.server_id}`} className="text-break">
+                    {alert.server_id}
+                  </Link>
+                ) : (
+                  <span className="text-break">{alert.server_id}</span>
+                )}
+              </p>
+              <p className="mb-0">
+                <span className="text-muted">Rule · </span>
+                {alert.rule_id || "—"}
+              </p>
+            </div>
+          </div>
+
+          <div className="card">
+            <div className="card-header">
+              <h4 className="card-title mb-0">Timeline</h4>
+            </div>
+            <div className="card-body">
+              {timeline.length === 0 ? (
+                <p className="text-muted mb-0">No timeline events yet.</p>
+              ) : (
+                <div className="dx-log">
+                  {timeline.map((entry) => (
+                    <div key={entry.id} className="dx-metric">
+                      <span className="fw-medium">{entry.message}</span>
+                      <span className="d-block text-muted fs-12 mt-1">
+                        {entry.event_type} · {formatAlertTime(entry.created_at)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
-      ) : (
-        <p className="text-muted">Read-only — you cannot change alert status.</p>
-      )}
 
-      {alert.resolution_notes ? (
-        <div className="card">
-          <div className="card-header">
-            <h4 className="card-title mb-0">Resolution notes</h4>
-          </div>
-          <div className="card-body">
-            <p className="mb-0" style={{ whiteSpace: "pre-wrap" }}>
-              {alert.resolution_notes}
-            </p>
-          </div>
-        </div>
-      ) : null}
-
-      <div className="card">
-        <div className="card-header">
-          <h4 className="card-title mb-0">Timeline</h4>
-        </div>
-        <div className="card-body">
-          {timeline.length === 0 ? (
-            <p className="text-muted mb-0">No timeline events yet.</p>
-          ) : (
-            <div className="list-group">
-              {timeline.map((t) => (
-                <div key={t.id} className="list-group-item">
-                  <p className="mb-1">{t.message}</p>
-                  <p className="text-muted fs-12 mb-0">
-                    {t.event_type} · {formatAlertTime(t.created_at)}
+        <div className="col-xl-5">
+          <div className="card dx-detail">
+            <div className="card-header">
+              <h4 className="card-title mb-0">Move this alert</h4>
+            </div>
+            <div className="card-body">
+              {canWrite ? (
+                <>
+                  <p className="text-muted">Resolve from any open state, or reopen a closed alert.</p>
+                  <label className="form-label" htmlFor="resolution-notes">
+                    Notes
+                  </label>
+                  <textarea
+                    id="resolution-notes"
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    rows={4}
+                    placeholder="Resolution / investigation notes (optional)"
+                    className="form-control"
+                  />
+                  {actionError ? <div className="alert alert-danger mt-3 mb-0">{actionError}</div> : null}
+                  <div className="d-flex flex-wrap gap-2 mt-3">
+                    {next.map((status) => {
+                      const primary = status === "RESOLVED" || status === "OPEN";
+                      return (
+                        <button
+                          key={status}
+                          type="button"
+                          disabled={saving}
+                          onClick={() => void patchStatus(status)}
+                          className={primary ? "btn btn-primary" : "btn btn-light"}
+                        >
+                          {saving ? "Updating…" : alertActionLabel(status)}
+                        </button>
+                      );
+                    })}
+                    {next.length === 0 ? <p className="text-muted mb-0">No further transitions available.</p> : null}
+                  </div>
+                </>
+              ) : (
+                <p className="text-muted mb-0">Read-only — you cannot change alert status.</p>
+              )}
+              {alert.resolution_notes ? (
+                <div className="mt-4">
+                  <p className="text-muted text-uppercase fs-12 mb-1">Saved notes</p>
+                  <p className="mb-0" style={{ whiteSpace: "pre-wrap" }}>
+                    {alert.resolution_notes}
                   </p>
                 </div>
-              ))}
+              ) : null}
             </div>
-          )}
+          </div>
         </div>
       </div>
     </>
   );
 }
 
-function MetaCell({ label, value }: { label: string; value: ReactNode }) {
+function Fact({ label, value }: { label: string; value: string }) {
   return (
-    <div className="col-md-6 col-xl-3">
-      <div className="card">
-        <div className="card-body">
-          <p className="text-muted text-uppercase fs-12 mb-1">{label}</p>
-          <div className="mb-0">{value}</div>
-        </div>
+    <div className="col-md-6 col-xl-4">
+      <div className="dx-metric">
+        <span className="text-muted text-uppercase fs-12">{label}</span>
+        <strong className="fs-14">{value}</strong>
       </div>
     </div>
   );

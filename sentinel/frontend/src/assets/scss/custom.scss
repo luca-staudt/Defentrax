@@ -104,6 +104,77 @@ html[data-sidebar-size="sm-hover"] {
   }
 }
 
+.dx-metric {
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--#{$prefix}border-color);
+  border-radius: 0.5rem;
+  background: var(--#{$prefix}secondary-bg);
+  height: 100%;
+
+  strong {
+    display: block;
+    font-size: 1.45rem;
+    line-height: 1.2;
+  }
+}
+
+.dx-detail {
+  position: sticky;
+  top: 86px;
+}
+
+.dx-log {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.dx-log button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: 1px solid var(--#{$prefix}border-color);
+  border-radius: 0.5rem;
+  background: transparent;
+  color: inherit;
+  padding: 0.75rem 0.9rem;
+}
+
+.dx-log button.is-on {
+  border-color: var(--#{$prefix}primary);
+  background: rgba(var(--#{$prefix}primary-rgb), 0.08);
+}
+
+.dx-auth {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: minmax(280px, 1.1fr) minmax(320px, 460px);
+}
+
+.dx-auth-aside {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 2.5rem;
+  background: #12161b;
+  color: #f3f6f9;
+}
+
+.dx-auth-panel {
+  display: flex;
+  align-items: center;
+  padding: 2rem 1.5rem;
+}
+
+@media (max-width: 991.98px) {
+  .dx-auth {
+    grid-template-columns: 1fr;
+  }
+
+  .dx-auth-aside {
+    min-height: 220px;
+  }
+}
+
 .dx-page-grant {
   height: 100%;
   padding: 0.9rem 1rem;

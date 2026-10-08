@@ -1,11 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { EmptyState } from "@/components/ui/empty-state";
 import { LoadingBlock } from "@/components/ui/loading-block";
 import { SeverityBadge } from "@/components/ui/severity-badge";
-import { Modal } from "@/components/ui/modal";
 import { PageHeader } from "@/components/ui/page-header";
 import { formatAlertTimeShort } from "@/lib/alerts";
 import { apiFetch } from "@/lib/api/client";
@@ -26,7 +25,7 @@ export default function EventsPage() {
   const [severity, setSeverity] = useState("");
   const [source, setSource] = useState("");
   const [sourceDraft, setSourceDraft] = useState("");
-  const [inspect, setInspect] = useState<EventRow | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
   const limit = 40;
 
@@ -58,211 +57,119 @@ export default function EventsPage() {
   const total = eventsQuery.data?.total || 0;
   const loading = !ready || eventsQuery.loading;
   const error = eventsQuery.error;
+  const selected = events.find((event) => event.id === selectedId) ?? events[0] ?? null;
+  const rangeStart = total === 0 ? 0 : offset + 1;
+  const rangeEnd = Math.min(offset + limit, total);
 
-  function applyFilters(e?: FormEvent) {
-    e?.preventDefault();
+  function applyFilters(event?: FormEvent) {
+    event?.preventDefault();
     setOffset(0);
     setQ(qDraft.trim());
     setSource(sourceDraft.trim());
   }
 
-  const rangeStart = total === 0 ? 0 : offset + 1;
-  const rangeEnd = Math.min(offset + limit, total);
-
   return (
     <>
-      <PageHeader
-        title="Events"
-        subtitle="Ingested telemetry from agents — search, filter, and inspect rows"
-        actions={<span className="badge bg-secondary-subtle text-secondary">{total.toLocaleString()} total</span>}
-      />
+      <PageHeader title="Events" subtitle="Search the telemetry the agents already sent." actions={<span className="text-muted">{total.toLocaleString()} rows</span>} />
 
-      <div className="card">
+      <form className="card" onSubmit={applyFilters}>
         <div className="card-body">
-          <form onSubmit={applyFilters} className="row g-2 align-items-center">
+          <div className="row g-2">
             <div className="col-lg-5">
-              <input value={qDraft} onChange={(e) => setQDraft(e.target.value)} placeholder="Search message…" className="form-control" />
+              <input className="form-control" value={qDraft} onChange={(event) => setQDraft(event.target.value)} placeholder="Message" />
             </div>
             <div className="col-lg-3">
-              <input
-                value={sourceDraft}
-                onChange={(e) => setSourceDraft(e.target.value)}
-                placeholder="Source (e.g. auth, docker)"
-                className="form-control"
-              />
+              <input className="form-control" value={sourceDraft} onChange={(event) => setSourceDraft(event.target.value)} placeholder="Source" />
             </div>
             <div className="col-lg-2">
-              <button type="submit" className="btn btn-primary w-100">
-                Apply
-              </button>
-            </div>
-            <div className="col-12 d-flex flex-wrap gap-2">
-              {SEVERITY_FILTERS.map((sev) => (
-                <button
-                  key={sev || "all"}
-                  type="button"
-                  onClick={() => {
-                    setSeverity(sev);
-                    setOffset(0);
-                  }}
-                  className={`btn btn-sm ${severity === sev ? "btn-primary" : "btn-light"}`}
-                >
-                  {sev ? sev.toUpperCase() : "ALL"}
-                </button>
-              ))}
-            </div>
-          </form>
-        </div>
-      </div>
-
-      {loading ? (
-        <LoadingBlock label="Loading events…" />
-      ) : error ? (
-        <div className="alert alert-danger">{error}</div>
-      ) : events.length === 0 ? (
-        <EmptyState
-          title="No events match"
-          description={q || severity || source ? "Try clearing filters or broadening your search." : "Ingest events via enrolled agents, or seed data in development."}
-          action={
-            q || severity || source ? (
-              <button
-                type="button"
-                className="btn btn-light"
-                onClick={() => {
-                  setQ("");
-                  setQDraft("");
-                  setSource("");
-                  setSourceDraft("");
-                  setSeverity("");
+              <select
+                className="form-select"
+                value={severity}
+                onChange={(event) => {
+                  setSeverity(event.target.value);
                   setOffset(0);
                 }}
               >
-                Clear filters
+                {SEVERITY_FILTERS.map((level) => (
+                  <option key={level || "all"} value={level}>
+                    {level ? level : "All severities"}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="col-lg-2">
+              <button type="submit" className="btn btn-primary w-100">
+                Search
               </button>
-            ) : null
-          }
-        />
-      ) : (
-        <div className="card">
-          <div className="card-body">
-            <div className="table-responsive">
-              <table className="table table-hover align-middle mb-0">
-                <thead className="table-light">
-                  <tr>
-                    <th>Received</th>
-                    <th>Severity</th>
-                    <th>Source</th>
-                    <th>Category</th>
-                    <th>Host</th>
-                    <th>Server</th>
-                    <th>Message</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {events.map((ev) => (
-                    <tr key={ev.id}>
-                      <td className="text-muted text-nowrap">{formatAlertTimeShort(ev.received_at)}</td>
-                      <td>
-                        <SeverityBadge severity={ev.severity} />
-                      </td>
-                      <td>{ev.source || "—"}</td>
-                      <td className="text-muted">{ev.category || "—"}</td>
-                      <td className="text-muted">{ev.host || "—"}</td>
-                      <td>
-                        {canServer && ev.server_id ? (
-                          <Link href={`/servers/${ev.server_id}`} title={ev.server_id}>
-                            {ev.server_id.slice(0, 8)}…
-                          </Link>
-                        ) : (
-                          <span title={ev.server_id}>{ev.server_id ? `${ev.server_id.slice(0, 8)}…` : "—"}</span>
-                        )}
-                      </td>
-                      <td style={{ maxWidth: 360 }}>
-                        <span className="d-inline-block text-truncate" style={{ maxWidth: 360 }}>
-                          {ev.message}
-                        </span>
-                      </td>
-                      <td className="text-end">
-                        <button type="button" className="btn btn-sm btn-light" onClick={() => setInspect(ev)}>
-                          Inspect
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
             </div>
           </div>
         </div>
-      )}
+      </form>
 
-      <div className="d-flex justify-content-between align-items-center">
-        <button type="button" disabled={offset === 0 || loading} onClick={() => setOffset((o) => Math.max(0, o - limit))} className="btn btn-light">
-          Previous
-        </button>
-        <span className="text-muted">
-          {rangeStart}–{rangeEnd} of {total.toLocaleString()}
-        </span>
-        <button type="button" disabled={offset + limit >= total || loading} onClick={() => setOffset((o) => o + limit)} className="btn btn-light">
-          Next
-        </button>
-      </div>
+      {loading ? <LoadingBlock label="Loading events…" /> : null}
+      {error ? <div className="alert alert-danger">{error}</div> : null}
+      {!loading && !error && events.length === 0 ? (
+        <EmptyState title="No events" description="Nothing matches this search." />
+      ) : null}
 
-      <Modal
-        isOpen={!!inspect}
-        onClose={() => setInspect(null)}
-        title="Event detail"
-        subtitle={inspect ? `${inspect.source || "unknown"} · ${inspect.category || "—"}` : undefined}
-        footer={
-          inspect ? (
-            <div className="d-flex justify-content-between w-100">
-              <span className="text-muted">Occurred {formatAlertTimeShort(inspect.occurred_at)}</span>
-              {canServer && inspect.server_id ? (
-                <Link href={`/servers/${inspect.server_id}`} className="btn btn-primary btn-sm">
-                  Open server
-                </Link>
-              ) : null}
+      {events.length > 0 ? (
+        <div className="row">
+          <div className="col-xl-7">
+            <div className="dx-log">
+              {events.map((event) => (
+                <button key={event.id} type="button" className={selected?.id === event.id ? "is-on" : ""} onClick={() => setSelectedId(event.id)}>
+                  <span className="d-flex justify-content-between gap-2">
+                    <span className="fw-medium text-truncate">{event.message}</span>
+                    <SeverityBadge severity={event.severity} />
+                  </span>
+                  <span className="d-block text-muted fs-12 mt-1">
+                    {formatAlertTimeShort(event.received_at)} · {event.source || "unknown"} · {event.host || "—"}
+                  </span>
+                </button>
+              ))}
             </div>
-          ) : null
-        }
-      >
-        {inspect ? (
-          <div className="row g-3">
-            <Field label="Severity">
-              <SeverityBadge severity={inspect.severity} />
-            </Field>
-            <Field label="Source">{inspect.source || "—"}</Field>
-            <Field label="Category">{inspect.category || "—"}</Field>
-            <Field label="Host">{inspect.host || "—"}</Field>
-            <Field label="Received">{formatAlertTimeShort(inspect.received_at)}</Field>
-            <Field label="Occurred">{formatAlertTimeShort(inspect.occurred_at)}</Field>
-            <div className="col-12">
-              <p className="text-muted mb-1">Message</p>
-              <p className="mb-0" style={{ whiteSpace: "pre-wrap" }}>
-                {inspect.message}
-              </p>
+            <div className="d-flex justify-content-between align-items-center mt-3">
+              <button type="button" className="btn btn-light" disabled={offset === 0 || loading} onClick={() => setOffset((value) => Math.max(0, value - limit))}>
+                Previous
+              </button>
+              <span className="text-muted">
+                {rangeStart}–{rangeEnd} of {total.toLocaleString()}
+              </span>
+              <button type="button" className="btn btn-light" disabled={offset + limit >= total || loading} onClick={() => setOffset((value) => value + limit)}>
+                Next
+              </button>
             </div>
-            <Field label="Event ID">
-              <span className="text-break">{inspect.id}</span>
-            </Field>
-            <Field label="Server ID">
-              <span className="text-break">{inspect.server_id || "—"}</span>
-            </Field>
           </div>
-        ) : null}
-      </Modal>
+          <div className="col-xl-5">
+            {selected ? (
+              <div className="card dx-detail">
+                <div className="card-body">
+                  <SeverityBadge severity={selected.severity} />
+                  <p className="mt-3 mb-3" style={{ whiteSpace: "pre-wrap" }}>
+                    {selected.message}
+                  </p>
+                  <dl className="row mb-0">
+                    <dt className="col-4 text-muted">Source</dt>
+                    <dd className="col-8">{selected.source || "—"}</dd>
+                    <dt className="col-4 text-muted">Category</dt>
+                    <dd className="col-8">{selected.category || "—"}</dd>
+                    <dt className="col-4 text-muted">Host</dt>
+                    <dd className="col-8">{selected.host || "—"}</dd>
+                    <dt className="col-4 text-muted">Received</dt>
+                    <dd className="col-8">{formatAlertTimeShort(selected.received_at)}</dd>
+                    <dt className="col-4 text-muted">Occurred</dt>
+                    <dd className="col-8">{formatAlertTimeShort(selected.occurred_at)}</dd>
+                    <dt className="col-4 text-muted">Server</dt>
+                    <dd className="col-8 text-break">
+                      {canServer && selected.server_id ? <Link href={`/servers/${selected.server_id}`}>{selected.server_id}</Link> : selected.server_id || "—"}
+                    </dd>
+                  </dl>
+                </div>
+              </div>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
     </>
-  );
-}
-
-function Field({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div className="col-md-4">
-      <div className="border rounded p-3 h-100">
-        <span className="text-muted text-uppercase fs-12 d-block mb-1">{label}</span>
-        {children}
-      </div>
-    </div>
   );
 }
