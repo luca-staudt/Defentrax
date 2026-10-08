@@ -3,6 +3,7 @@
 import { FormEvent, useCallback, useState } from "react";
 import { EmptyState } from "@/components/ui/empty-state";
 import { LoadingBlock } from "@/components/ui/loading-block";
+import { Modal } from "@/components/ui/modal";
 import { PageHeader } from "@/components/ui/page-header";
 import { formatAlertTime } from "@/lib/alerts";
 import { apiFetch, ApiRequestError } from "@/lib/api/client";
@@ -99,7 +100,7 @@ export default function NotificationsPage() {
 
   async function onCreateChannel(e: FormEvent) {
     e.preventDefault();
-    if (!canWrite) return;
+    if (!canWrite || chSaving) return;
     setChError(null);
     setChSaving(true);
     try {
@@ -177,7 +178,7 @@ export default function NotificationsPage() {
 
   async function onCreateRule(e: FormEvent) {
     e.preventDefault();
-    if (!canWrite) return;
+    if (!canWrite || ruleSaving) return;
     setRuleError(null);
     setRuleSaving(true);
     try {
@@ -243,344 +244,350 @@ export default function NotificationsPage() {
 
   return (
     <>
-      <PageHeader
-        title={t("dispatch.title")}
-        subtitle={t("dispatch.subtitle")}
-      />
+      <PageHeader title={t("dispatch.title")} subtitle={t("dispatch.subtitle")} />
       {loadError ? <div className="alert alert-danger">{loadError}</div> : null}
 
-      <div className="row">
-        <div className="col-xl-5">
-          <div className="card">
-            <div className="card-header d-flex justify-content-between align-items-center">
-              <h4 className="card-title mb-0">{t("dispatch.channels")}</h4>
-              {canWrite ? (
-                <button
-                  type="button"
-                  className="btn btn-sm btn-primary"
-                  onClick={() => {
-                    setCreatingChannel(true);
-                    setChError(null);
-                  }}
-                >
-                  {t("dispatch.add")}
-                </button>
-              ) : null}
-            </div>
-            <div className="card-body">
-              {chError && !creatingChannel ? <div className="alert alert-danger">{chError}</div> : null}
-              {channels.length === 0 ? (
-                <EmptyState title={t("dispatch.noChannels")} description={t("dispatch.noChannelsHint")} />
-              ) : (
-                <div className="dx-log">
+      <div className="card">
+        <div className="card-header d-flex justify-content-between align-items-center">
+          <h4 className="card-title mb-0">{t("dispatch.channels")}</h4>
+          {canWrite ? (
+            <button
+              type="button"
+              className="btn btn-sm btn-primary"
+              onClick={() => {
+                setCreatingChannel(true);
+                setChError(null);
+              }}
+            >
+              {t("dispatch.add")}
+            </button>
+          ) : null}
+        </div>
+        <div className="card-body">
+          {channels.length === 0 ? (
+            <EmptyState title={t("dispatch.noChannels")} description={t("dispatch.noChannelsHint")} />
+          ) : (
+            <div className="table-responsive">
+              <table className="table table-hover align-middle mb-0">
+                <thead className="table-light">
+                  <tr>
+                    <th>{t("common.name")}</th>
+                    <th>{t("dispatch.type")}</th>
+                    <th>{t("alerts.status")}</th>
+                  </tr>
+                </thead>
+                <tbody>
                   {channels.map((channel) => (
-                    <button
-                      key={channel.id}
-                      type="button"
-                      className={!creatingChannel && selectedChannel?.id === channel.id ? "is-on" : ""}
-                      onClick={() => {
-                        setCreatingChannel(false);
-                        setSelectedChannelId(channel.id);
-                        setChError(null);
-                      }}
-                    >
-                      <span className="d-flex justify-content-between gap-2">
-                        <span className="fw-medium">{channel.name}</span>
+                    <tr key={channel.id}>
+                      <td>
+                        <button
+                          type="button"
+                          className="btn btn-link p-0 fw-medium"
+                          onClick={() => {
+                            setSelectedChannelId(channel.id);
+                            setChError(null);
+                          }}
+                        >
+                          {channel.name}
+                        </button>
+                      </td>
+                      <td>
                         <span className="badge bg-primary-subtle text-primary text-uppercase">{channel.channel_type}</span>
-                      </span>
-                      <span className="d-block text-muted fs-12 mt-1">{channel.enabled ? t("dispatch.sending") : t("dispatch.paused")}</span>
-                    </button>
+                      </td>
+                      <td className="text-muted">{channel.enabled ? t("dispatch.sending") : t("dispatch.paused")}</td>
+                    </tr>
                   ))}
-                </div>
-              )}
+                </tbody>
+              </table>
             </div>
-          </div>
-        </div>
-
-        <div className="col-xl-7">
-          <div className="card dx-detail">
-            <div className="card-header">
-              <h4 className="card-title mb-0">{creatingChannel ? t("dispatch.newChannel") : selectedChannel?.name || t("dispatch.channel")}</h4>
-            </div>
-            <div className="card-body">
-              {creatingChannel && canWrite ? (
-                <form onSubmit={(e) => void onCreateChannel(e)}>
-                  <label className="form-label">{t("common.name")}</label>
-                  <input required className="form-control mb-3" value={chName} onChange={(e) => setChName(e.target.value)} />
-                  <label className="form-label">{t("dispatch.type")}</label>
-                  <select className="form-select mb-3" value={chType} onChange={(e) => setChType(e.target.value as ChannelType)}>
-                    <option value="discord">Discord</option>
-                    <option value="slack">Slack</option>
-                    <option value="webhook">Webhook</option>
-                    <option value="email">{t("dispatch.email")}</option>
-                  </select>
-                  {chType === "email" ? (
-                    <>
-                      <div className="row g-2">
-                        <div className="col-8 mb-3">
-                          <label className="form-label">{t("dispatch.smtp")}</label>
-                          <input required className="form-control" value={smtpHost} onChange={(e) => setSmtpHost(e.target.value)} />
-                        </div>
-                        <div className="col-4 mb-3">
-                          <label className="form-label">{t("dispatch.port")}</label>
-                          <input type="number" className="form-control" value={smtpPort} onChange={(e) => setSmtpPort(Number(e.target.value) || 587)} />
-                        </div>
-                      </div>
-                      <label className="form-label">{t("dispatch.from")}</label>
-                      <input required className="form-control mb-3" value={smtpFrom} onChange={(e) => setSmtpFrom(e.target.value)} />
-                      <label className="form-label">{t("dispatch.to")}</label>
-                      <input required className="form-control mb-3" value={smtpTo} onChange={(e) => setSmtpTo(e.target.value)} />
-                      <label className="form-label">{t("dispatch.username")}</label>
-                      <input className="form-control mb-3" value={smtpUser} onChange={(e) => setSmtpUser(e.target.value)} />
-                      <label className="form-label">{t("dispatch.password")}</label>
-                      <input type="password" className="form-control mb-3" value={smtpPassword} onChange={(e) => setSmtpPassword(e.target.value)} />
-                    </>
-                  ) : (
-                    <>
-                      <label className="form-label">{t("dispatch.webhook")}</label>
-                      <input required className="form-control mb-3" value={webhookUrl} onChange={(e) => setWebhookUrl(e.target.value)} />
-                    </>
-                  )}
-                  {chError ? <div className="alert alert-danger">{chError}</div> : null}
-                  <div className="d-flex gap-2">
-                    <button type="button" className="btn btn-light" onClick={() => setCreatingChannel(false)}>
-                      {t("common.cancel")}
-                    </button>
-                    <button type="submit" className="btn btn-primary" disabled={chSaving}>
-                      {chSaving ? t("views.saving") : t("dispatch.createChannel")}
-                    </button>
-                  </div>
-                </form>
-              ) : selectedChannel ? (
-                <>
-                  <p className="text-muted text-uppercase fs-12 mb-1">{selectedChannel.channel_type}</p>
-                  <div className="form-check form-switch mb-3">
-                    <input
-                      className="form-check-input"
-                      type="checkbox"
-                      role="switch"
-                      checked={selectedChannel.enabled}
-                      disabled={!canWrite}
-                      onChange={() => void toggleChannel(selectedChannel)}
-                      id="channel-enabled"
-                    />
-                    <label className="form-check-label" htmlFor="channel-enabled">
-                      {selectedChannel.enabled ? t("dispatch.enabled") : t("dispatch.paused")}
-                    </label>
-                  </div>
-                  <div className="d-flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      className="btn btn-light"
-                      disabled={!canWrite || testBusyId === selectedChannel.id}
-                      onClick={() => void testChannel(selectedChannel)}
-                    >
-                      {testBusyId === selectedChannel.id ? t("dispatch.testing") : t("dispatch.test")}
-                    </button>
-                    {canWrite ? (
-                      <button type="button" className="btn btn-danger" onClick={() => void deleteChannel(selectedChannel.id)}>
-                        {t("common.delete")}
-                      </button>
-                    ) : null}
-                  </div>
-                  {testFeedback && testFeedback.channelId === selectedChannel.id ? (
-                    <div className={`alert ${testFeedback.ok ? "alert-success" : "alert-danger"} mt-3 mb-0`}>{testFeedback.message}</div>
-                  ) : null}
-                  <div className="mt-4">
-                    <h5 className="fs-14 mb-2">{t("dispatch.log")}</h5>
-                    {deliveriesQuery.loading ? <p className="text-muted mb-0">{t("common.loading")}</p> : null}
-                    {deliveriesQuery.error ? <div className="alert alert-danger">{deliveriesQuery.error}</div> : null}
-                    {!deliveriesQuery.loading && deliveries.length === 0 ? <p className="text-muted mb-0">{t("dispatch.logEmpty")}</p> : null}
-                    {deliveries.length > 0 ? (
-                      <div className="table-responsive">
-                        <table className="table table-sm align-middle mb-0">
-                          <tbody>
-                            {deliveries.map((row) => (
-                              <tr key={row.id}>
-                                <td className="text-muted text-nowrap">{formatAlertTime(row.sent_at || row.created_at)}</td>
-                                <td>{row.alert_title || row.trigger || "—"}</td>
-                                <td>
-                                  <span
-                                    className={`badge ${row.status === "sent" ? "bg-success-subtle text-success" : row.status === "failed" ? "bg-danger-subtle text-danger" : "bg-warning-subtle text-warning"}`}
-                                  >
-                                    {deliveryStatus(t, row.status)}
-                                  </span>
-                                </td>
-                                <td className="text-muted">{row.error || ""}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    ) : null}
-                  </div>
-                </>
-              ) : (
-                <EmptyState title={t("dispatch.pickChannel")} description={t("dispatch.pickChannelHint")} />
-              )}
-            </div>
-          </div>
+          )}
         </div>
       </div>
 
-      <div className="row">
-        <div className="col-xl-5">
-          <div className="card">
-            <div className="card-header d-flex justify-content-between align-items-center">
-              <h4 className="card-title mb-0">{t("dispatch.routes")}</h4>
+      <div className="card">
+        <div className="card-header d-flex justify-content-between align-items-center">
+          <h4 className="card-title mb-0">{t("dispatch.routes")}</h4>
+          {canWrite ? (
+            <button
+              type="button"
+              className="btn btn-sm btn-primary"
+              onClick={() => {
+                setCreatingRule(true);
+                setRuleError(null);
+              }}
+            >
+              {t("dispatch.add")}
+            </button>
+          ) : null}
+        </div>
+        <div className="card-body">
+          {rules.length === 0 ? (
+            <EmptyState title={t("dispatch.noRoutes")} description={t("dispatch.noRoutesHint")} />
+          ) : (
+            <div className="table-responsive">
+              <table className="table table-hover align-middle mb-0">
+                <thead className="table-light">
+                  <tr>
+                    <th>{t("common.name")}</th>
+                    <th>{t("dispatch.min")}</th>
+                    <th>{t("dispatch.triggers")}</th>
+                    <th>{t("alerts.status")}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rules.map((rule) => (
+                    <tr key={rule.id}>
+                      <td>
+                        <button type="button" className="btn btn-link p-0 fw-medium" onClick={() => setSelectedRuleId(rule.id)}>
+                          {rule.name}
+                        </button>
+                      </td>
+                      <td className="text-uppercase text-muted">{severityLabel(t, rule.min_severity)}</td>
+                      <td className="text-muted">{rule.triggers.map((id) => triggerLabel(t, id)).join(", ")}</td>
+                      <td className="text-muted">{rule.enabled ? t("dispatch.on") : t("dispatch.off")}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <Modal
+        isOpen={creatingChannel}
+        onClose={() => {
+          if (chSaving) return;
+          setCreatingChannel(false);
+          setChError(null);
+        }}
+        size="lg"
+        title={t("dispatch.newChannel")}
+        footer={
+          <div className="d-flex gap-2">
+            <button type="button" className="btn btn-light" disabled={chSaving} onClick={() => setCreatingChannel(false)}>
+              {t("common.cancel")}
+            </button>
+            <button type="submit" form="channel-create" className="btn btn-primary" disabled={chSaving}>
+              {chSaving ? t("views.saving") : t("dispatch.createChannel")}
+            </button>
+          </div>
+        }
+      >
+        <form id="channel-create" onSubmit={(e) => void onCreateChannel(e)}>
+          <label className="form-label">{t("common.name")}</label>
+          <input required className="form-control mb-3" value={chName} onChange={(e) => setChName(e.target.value)} />
+          <label className="form-label">{t("dispatch.type")}</label>
+          <select className="form-select mb-3" value={chType} onChange={(e) => setChType(e.target.value as ChannelType)}>
+            <option value="discord">Discord</option>
+            <option value="slack">Slack</option>
+            <option value="webhook">Webhook</option>
+            <option value="email">{t("dispatch.email")}</option>
+          </select>
+          {chType === "email" ? (
+            <>
+              <div className="row g-2">
+                <div className="col-8 mb-3">
+                  <label className="form-label">{t("dispatch.smtp")}</label>
+                  <input required className="form-control" value={smtpHost} onChange={(e) => setSmtpHost(e.target.value)} />
+                </div>
+                <div className="col-4 mb-3">
+                  <label className="form-label">{t("dispatch.port")}</label>
+                  <input type="number" className="form-control" value={smtpPort} onChange={(e) => setSmtpPort(Number(e.target.value) || 587)} />
+                </div>
+              </div>
+              <label className="form-label">{t("dispatch.from")}</label>
+              <input required className="form-control mb-3" value={smtpFrom} onChange={(e) => setSmtpFrom(e.target.value)} />
+              <label className="form-label">{t("dispatch.to")}</label>
+              <input required className="form-control mb-3" value={smtpTo} onChange={(e) => setSmtpTo(e.target.value)} />
+              <label className="form-label">{t("dispatch.username")}</label>
+              <input className="form-control mb-3" value={smtpUser} onChange={(e) => setSmtpUser(e.target.value)} />
+              <label className="form-label">{t("dispatch.password")}</label>
+              <input type="password" className="form-control mb-3" value={smtpPassword} onChange={(e) => setSmtpPassword(e.target.value)} />
+            </>
+          ) : (
+            <>
+              <label className="form-label">{t("dispatch.webhook")}</label>
+              <input required type="password" autoComplete="off" className="form-control mb-3" value={webhookUrl} onChange={(e) => setWebhookUrl(e.target.value)} />
+            </>
+          )}
+          {chError ? <div className="alert alert-danger mb-0">{chError}</div> : null}
+        </form>
+      </Modal>
+
+      <Modal
+        isOpen={!!selectedChannel && !creatingChannel}
+        onClose={() => setSelectedChannelId(null)}
+        size="xl"
+        title={selectedChannel?.name || t("dispatch.channel")}
+        subtitle={selectedChannel?.channel_type}
+      >
+        {selectedChannel ? (
+          <>
+            <div className="form-check form-switch mb-3">
+              <input
+                className="form-check-input"
+                type="checkbox"
+                role="switch"
+                checked={selectedChannel.enabled}
+                disabled={!canWrite}
+                onChange={() => void toggleChannel(selectedChannel)}
+                id="channel-enabled"
+              />
+              <label className="form-check-label" htmlFor="channel-enabled">
+                {selectedChannel.enabled ? t("dispatch.enabled") : t("dispatch.paused")}
+              </label>
+            </div>
+            <div className="d-flex flex-wrap gap-2">
+              <button
+                type="button"
+                className="btn btn-light"
+                disabled={!canWrite || testBusyId === selectedChannel.id}
+                onClick={() => void testChannel(selectedChannel)}
+              >
+                {testBusyId === selectedChannel.id ? t("dispatch.testing") : t("dispatch.test")}
+              </button>
               {canWrite ? (
-                <button
-                  type="button"
-                  className="btn btn-sm btn-primary"
-                  onClick={() => {
-                    setCreatingRule(true);
-                    setRuleError(null);
-                  }}
-                >
-                  {t("dispatch.add")}
+                <button type="button" className="btn btn-danger" onClick={() => void deleteChannel(selectedChannel.id)}>
+                  {t("common.delete")}
                 </button>
               ) : null}
             </div>
-            <div className="card-body">
-              {ruleError && !creatingRule ? <div className="alert alert-danger">{ruleError}</div> : null}
-              {rules.length === 0 ? (
-                <EmptyState title={t("dispatch.noRoutes")} description={t("dispatch.noRoutesHint")} />
-              ) : (
-                <div className="dx-log">
-                  {rules.map((rule) => (
-                    <button
-                      key={rule.id}
-                      type="button"
-                      className={!creatingRule && selectedRule?.id === rule.id ? "is-on" : ""}
-                      onClick={() => {
-                        setCreatingRule(false);
-                        setSelectedRuleId(rule.id);
-                        setRuleError(null);
-                      }}
-                    >
-                      <span className="d-flex justify-content-between gap-2">
-                        <span className="fw-medium">{rule.name}</span>
-                        <span className="text-uppercase fs-12 text-muted">{rule.min_severity}</span>
-                      </span>
-                      <span className="d-block text-muted fs-12 mt-1">
-                        {rule.triggers.map((id) => triggerLabel(t, id)).join(", ")} · {rule.channel_ids.length} {t("dispatch.channelCount")} · {rule.enabled ? t("dispatch.on") : t("dispatch.off")}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-        <div className="col-xl-7">
-          <div className="card">
-            <div className="card-header">
-              <h4 className="card-title mb-0">{creatingRule ? t("dispatch.newRoute") : selectedRule?.name || t("dispatch.route")}</h4>
-            </div>
-            <div className="card-body">
-              {creatingRule && canWrite ? (
-                <form onSubmit={(e) => void onCreateRule(e)}>
-                  <label className="form-label">{t("common.name")}</label>
-                  <input required className="form-control mb-3" value={ruleName} onChange={(e) => setRuleName(e.target.value)} />
-                  <label className="form-label">{t("dispatch.min")}</label>
-                  <select className="form-select mb-3" value={minSeverity} onChange={(e) => setMinSeverity(e.target.value)}>
-                    {SEVERITIES.map((level) => (
-                      <option key={level} value={level}>
-                        {severityLabel(t, level)}
-                      </option>
-                    ))}
-                  </select>
-                  <p className="form-label mb-2">{t("dispatch.triggers")}</p>
-                  <div className="d-flex flex-column gap-2 mb-3">
-                    {TRIGGER_IDS.map((id) => {
-                      const on = triggers.includes(id);
-                      return (
-                        <button
-                          key={id}
-                          type="button"
-                          className={`dx-role-pick ${on ? "is-on" : ""}`}
-                          onClick={() => toggleTrigger(id)}
-                        >
-                          <input className="form-check-input" type="checkbox" checked={on} readOnly tabIndex={-1} aria-hidden />
-                          <span>{triggerLabel(t, id)}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                  <p className="form-label mb-2">{t("dispatch.channelsField")}</p>
-                  {channels.length === 0 ? (
-                    <p className="text-muted">{t("dispatch.needChannel")}</p>
-                  ) : (
-                    <div className="d-flex flex-column gap-2 mb-3">
-                      {channels.map((channel) => {
-                        const on = channelIds.includes(channel.id);
-                        return (
-                          <button
-                            key={channel.id}
-                            type="button"
-                            className={`dx-role-pick ${on ? "is-on" : ""}`}
-                            onClick={() => toggleChannelId(channel.id)}
-                          >
-                            <input className="form-check-input" type="checkbox" checked={on} readOnly tabIndex={-1} aria-hidden />
-                            <span>
-                              {channel.name} ({channel.channel_type})
+            {testFeedback && testFeedback.channelId === selectedChannel.id ? (
+              <div className={`alert ${testFeedback.ok ? "alert-success" : "alert-danger"} mt-3 mb-0`}>{testFeedback.message}</div>
+            ) : null}
+            {chError ? <div className="alert alert-danger mt-3">{chError}</div> : null}
+            <div className="mt-4">
+              <h5 className="fs-14 mb-2">{t("dispatch.log")}</h5>
+              {deliveriesQuery.loading ? <p className="text-muted mb-0">{t("common.loading")}</p> : null}
+              {deliveriesQuery.error ? <div className="alert alert-danger">{deliveriesQuery.error}</div> : null}
+              {!deliveriesQuery.loading && deliveries.length === 0 ? <p className="text-muted mb-0">{t("dispatch.logEmpty")}</p> : null}
+              {deliveries.length > 0 ? (
+                <div className="table-responsive">
+                  <table className="table table-sm align-middle mb-0">
+                    <tbody>
+                      {deliveries.map((row) => (
+                        <tr key={row.id}>
+                          <td className="text-muted text-nowrap">{formatAlertTime(row.sent_at || row.created_at)}</td>
+                          <td>{row.alert_title || row.trigger || "—"}</td>
+                          <td>
+                            <span
+                              className={`badge ${row.status === "sent" ? "bg-success-subtle text-success" : row.status === "failed" ? "bg-danger-subtle text-danger" : "bg-warning-subtle text-warning"}`}
+                            >
+                              {deliveryStatus(t, row.status)}
                             </span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
-                  {ruleError ? <div className="alert alert-danger">{ruleError}</div> : null}
-                  <div className="d-flex gap-2">
-                    <button type="button" className="btn btn-light" onClick={() => setCreatingRule(false)}>
-                      {t("common.cancel")}
-                    </button>
-                    <button type="submit" className="btn btn-primary" disabled={ruleSaving}>
-                      {ruleSaving ? t("views.saving") : t("dispatch.createRule")}
-                    </button>
-                  </div>
-                </form>
-              ) : selectedRule ? (
-                <>
-                  <p className="mb-2">
-                    <span className="text-muted">{t("dispatch.min")} · </span>
-                    <span className="text-uppercase">{severityLabel(t, selectedRule.min_severity)}</span>
-                  </p>
-                  <p className="mb-2">
-                    <span className="text-muted">{t("dispatch.triggers")} · </span>
-                    {selectedRule.triggers.map((id) => triggerLabel(t, id)).join(", ")}
-                  </p>
-                  <p className="mb-3">
-                    <span className="text-muted">{t("dispatch.channelsField")} · </span>
-                    {selectedRule.channel_ids.length}
-                  </p>
-                  <div className="form-check form-switch mb-3">
-                    <input
-                      className="form-check-input"
-                      type="checkbox"
-                      role="switch"
-                      checked={selectedRule.enabled}
-                      disabled={!canWrite}
-                      onChange={() => void toggleRule(selectedRule)}
-                      id="route-enabled"
-                    />
-                    <label className="form-check-label" htmlFor="route-enabled">
-                      {selectedRule.enabled ? t("dispatch.enabled") : t("dispatch.paused")}
-                    </label>
-                  </div>
-                  {canWrite ? (
-                    <button type="button" className="btn btn-danger" onClick={() => void deleteRule(selectedRule.id)}>
-                      {t("common.delete")}
-                    </button>
-                  ) : null}
-                </>
-              ) : (
-                <EmptyState title={t("dispatch.pickRoute")} description={t("dispatch.pickRouteHint")} />
-              )}
+                          </td>
+                          <td className="text-muted">{row.error || ""}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : null}
             </div>
+          </>
+        ) : null}
+      </Modal>
+
+      <Modal
+        isOpen={creatingRule}
+        onClose={() => {
+          if (ruleSaving) return;
+          setCreatingRule(false);
+          setRuleError(null);
+        }}
+        size="lg"
+        title={t("dispatch.newRoute")}
+        footer={
+          <div className="d-flex gap-2">
+            <button type="button" className="btn btn-light" disabled={ruleSaving} onClick={() => setCreatingRule(false)}>
+              {t("common.cancel")}
+            </button>
+            <button type="submit" form="route-create" className="btn btn-primary" disabled={ruleSaving}>
+              {ruleSaving ? t("views.saving") : t("dispatch.createRule")}
+            </button>
           </div>
-        </div>
-      </div>
+        }
+      >
+        <form id="route-create" onSubmit={(e) => void onCreateRule(e)}>
+          <label className="form-label">{t("common.name")}</label>
+          <input required className="form-control mb-3" value={ruleName} onChange={(e) => setRuleName(e.target.value)} />
+          <label className="form-label">{t("dispatch.min")}</label>
+          <select className="form-select mb-3" value={minSeverity} onChange={(e) => setMinSeverity(e.target.value)}>
+            {SEVERITIES.map((level) => (
+              <option key={level} value={level}>
+                {severityLabel(t, level)}
+              </option>
+            ))}
+          </select>
+          <p className="form-label mb-2">{t("dispatch.triggers")}</p>
+          <div className="d-flex flex-wrap gap-3 mb-3">
+            {TRIGGER_IDS.map((id) => (
+              <div className="form-check" key={id}>
+                <input className="form-check-input" type="checkbox" id={`trigger-${id}`} checked={triggers.includes(id)} onChange={() => toggleTrigger(id)} />
+                <label className="form-check-label" htmlFor={`trigger-${id}`}>
+                  {triggerLabel(t, id)}
+                </label>
+              </div>
+            ))}
+          </div>
+          <p className="form-label mb-2">{t("dispatch.channelsField")}</p>
+          {channels.length === 0 ? (
+            <p className="text-muted">{t("dispatch.needChannel")}</p>
+          ) : (
+            <div className="d-flex flex-column gap-2 mb-3">
+              {channels.map((channel) => (
+                <div className="form-check" key={channel.id}>
+                  <input className="form-check-input" type="checkbox" id={`ch-${channel.id}`} checked={channelIds.includes(channel.id)} onChange={() => toggleChannelId(channel.id)} />
+                  <label className="form-check-label" htmlFor={`ch-${channel.id}`}>
+                    {channel.name} ({channel.channel_type})
+                  </label>
+                </div>
+              ))}
+            </div>
+          )}
+          {ruleError ? <div className="alert alert-danger mb-0">{ruleError}</div> : null}
+        </form>
+      </Modal>
+
+      <Modal isOpen={!!selectedRule && !creatingRule} onClose={() => setSelectedRuleId(null)} size="lg" title={selectedRule?.name || t("dispatch.route")}>
+        {selectedRule ? (
+          <>
+            {ruleError ? <div className="alert alert-danger">{ruleError}</div> : null}
+            <p className="mb-2">
+              <span className="text-muted">{t("dispatch.min")} · </span>
+              <span className="text-uppercase">{severityLabel(t, selectedRule.min_severity)}</span>
+            </p>
+            <p className="mb-2">
+              <span className="text-muted">{t("dispatch.triggers")} · </span>
+              {selectedRule.triggers.map((id) => triggerLabel(t, id)).join(", ")}
+            </p>
+            <p className="mb-3">
+              <span className="text-muted">{t("dispatch.channelsField")} · </span>
+              {selectedRule.channel_ids.length}
+            </p>
+            <div className="form-check form-switch mb-3">
+              <input
+                className="form-check-input"
+                type="checkbox"
+                role="switch"
+                checked={selectedRule.enabled}
+                disabled={!canWrite}
+                onChange={() => void toggleRule(selectedRule)}
+                id="route-enabled"
+              />
+              <label className="form-check-label" htmlFor="route-enabled">
+                {selectedRule.enabled ? t("dispatch.enabled") : t("dispatch.paused")}
+              </label>
+            </div>
+            {canWrite ? (
+              <button type="button" className="btn btn-danger" onClick={() => void deleteRule(selectedRule.id)}>
+                {t("common.delete")}
+              </button>
+            ) : null}
+          </>
+        ) : null}
+      </Modal>
     </>
   );
 }

@@ -2,21 +2,22 @@
 
 import { useCallback, useState } from "react";
 import Link from "next/link";
+import { SavedViews } from "@/components/operator/saved-views";
 import { EmptyState } from "@/components/ui/empty-state";
 import { LoadingBlock } from "@/components/ui/loading-block";
+import { Modal } from "@/components/ui/modal";
+import { PageHeader } from "@/components/ui/page-header";
 import { SeverityBadge } from "@/components/ui/severity-badge";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { PageHeader } from "@/components/ui/page-header";
+import { useAuth } from "@/context/auth-context";
 import { formatAlertTime, isAlertActive, nextAlertStatuses } from "@/lib/alerts";
-import { actionLabel, severityLabel, statusLabel, useI18n } from "@/lib/i18n";
-import { SavedViews } from "@/components/operator/saved-views";
 import { apiFetch, ApiRequestError } from "@/lib/api/client";
 import { copyText } from "@/lib/clipboard";
-import { useAuth } from "@/context/auth-context";
-import { hasPermission } from "@/lib/permissions";
+import { actionLabel, severityLabel, statusLabel, useI18n } from "@/lib/i18n";
 import { canSeePage } from "@/lib/pages";
 import { invalidateQueries } from "@/lib/panel/cache";
 import { useQuery } from "@/lib/panel/use-query";
+import { hasPermission } from "@/lib/permissions";
 import type { Alert, Server } from "@/lib/types";
 
 const STATUS_FILTERS = ["ALL", "OPEN", "ACKNOWLEDGED", "INVESTIGATING", "RESOLVED"] as const;
@@ -80,7 +81,7 @@ export default function AlertsPage() {
       (alert.source_ip && alert.source_ip.toLowerCase().includes(q))
     );
   });
-  const selected = filteredAlerts.find((alert) => alert.id === selectedId) ?? filteredAlerts[0] ?? null;
+  const selected = filteredAlerts.find((alert) => alert.id === selectedId) ?? null;
   const activeCount = filteredAlerts.filter((alert) => isAlertActive(alert.status)).length;
 
   async function patchAlert(alert: Alert, status: string) {
@@ -95,7 +96,7 @@ export default function AlertsPage() {
       invalidateQueries(["stats", "alert:"]);
       await alertsQuery.reload();
     } catch (e) {
-      setActionError(e instanceof ApiRequestError ? e.message : e instanceof Error ? e.message : "Failed to update alert");
+      setActionError(e instanceof ApiRequestError ? e.message : e instanceof Error ? e.message : t("people.updateFailed"));
     } finally {
       setActionBusy(null);
     }
@@ -121,13 +122,11 @@ export default function AlertsPage() {
         }
       />
 
-      <div className="row">
-        <div className="col-xl-3">
-          <SavedViews kind="alerts" current={currentView} onApply={applyView} />
-        </div>
-        <div className="col-xl-9">
       <div className="card">
         <div className="card-body">
+          <div className="mb-3">
+            <SavedViews kind="alerts" current={currentView} onApply={applyView} />
+          </div>
           <div className="row g-2">
             <div className="col-lg-4">
               <input
@@ -171,7 +170,7 @@ export default function AlertsPage() {
         </div>
       </div>
 
-      {actionError ? <div className="alert alert-danger">{actionError}</div> : null}
+      {actionError && !selected ? <div className="alert alert-danger">{actionError}</div> : null}
       {alertsQuery.loading ? <LoadingBlock label={t("alerts.loading")} /> : null}
       {alertsQuery.error ? <div className="alert alert-danger">{alertsQuery.error}</div> : null}
 
@@ -197,78 +196,110 @@ export default function AlertsPage() {
       ) : null}
 
       {filteredAlerts.length > 0 ? (
-        <div className="row">
-          <div className="col-xl-7">
-            <div className="dx-log">
-              {filteredAlerts.map((alert) => (
-                <button key={alert.id} type="button" className={selected?.id === alert.id ? "is-on" : ""} onClick={() => setSelectedId(alert.id)}>
-                  <span className="d-flex justify-content-between gap-2">
-                    <span className="fw-medium">{alert.title}</span>
-                    <SeverityBadge severity={alert.severity} />
-                  </span>
-                  <span className="d-block text-muted fs-12 mt-1">
-                    {statusLabel(t, alert.status)} · {alert.event_count || 1} {t("common.hits")} · {formatAlertTime(alert.last_seen_at)}
-                  </span>
-                </button>
-              ))}
+        <div className="card">
+          <div className="card-body">
+            <div className="table-responsive">
+              <table className="table table-hover align-middle table-nowrap mb-0">
+                <thead className="table-light">
+                  <tr>
+                    <th>{t("dash.colAlert")}</th>
+                    <th>{t("alerts.severity")}</th>
+                    <th>{t("alerts.status")}</th>
+                    <th>{t("common.hits")}</th>
+                    <th>{t("common.lastSeen")}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredAlerts.map((alert) => (
+                    <tr key={alert.id}>
+                      <td>
+                        <button type="button" className="btn btn-link p-0 fw-medium text-start" onClick={() => setSelectedId(alert.id)}>
+                          {alert.title}
+                        </button>
+                      </td>
+                      <td>
+                        <SeverityBadge severity={alert.severity} />
+                      </td>
+                      <td>
+                        <StatusBadge status={alert.status} />
+                      </td>
+                      <td>{alert.event_count || 1}</td>
+                      <td className="text-muted">{formatAlertTime(alert.last_seen_at)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-          </div>
-          <div className="col-xl-5">
-            {selected ? (
-              <div className="card dx-detail">
-                <div className="card-body">
-                  <div className="d-flex gap-2 mb-2">
-                    <StatusBadge status={selected.status} />
-                    <SeverityBadge severity={selected.severity} />
-                  </div>
-                  <h4>{selected.title}</h4>
-                  <p className="text-muted">{selected.description || t("common.noDescription")}</p>
-                  <dl className="row">
-                    <dt className="col-4 text-muted">{t("common.server")}</dt>
-                    <dd className="col-8 text-break">
-                      {canServer ? <Link href={`/servers/${selected.server_id}`}>{selected.server_id}</Link> : selected.server_id}
-                    </dd>
-                    <dt className="col-4 text-muted">{t("common.rule")}</dt>
-                    <dd className="col-8">{selected.rule_id || "—"}</dd>
-                    <dt className="col-4 text-muted">{t("common.sourceIp")}</dt>
-                    <dd className="col-8">{selected.source_ip || "—"}</dd>
-                    <dt className="col-4 text-muted">{t("common.firstSeen")}</dt>
-                    <dd className="col-8">{formatAlertTime(selected.first_seen_at)}</dd>
-                    <dt className="col-4 text-muted">{t("common.lastSeen")}</dt>
-                    <dd className="col-8">{formatAlertTime(selected.last_seen_at)}</dd>
-                  </dl>
-                  <p className="text-muted fs-12">{t("alerts.review")}</p>
-                  <div className="d-flex flex-wrap gap-2">
-                    {canWrite
-                      ? nextAlertStatuses(selected.status).map((status) => (
-                          <button
-                            key={status}
-                            type="button"
-                            className={status === "RESOLVED" || status === "OPEN" ? "btn btn-primary btn-sm" : "btn btn-light btn-sm"}
-                            disabled={actionBusy === selected.id}
-                            onClick={() => void patchAlert(selected, status)}
-                          >
-                            {actionLabel(t, status)}
-                          </button>
-                        ))
-                      : null}
-                    <button type="button" className="btn btn-light btn-sm" onClick={() => void copyJson(selected)}>
-                      {copied ? t("alerts.copied") : t("alerts.copy")}
-                    </button>
-                    {canDetail ? (
-                      <Link href={`/alerts/${selected.id}`} className="btn btn-primary btn-sm">
-                        {t("alerts.full")}
-                      </Link>
-                    ) : null}
-                  </div>
-                </div>
-              </div>
-            ) : null}
           </div>
         </div>
       ) : null}
-        </div>
-      </div>
+
+      <Modal
+        isOpen={!!selected}
+        onClose={() => {
+          setSelectedId(null);
+          setActionError(null);
+        }}
+        size="xl"
+        title={selected?.title || t("dash.selected")}
+        subtitle={selected ? statusLabel(t, selected.status) : undefined}
+        footer={
+          selected ? (
+            <div className="d-flex flex-wrap gap-2 w-100 justify-content-end">
+              {canWrite
+                ? nextAlertStatuses(selected.status).map((status) => (
+                    <button
+                      key={status}
+                      type="button"
+                      className={status === "RESOLVED" || status === "OPEN" ? "btn btn-primary btn-sm" : "btn btn-light btn-sm"}
+                      disabled={actionBusy === selected.id}
+                      onClick={() => void patchAlert(selected, status)}
+                    >
+                      {actionLabel(t, status)}
+                    </button>
+                  ))
+                : null}
+              <button type="button" className="btn btn-light btn-sm" onClick={() => void copyJson(selected)}>
+                {copied ? t("alerts.copied") : t("alerts.copy")}
+              </button>
+              {canDetail ? (
+                <Link href={`/alerts/${selected.id}`} className="btn btn-primary btn-sm">
+                  {t("alerts.full")}
+                </Link>
+              ) : null}
+              <button type="button" className="btn btn-light btn-sm" onClick={() => setSelectedId(null)}>
+                {t("common.close")}
+              </button>
+            </div>
+          ) : null
+        }
+      >
+        {selected ? (
+          <>
+            <div className="d-flex gap-2 mb-3">
+              <StatusBadge status={selected.status} />
+              <SeverityBadge severity={selected.severity} />
+            </div>
+            <p className="text-muted">{selected.description || t("common.noDescription")}</p>
+            {actionError ? <div className="alert alert-danger">{actionError}</div> : null}
+            <dl className="row mb-0">
+              <dt className="col-sm-3 text-muted">{t("common.server")}</dt>
+              <dd className="col-sm-9 text-break">
+                {canServer ? <Link href={`/servers/${selected.server_id}`}>{selected.server_id}</Link> : selected.server_id}
+              </dd>
+              <dt className="col-sm-3 text-muted">{t("common.rule")}</dt>
+              <dd className="col-sm-9">{selected.rule_id || "—"}</dd>
+              <dt className="col-sm-3 text-muted">{t("common.sourceIp")}</dt>
+              <dd className="col-sm-9">{selected.source_ip || "—"}</dd>
+              <dt className="col-sm-3 text-muted">{t("common.firstSeen")}</dt>
+              <dd className="col-sm-9">{formatAlertTime(selected.first_seen_at)}</dd>
+              <dt className="col-sm-3 text-muted">{t("common.lastSeen")}</dt>
+              <dd className="col-sm-9">{formatAlertTime(selected.last_seen_at)}</dd>
+            </dl>
+            <p className="text-muted fs-12 mt-3 mb-0">{t("alerts.review")}</p>
+          </>
+        ) : null}
+      </Modal>
     </>
   );
 }

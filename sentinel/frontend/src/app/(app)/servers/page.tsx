@@ -5,15 +5,16 @@ import { FormEvent, useState } from "react";
 import { SilenceControl, writeTargetSilence } from "@/components/operator/silence-control";
 import { EmptyState } from "@/components/ui/empty-state";
 import { LoadingBlock } from "@/components/ui/loading-block";
+import { Modal } from "@/components/ui/modal";
 import { PageHeader } from "@/components/ui/page-header";
+import { useAuth } from "@/context/auth-context";
 import { formatAlertTime } from "@/lib/alerts";
 import { apiFetch, ApiRequestError } from "@/lib/api/client";
 import { useI18n } from "@/lib/i18n";
+import { canSeePage } from "@/lib/pages";
 import { invalidateQueries } from "@/lib/panel/cache";
 import { useQuery } from "@/lib/panel/use-query";
 import { hasPermission } from "@/lib/permissions";
-import { canSeePage } from "@/lib/pages";
-import { useAuth } from "@/context/auth-context";
 import type { Server } from "@/lib/types";
 
 export default function ServersPage() {
@@ -22,6 +23,7 @@ export default function ServersPage() {
   const canWrite = hasPermission(user, "servers", "write");
   const canDetail = canSeePage(user, "server_detail");
   const [adding, setAdding] = useState(false);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [hostname, setHostname] = useState("");
   const [description, setDescription] = useState("");
@@ -33,10 +35,11 @@ export default function ServersPage() {
 
   const serversQuery = useQuery("servers", () => apiFetch<{ servers: Server[] }>("/servers"), { refreshMs: 20000 });
   const servers = serversQuery.data?.servers || [];
+  const selected = servers.find((server) => server.id === selectedId) ?? null;
 
   async function onCreate(event: FormEvent) {
     event.preventDefault();
-    if (!canWrite) return;
+    if (!canWrite || saving) return;
     setFormError(null);
     setSaving(true);
     try {
@@ -63,7 +66,7 @@ export default function ServersPage() {
   }
 
   async function changeSilence(server: Server, until: string | null) {
-    if (!canWrite) return;
+    if (!canWrite || silenceBusy) return;
     setSilenceBusy(server.id);
     setSilenceError(null);
     try {
@@ -84,49 +87,13 @@ export default function ServersPage() {
         subtitle={t("fleet.subtitle")}
         actions={
           canWrite ? (
-            <button type="button" className="btn btn-primary" onClick={() => setAdding((open) => !open)}>
-              {adding ? t("common.close") : t("fleet.add")}
+            <button type="button" className="btn btn-primary" onClick={() => setAdding(true)}>
+              {t("fleet.add")}
             </button>
           ) : null
         }
       />
 
-      {adding && canWrite ? (
-        <form className="card" onSubmit={onCreate}>
-          <div className="card-body">
-            <div className="row g-3">
-              <div className="col-md-3">
-                <label className="form-label">{t("common.name")}</label>
-                <input className="form-control" required value={name} onChange={(event) => setName(event.target.value)} placeholder="main-vps" />
-              </div>
-              <div className="col-md-3">
-                <label className="form-label">{t("fleet.hostname")}</label>
-                <input className="form-control" value={hostname} onChange={(event) => setHostname(event.target.value)} />
-              </div>
-              <div className="col-md-3">
-                <label className="form-label">{t("fleet.environment")}</label>
-                <input className="form-control" value={environment} onChange={(event) => setEnvironment(event.target.value)} />
-              </div>
-              <div className="col-md-3">
-                <label className="form-label">{t("fleet.note")}</label>
-                <input className="form-control" value={description} onChange={(event) => setDescription(event.target.value)} />
-              </div>
-              {formError ? (
-                <div className="col-12">
-                  <div className="alert alert-danger mb-0">{formError}</div>
-                </div>
-              ) : null}
-              <div className="col-12 text-end">
-                <button type="submit" className="btn btn-primary" disabled={saving || !name.trim()}>
-                  {saving ? t("fleet.saving") : t("fleet.create")}
-                </button>
-              </div>
-            </div>
-          </div>
-        </form>
-      ) : null}
-
-      {silenceError ? <div className="alert alert-danger">{silenceError}</div> : null}
       {serversQuery.loading ? <LoadingBlock /> : null}
       {serversQuery.error ? <EmptyState title={t("fleet.cannot")} description={serversQuery.error} /> : null}
       {!serversQuery.loading && !serversQuery.error && servers.length === 0 ? (
@@ -134,50 +101,139 @@ export default function ServersPage() {
       ) : null}
 
       {servers.length > 0 ? (
-        <div className="dx-log">
-          {servers.map((server) => {
-            const signal = server.silent ? t("fleet.silent") : (server.agent_count || 0) > 0 ? t("fleet.reporting") : t("fleet.noAgent");
-            const tone = server.silent ? "bg-warning-subtle text-warning" : (server.agent_count || 0) > 0 ? "bg-success-subtle text-success" : "bg-secondary-subtle text-secondary";
-            const body = (
-              <>
-                <span className="d-flex justify-content-between gap-2">
-                  <span className="fw-medium">{server.name}</span>
-                  <span className={`badge ${tone}`}>{signal}</span>
-                </span>
-                <span className="d-block text-muted fs-12 mt-1">
-                  {server.hostname || t("common.noHostname")} · {server.environment || t("common.default")} · {t("common.added")} {formatAlertTime(server.created_at)}
-                </span>
-                <span className="d-block text-muted fs-12">
-                  {t("fleet.heartbeat")}: {server.last_heartbeat_at ? formatAlertTime(server.last_heartbeat_at) : "—"} · {t("fleet.lastEvent")}:{" "}
-                  {server.last_event_at ? formatAlertTime(server.last_event_at) : "—"}
-                </span>
-              </>
-            );
-            return (
-              <div key={server.id} className="d-flex align-items-stretch gap-3">
-                {canDetail ? (
-                  <Link href={`/servers/${server.id}`} className="dx-role-pick text-reset flex-grow-1">
-                    <span className="flex-grow-1">{body}</span>
-                  </Link>
-                ) : (
-                  <div className="dx-role-pick flex-grow-1">
-                    <span className="flex-grow-1">{body}</span>
-                  </div>
-                )}
-                {canWrite ? (
-                  <div className="py-2" style={{ minWidth: 220 }}>
-                    <SilenceControl
-                      until={server.silenced_until}
-                      busy={silenceBusy === server.id}
-                      onChange={(until) => changeSilence(server, until)}
-                    />
-                  </div>
-                ) : null}
-              </div>
-            );
-          })}
+        <div className="card">
+          <div className="card-body">
+            <div className="table-responsive">
+              <table className="table table-hover align-middle mb-0">
+                <thead className="table-light">
+                  <tr>
+                    <th>{t("common.name")}</th>
+                    <th>{t("fleet.hostname")}</th>
+                    <th>{t("fleet.environment")}</th>
+                    <th>{t("fleet.heartbeat")}</th>
+                    <th>{t("alerts.status")}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {servers.map((server) => {
+                    const signal = server.silent ? t("fleet.silent") : (server.agent_count || 0) > 0 ? t("fleet.reporting") : t("fleet.noAgent");
+                    const tone = server.silent
+                      ? "bg-warning-subtle text-warning"
+                      : (server.agent_count || 0) > 0
+                        ? "bg-success-subtle text-success"
+                        : "bg-secondary-subtle text-secondary";
+                    return (
+                      <tr key={server.id}>
+                        <td>
+                          <button type="button" className="btn btn-link p-0 fw-medium" onClick={() => setSelectedId(server.id)}>
+                            {server.name}
+                          </button>
+                        </td>
+                        <td className="text-muted">{server.hostname || t("common.noHostname")}</td>
+                        <td className="text-muted">{server.environment || t("common.default")}</td>
+                        <td className="text-muted">{server.last_heartbeat_at ? formatAlertTime(server.last_heartbeat_at) : "—"}</td>
+                        <td>
+                          <span className={`badge ${tone}`}>{signal}</span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       ) : null}
+
+      <Modal
+        isOpen={adding}
+        onClose={() => {
+          if (saving) return;
+          setAdding(false);
+          setFormError(null);
+        }}
+        size="lg"
+        title={t("fleet.add")}
+        footer={
+          <div className="d-flex gap-2">
+            <button type="button" className="btn btn-light" disabled={saving} onClick={() => setAdding(false)}>
+              {t("common.cancel")}
+            </button>
+            <button type="submit" form="server-create" className="btn btn-primary" disabled={saving || !name.trim()}>
+              {saving ? t("fleet.saving") : t("fleet.create")}
+            </button>
+          </div>
+        }
+      >
+        <form id="server-create" onSubmit={onCreate}>
+          <div className="row g-3">
+            <div className="col-md-6">
+              <label className="form-label">{t("common.name")}</label>
+              <input className="form-control" required value={name} onChange={(event) => setName(event.target.value)} placeholder="main-vps" />
+            </div>
+            <div className="col-md-6">
+              <label className="form-label">{t("fleet.hostname")}</label>
+              <input className="form-control" value={hostname} onChange={(event) => setHostname(event.target.value)} />
+            </div>
+            <div className="col-md-6">
+              <label className="form-label">{t("fleet.environment")}</label>
+              <input className="form-control" value={environment} onChange={(event) => setEnvironment(event.target.value)} />
+            </div>
+            <div className="col-md-6">
+              <label className="form-label">{t("fleet.note")}</label>
+              <input className="form-control" value={description} onChange={(event) => setDescription(event.target.value)} />
+            </div>
+          </div>
+          {formError ? <div className="alert alert-danger mt-3 mb-0">{formError}</div> : null}
+        </form>
+      </Modal>
+
+      <Modal
+        isOpen={!!selected}
+        onClose={() => {
+          setSelectedId(null);
+          setSilenceError(null);
+        }}
+        size="lg"
+        title={selected?.name || t("fleet.title")}
+        subtitle={selected?.hostname || undefined}
+        footer={
+          selected && canDetail ? (
+            <Link href={`/servers/${selected.id}`} className="btn btn-primary">
+              {t("host.enroll")}
+            </Link>
+          ) : (
+            <button type="button" className="btn btn-light" onClick={() => setSelectedId(null)}>
+              {t("common.close")}
+            </button>
+          )
+        }
+      >
+        {selected ? (
+          <>
+            <dl className="row">
+              <dt className="col-sm-4 text-muted">{t("fleet.environment")}</dt>
+              <dd className="col-sm-8">{selected.environment || t("common.default")}</dd>
+              <dt className="col-sm-4 text-muted">{t("common.added")}</dt>
+              <dd className="col-sm-8">{formatAlertTime(selected.created_at)}</dd>
+              <dt className="col-sm-4 text-muted">{t("fleet.heartbeat")}</dt>
+              <dd className="col-sm-8">{selected.last_heartbeat_at ? formatAlertTime(selected.last_heartbeat_at) : "—"}</dd>
+              <dt className="col-sm-4 text-muted">{t("fleet.lastEvent")}</dt>
+              <dd className="col-sm-8">{selected.last_event_at ? formatAlertTime(selected.last_event_at) : "—"}</dd>
+              <dt className="col-sm-4 text-muted">{t("host.agents")}</dt>
+              <dd className="col-sm-8">{selected.agent_count ?? 0}</dd>
+            </dl>
+            {canWrite ? (
+              <SilenceControl
+                until={selected.silenced_until}
+                busy={silenceBusy === selected.id}
+                onChange={(until) => changeSilence(selected, until)}
+              />
+            ) : null}
+            {silenceError ? <div className="alert alert-danger mt-3 mb-0">{silenceError}</div> : null}
+          </>
+        ) : null}
+      </Modal>
     </>
   );
 }

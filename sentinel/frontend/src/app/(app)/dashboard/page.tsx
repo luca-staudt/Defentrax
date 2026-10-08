@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { CoverageRadial, EventsSeverityChart, OpenAlertsDonut } from "@/components/dashboard/analytics-charts";
+import { CoverageRadial, SeverityRadar } from "@/components/dashboard/analytics-charts";
 import { EmptyState } from "@/components/ui/empty-state";
 import { LoadingBlock } from "@/components/ui/loading-block";
 import { PageHeader } from "@/components/ui/page-header";
@@ -95,27 +95,14 @@ export default function DashboardPage() {
             <div className="col-xl-8">
               <div className="card card-height-100">
                 <div className="card-header align-items-center d-flex">
-                  <h4 className="card-title mb-0 flex-grow-1">{t("dash.eventsTitle")}</h4>
-                  <span className="text-muted">{t("dash.last24")}</span>
+                  <h4 className="card-title mb-0 flex-grow-1">{t("dash.shape")}</h4>
+                  <span className="text-muted">{t("dash.shapeHint")}</span>
                 </div>
                 <div className="card-body">
-                  <EventsSeverityChart counts={stats.events_by_severity_24h} />
+                  <SeverityRadar alerts={stats.alerts_by_severity} events={stats.events_by_severity_24h} />
                 </div>
               </div>
             </div>
-            <div className="col-xl-4">
-              <div className="card card-height-100">
-                <div className="card-header align-items-center d-flex">
-                  <h4 className="card-title mb-0 flex-grow-1">{t("dash.bySeverity")}</h4>
-                </div>
-                <div className="card-body">
-                  <OpenAlertsDonut counts={stats.alerts_by_severity} />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="row">
             <div className="col-xl-4">
               <div className="card card-height-100">
                 <div className="card-header align-items-center d-flex">
@@ -126,17 +113,16 @@ export default function DashboardPage() {
                 </div>
               </div>
             </div>
-            <div className="col-xl-8">
-              {canAlerts ? (
-                <RecentAlerts
-                  alerts={alerts}
-                  loading={alertsQuery.loading}
-                  error={alertsQuery.error}
-                  canAlertDetail={canAlertDetail}
-                />
-              ) : null}
-            </div>
           </div>
+
+          {canAlerts ? (
+            <RecentAlerts
+              alerts={alerts}
+              loading={alertsQuery.loading}
+              error={alertsQuery.error}
+              canAlertDetail={canAlertDetail}
+            />
+          ) : null}
         </>
       ) : null}
     </>

@@ -10,9 +10,8 @@ const Chart = dynamic(() => import("react-apexcharts"), { ssr: false });
 
 const SEVERITIES = ["critical", "high", "medium", "low", "info"] as const;
 
-/** Velzon palette, mapped so severity reads the same on every chart. */
-const SEVERITY_COLORS = ["#f06548", "#f7b84b", "#299cdb", "#0ab39c", "#878a99"];
 const BRAND = "#405189";
+const TEAL = "#0ab39c";
 
 function severityLabel(t: (key: string) => string, severity: string) {
   return t(`dash.sev.${severity}`);
@@ -45,111 +44,55 @@ function palette(mode: "light" | "dark") {
   };
 }
 
-export function OpenAlertsDonut({ counts }: { counts: Record<string, number> | undefined }) {
-  const mode = useChartMode();
-  const { t } = useI18n();
-  const colors = palette(mode);
-  const series = SEVERITIES.map((level) => countSeverity(counts, level));
-  const total = series.reduce((sum, value) => sum + value, 0);
-  const openLabel = t("dash.openTotal");
-
-  const options = useMemo<ApexOptions>(
-    () => ({
-      chart: {
-        type: "donut",
-        background: "transparent",
-        foreColor: colors.fore,
-        fontFamily: "inherit",
-        toolbar: { show: false },
-        animations: { enabled: true, speed: 550 },
-      },
-      labels: SEVERITIES.map((level) => severityLabel(t, level)),
-      colors: SEVERITY_COLORS,
-      legend: {
-        position: "bottom",
-        fontSize: "13px",
-        labels: { colors: colors.fore },
-        markers: { offsetX: -2 },
-      },
-      dataLabels: { enabled: false },
-      stroke: { width: 0 },
-      tooltip: { theme: mode },
-      theme: { mode },
-      plotOptions: {
-        pie: {
-          donut: {
-            size: "72%",
-            labels: {
-              show: true,
-              name: { color: colors.muted, fontSize: "13px" },
-              value: {
-                color: colors.fore,
-                fontSize: "22px",
-                fontWeight: 600,
-              },
-              total: {
-                show: true,
-                showAlways: true,
-                label: openLabel,
-                color: colors.muted,
-                fontSize: "13px",
-                formatter: () => String(total),
-              },
-            },
-          },
-        },
-      },
-    }),
-    [colors.fore, colors.muted, mode, openLabel, t, total],
-  );
-
-  return (
-    <div className="apex-charts">
-      <Chart key={mode} type="donut" height={320} series={series} options={options} />
-    </div>
-  );
-}
-
-export function EventsSeverityChart({ counts }: { counts: Record<string, number> | undefined }) {
+export function SeverityRadar({
+  alerts,
+  events,
+}: {
+  alerts: Record<string, number> | undefined;
+  events: Record<string, number> | undefined;
+}) {
   const mode = useChartMode();
   const { t } = useI18n();
   const colors = palette(mode);
   const categories = SEVERITIES.map((level) => severityLabel(t, level));
-  const series = [{ name: t("dash.events"), data: SEVERITIES.map((level) => countSeverity(counts, level)) }];
+  const series = [
+    { name: t("dash.open"), data: SEVERITIES.map((level) => countSeverity(alerts, level)) },
+    { name: t("dash.events"), data: SEVERITIES.map((level) => countSeverity(events, level)) },
+  ];
 
   const options = useMemo<ApexOptions>(
     () => ({
       chart: {
-        type: "bar",
+        type: "radar",
         background: "transparent",
         foreColor: colors.fore,
         fontFamily: "inherit",
         toolbar: { show: false },
-        animations: { enabled: true, speed: 550 },
+        animations: { enabled: true, speed: 700, easing: "easeinout" },
+        dropShadow: { enabled: true, blur: 3, opacity: 0.12 },
       },
-      colors: SEVERITY_COLORS,
-      plotOptions: {
-        bar: {
-          borderRadius: 4,
-          columnWidth: "46%",
-          distributed: true,
-        },
-      },
-      dataLabels: { enabled: false },
-      legend: { show: false },
-      grid: {
-        borderColor: colors.grid,
-        strokeDashArray: 4,
-      },
+      colors: [BRAND, TEAL],
+      stroke: { width: 2, curve: "smooth" },
+      fill: { opacity: 0.22 },
+      markers: { size: 4, hover: { size: 6 } },
       xaxis: {
         categories,
         labels: { style: { colors: SEVERITIES.map(() => colors.muted), fontSize: "12px" } },
-        axisBorder: { color: colors.grid },
-        axisTicks: { color: colors.grid },
       },
-      yaxis: {
-        min: 0,
-        labels: { style: { colors: colors.muted } },
+      yaxis: { show: false, min: 0 },
+      plotOptions: {
+        radar: {
+          polygons: {
+            strokeColors: colors.grid,
+            connectorColors: colors.grid,
+            fill: { colors: mode === "dark" ? ["rgba(255,255,255,0.02)", "transparent"] : ["#f8f9fa", "transparent"] },
+          },
+        },
+      },
+      legend: {
+        position: "bottom",
+        fontSize: "13px",
+        labels: { colors: colors.fore },
       },
       tooltip: { theme: mode },
       theme: { mode },
@@ -159,7 +102,7 @@ export function EventsSeverityChart({ counts }: { counts: Record<string, number>
 
   return (
     <div className="apex-charts">
-      <Chart key={mode} type="bar" height={320} series={series} options={options} />
+      <Chart key={mode} type="radar" height={340} series={series} options={options} />
     </div>
   );
 }
@@ -179,15 +122,28 @@ export function CoverageRadial({ active, total }: { active: number; total: numbe
         foreColor: colors.fore,
         fontFamily: "inherit",
         toolbar: { show: false },
-        animations: { enabled: true, speed: 550 },
+        animations: { enabled: true, speed: 700 },
       },
       colors: [BRAND],
       labels: [coverageLabel],
+      fill: {
+        type: "gradient",
+        gradient: {
+          shade: mode === "dark" ? "dark" : "light",
+          type: "horizontal",
+          gradientToColors: [TEAL],
+          stops: [0, 100],
+        },
+      },
       stroke: { lineCap: "round" },
       plotOptions: {
         radialBar: {
           hollow: { size: "64%" },
-          track: { background: colors.track },
+          track: {
+            background: colors.track,
+            strokeWidth: "100%",
+            margin: 4,
+          },
           dataLabels: {
             name: { offsetY: -8, color: colors.muted, fontSize: "13px" },
             value: {

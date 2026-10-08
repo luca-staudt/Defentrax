@@ -9,17 +9,18 @@ export function Modal({
   subtitle,
   children,
   footer,
+  size = "lg",
 }: {
   isOpen: boolean;
   onClose: () => void;
   title: string;
   subtitle?: string;
   children: React.ReactNode;
-  maxWidth?: string;
   footer?: React.ReactNode;
+  size?: "md" | "lg" | "xl";
 }) {
   return (
-    <RsModal isOpen={isOpen} toggle={onClose} centered scrollable size="lg">
+    <RsModal isOpen={isOpen} toggle={onClose} centered scrollable size={size === "md" ? undefined : size} backdrop="static" keyboard>
       <ModalHeader toggle={onClose}>
         {title}
         {subtitle ? <p className="text-muted fs-13 mb-0 fw-normal">{subtitle}</p> : null}

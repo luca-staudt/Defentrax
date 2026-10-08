@@ -136,28 +136,34 @@ export default function ServerDetailPage() {
       />
 
       <div className="row">
-        <div className="col-xl-7">
-          <div className="row g-3 mb-3">
-            <div className="col-md-4">
-              <div className="dx-metric">
-                <span className="text-muted text-uppercase fs-12">{t("host.agents")}</span>
-                <strong>{server.agents.length}</strong>
-              </div>
-            </div>
-            <div className="col-md-4">
-              <div className="dx-metric">
-                <span className="text-muted text-uppercase fs-12">{t("host.environment")}</span>
-                <strong className="fs-14">{server.environment || t("common.default")}</strong>
-              </div>
-            </div>
-            <div className="col-md-4">
-              <div className="dx-metric">
-                <span className="text-muted text-uppercase fs-12">{t("host.enrolled")}</span>
-                <strong className="fs-14">{formatAlertTime(server.created_at)}</strong>
-              </div>
+        <div className="col-md-4">
+          <div className="card card-animate">
+            <div className="card-body">
+              <p className="text-uppercase fw-medium text-muted mb-2">{t("host.agents")}</p>
+              <h4 className="fs-22 fw-semibold ff-secondary mb-0">{server.agents.length}</h4>
             </div>
           </div>
+        </div>
+        <div className="col-md-4">
+          <div className="card card-animate">
+            <div className="card-body">
+              <p className="text-uppercase fw-medium text-muted mb-2">{t("host.environment")}</p>
+              <h4 className="fs-16 fw-semibold mb-0">{server.environment || t("common.default")}</h4>
+            </div>
+          </div>
+        </div>
+        <div className="col-md-4">
+          <div className="card card-animate">
+            <div className="card-body">
+              <p className="text-uppercase fw-medium text-muted mb-2">{t("host.enrolled")}</p>
+              <h4 className="fs-16 fw-semibold mb-0">{formatAlertTime(server.created_at)}</h4>
+            </div>
+          </div>
+        </div>
+      </div>
 
+      <div className="row">
+        <div className="col-xl-7">
           {server.description ? (
             <div className="card">
               <div className="card-body">
@@ -174,18 +180,29 @@ export default function ServerDetailPage() {
               {server.agents.length === 0 ? (
                 <EmptyState title={t("host.none")} description={t("host.noneHint")} />
               ) : (
-                <div className="dx-log">
-                  {server.agents.map((agent) => (
-                    <div key={agent.id} className="dx-metric">
-                      <span className="d-flex justify-content-between gap-2">
-                        <span className="fw-medium">{agent.name || agent.id.slice(0, 8)}</span>
-                        <span className="badge bg-secondary-subtle text-secondary">{agent.status}</span>
-                      </span>
-                      <span className="d-block text-muted fs-12 mt-1">
-                        v{agent.agent_version || "?"} · {agent.last_heartbeat_at ? formatAlertTime(agent.last_heartbeat_at) : t("host.noHeartbeat")}
-                      </span>
-                    </div>
-                  ))}
+                <div className="table-responsive">
+                  <table className="table table-hover align-middle mb-0">
+                    <thead className="table-light">
+                      <tr>
+                        <th>{t("common.name")}</th>
+                        <th>{t("alerts.status")}</th>
+                        <th>{t("host.version")}</th>
+                        <th>{t("fleet.heartbeat")}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {server.agents.map((agent) => (
+                        <tr key={agent.id}>
+                          <td className="fw-medium">{agent.name || agent.id.slice(0, 8)}</td>
+                          <td>
+                            <span className="badge bg-secondary-subtle text-secondary">{agent.status}</span>
+                          </td>
+                          <td className="text-muted">v{agent.agent_version || "?"}</td>
+                          <td className="text-muted">{agent.last_heartbeat_at ? formatAlertTime(agent.last_heartbeat_at) : t("host.noHeartbeat")}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               )}
             </div>
@@ -193,7 +210,7 @@ export default function ServerDetailPage() {
         </div>
 
         <div className="col-xl-5">
-          <div className="card dx-detail">
+          <div className="card">
             <div className="card-header">
               <h4 className="card-title mb-0">{t("host.enroll")}</h4>
             </div>

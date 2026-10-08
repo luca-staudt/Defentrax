@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { EmptyState } from "@/components/ui/empty-state";
 import { LoadingBlock } from "@/components/ui/loading-block";
+import { Modal } from "@/components/ui/modal";
 import { PageHeader } from "@/components/ui/page-header";
 import { useI18n } from "@/lib/i18n";
 import { useAuth } from "@/context/auth-context";
@@ -69,7 +70,7 @@ export default function RolesPage() {
     if (!q) return true;
     return role.name.toLowerCase().includes(q) || role.description.toLowerCase().includes(q);
   });
-  const selected = roles.find((role) => role.id === (selectedId ?? roles[0]?.id)) ?? null;
+  const selected = roles.find((role) => role.id === selectedId) ?? null;
   const locked = selected ? roleIsFullAccess(selected.name) : false;
   const dirty =
     !!selected &&
@@ -141,7 +142,7 @@ export default function RolesPage() {
       setCreateDescription("");
       setTemplateId("");
       setSelectedId(created.id);
-      setMessage(`Created ${roleDisplayName(created.name)}.`);
+      setMessage(t("access.created"));
       await reload();
     } catch (err) {
       setError(err instanceof ApiRequestError ? err.message : t("access.createFailed"));
@@ -156,7 +157,7 @@ export default function RolesPage() {
       setError(t("access.moveOff"));
       return;
     }
-    if (!window.confirm(`Delete ${roleDisplayName(selected.name)}?`)) return;
+    if (!window.confirm(t("access.confirmDelete"))) return;
     setBusy(true);
     setError(null);
     try {
@@ -184,7 +185,7 @@ export default function RolesPage() {
         body: JSON.stringify({ roles: next }),
       });
       setMemberId("");
-      setMessage(`${person.display_name || person.email} now has ${roleDisplayName(selected.name)}.`);
+      setMessage(t("access.assigned"));
       await reload();
     } catch (err) {
       setError(err instanceof ApiRequestError ? err.message : t("access.assignFailed"));
@@ -207,7 +208,7 @@ export default function RolesPage() {
         method: "PUT",
         body: JSON.stringify({ roles: next }),
       });
-      setMessage(`${person.display_name || person.email} no longer has ${roleDisplayName(selected.name)}.`);
+      setMessage(t("access.removed"));
       await reload();
     } catch (err) {
       setError(err instanceof ApiRequestError ? err.message : t("access.removeFailed"));
@@ -225,8 +226,8 @@ export default function RolesPage() {
         subtitle={t("access.subtitle")}
         actions={
           canWrite ? (
-            <button type="button" className="btn btn-primary" onClick={() => setCreating((open) => !open)}>
-              {creating ? t("common.close") : t("access.new")}
+            <button type="button" className="btn btn-primary" onClick={() => setCreating(true)}>
+              {t("access.new")}
             </button>
           ) : null
         }
@@ -238,78 +239,91 @@ export default function RolesPage() {
       {error ? <div className="alert alert-danger">{error}</div> : null}
       {message ? <div className="alert alert-success">{message}</div> : null}
 
-      {creating && canWrite ? (
-        <div className="card">
-          <div className="card-body">
-            <form className="row g-3" onSubmit={(event) => void createRole(event)}>
-              <div className="col-md-4">
-                <label className="form-label">{t("common.name")}</label>
-                <input className="form-control" required value={name} onChange={(event) => setName(event.target.value)} placeholder="Shift lead" />
-              </div>
-              <div className="col-md-4">
-                <label className="form-label">{t("access.start")}</label>
-                <select className="form-select" value={templateId} onChange={(event) => setTemplateId(event.target.value)}>
-                  <option value="">{t("access.empty")}</option>
-                  {roles.map((role) => (
-                    <option key={role.id} value={role.id}>
-                      {roleDisplayName(role.name)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="col-md-4">
-                <label className="form-label">{t("rules.f.description")}</label>
-                <input className="form-control" value={createDescription} onChange={(event) => setCreateDescription(event.target.value)} />
-              </div>
-              <div className="col-12 text-end">
-                <button type="submit" className="btn btn-primary" disabled={busy}>
-                  {busy ? t("access.creating") : t("access.create")}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      ) : null}
-
-      <div className="row">
-        <div className="col-xl-3">
-          <div className="card">
-            <div className="card-body">
-              <input className="form-control mb-3" value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t("access.find")} />
-              {visible.length === 0 ? (
-                <EmptyState title={t("access.none")} description={t("access.noneHint")} />
-              ) : (
-                <div className="d-flex flex-column gap-2">
+      <div className="card">
+        <div className="card-body">
+          <input className="form-control mb-3" value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t("access.find")} />
+          {visible.length === 0 ? (
+            <EmptyState title={t("access.none")} description={t("access.noneHint")} />
+          ) : (
+            <div className="table-responsive">
+              <table className="table table-hover align-middle mb-0">
+                <thead className="table-light">
+                  <tr>
+                    <th>{t("common.name")}</th>
+                    <th>{t("rules.f.description")}</th>
+                    <th>{t("access.pages")}</th>
+                  </tr>
+                </thead>
+                <tbody>
                   {visible.map((role) => {
-                    const active = selected?.id === role.id;
                     const count = users.filter((person) => person.roles?.includes(role.name)).length;
                     return (
-                      <button
-                        key={role.id}
-                        type="button"
-                        className={`dx-role-pick ${active ? "is-on" : ""}`}
-                        onClick={() => setSelectedId(role.id)}
-                      >
-                        <span className="flex-grow-1 text-start">
-                          <span className="d-block fw-medium">{roleDisplayName(role.name)}</span>
-                          <span className="d-block text-muted fs-12">
-                            {pageSummary(role)}
-                            {canReadUsers ? ` · ${count} ${count === 1 ? "person" : "people"}` : ""}
-                          </span>
-                        </span>
-                      </button>
+                      <tr key={role.id}>
+                        <td>
+                          <button type="button" className="btn btn-link p-0 fw-medium" onClick={() => setSelectedId(role.id)}>
+                            {roleDisplayName(role.name)}
+                          </button>
+                          <span className="d-block text-muted fs-12">{role.name}</span>
+                        </td>
+                        <td className="text-muted">{role.description || pageSummary(role)}</td>
+                        <td className="text-muted">
+                          {pageSummary(role)}
+                          {canReadUsers ? ` · ${count}` : ""}
+                        </td>
+                      </tr>
                     );
                   })}
-                </div>
-              )}
+                </tbody>
+              </table>
             </div>
-          </div>
+          )}
         </div>
+      </div>
 
-        <div className="col-xl-9">
-          {!selected ? (
-            <EmptyState title={t("access.noneSelected")} description={t("access.noneSelectedHint")} />
-          ) : (
+      <Modal
+        isOpen={creating}
+        onClose={() => {
+          if (busy) return;
+          setCreating(false);
+        }}
+        size="lg"
+        title={t("access.new")}
+        footer={
+          <div className="d-flex gap-2">
+            <button type="button" className="btn btn-light" disabled={busy} onClick={() => setCreating(false)}>
+              {t("common.cancel")}
+            </button>
+            <button type="submit" form="role-create" className="btn btn-primary" disabled={busy}>
+              {busy ? t("access.creating") : t("access.create")}
+            </button>
+          </div>
+        }
+      >
+        <form id="role-create" className="row g-3" onSubmit={(event) => void createRole(event)}>
+          <div className="col-md-6">
+            <label className="form-label">{t("common.name")}</label>
+            <input className="form-control" required value={name} onChange={(event) => setName(event.target.value)} placeholder="Shift lead" />
+          </div>
+          <div className="col-md-6">
+            <label className="form-label">{t("access.start")}</label>
+            <select className="form-select" value={templateId} onChange={(event) => setTemplateId(event.target.value)}>
+              <option value="">{t("access.empty")}</option>
+              {roles.map((role) => (
+                <option key={role.id} value={role.id}>
+                  {roleDisplayName(role.name)}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="col-12">
+            <label className="form-label">{t("rules.f.description")}</label>
+            <input className="form-control" value={createDescription} onChange={(event) => setCreateDescription(event.target.value)} />
+          </div>
+        </form>
+      </Modal>
+
+      <Modal isOpen={!!selected} onClose={() => setSelectedId(null)} size="xl" title={selected ? roleDisplayName(selected.name) : t("access.title")} subtitle={selected?.name}>
+        {selected ? (
             <>
               <div className="card">
                 <div className="card-body">
@@ -323,9 +337,7 @@ export default function RolesPage() {
                     </div>
                   </div>
                   {locked ? (
-                    <div className="alert alert-primary mb-0">
-                      This role opens every page and can change every record. The panel does not consult a permission list for it.
-                    </div>
+                    <div className="alert alert-primary mb-0">{t("access.locked")}</div>
                   ) : (
                     <>
                       <label className="form-label">{t("access.purpose")}</label>
@@ -449,7 +461,7 @@ export default function RolesPage() {
                 <div className="card-header d-flex align-items-center">
                   <h4 className="card-title mb-0 flex-grow-1">{t("access.people")}</h4>
                   <Link href="/users" className="btn btn-sm btn-light">
-                    Team
+                    {t("people.title")}
                   </Link>
                 </div>
                 <div className="card-body">
@@ -471,7 +483,7 @@ export default function RolesPage() {
                           </div>
                           <div className="col-auto">
                             <button type="button" className="btn btn-primary" disabled={!memberId || busy} onClick={() => void addMember()}>
-                              Assign
+                              {t("access.assign")}
                             </button>
                           </div>
                         </div>
@@ -488,7 +500,7 @@ export default function RolesPage() {
                               </span>
                               {canAssign ? (
                                 <button type="button" className="btn btn-sm btn-light" disabled={busy} onClick={() => void removeMember(person)}>
-                                  Remove
+                                  {t("access.remove")}
                                 </button>
                               ) : null}
                             </li>
@@ -503,7 +515,7 @@ export default function RolesPage() {
               <div className="d-flex justify-content-between mb-4">
                 {!selected.is_system && canWrite ? (
                   <button type="button" className="btn btn-danger" disabled={busy} onClick={() => void removeRole()}>
-                    Delete role
+                    {t("access.delete")}
                   </button>
                 ) : (
                   <span />
@@ -515,9 +527,8 @@ export default function RolesPage() {
                 ) : null}
               </div>
             </>
-          )}
-        </div>
-      </div>
+        ) : null}
+      </Modal>
     </>
   );
 }

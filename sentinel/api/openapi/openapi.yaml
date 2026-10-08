@@ -2753,6 +2753,12 @@ components:
           type: integer
         definition:
           description: Rule definition JSON
+        custom:
+          type: boolean
+        silenced_until:
+          type: string
+          format: date-time
+          description: Active maintenance window end. Omitted when the rule is not silenced. Stored in the silences table, not on rules.
         created_at:
           type: string
           format: date-time

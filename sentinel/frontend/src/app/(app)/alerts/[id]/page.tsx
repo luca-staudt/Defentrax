@@ -109,13 +109,21 @@ export default function AlertDetailPage() {
 
       <div className="row">
         <div className="col-xl-7">
-          <div className="row g-3 mb-3">
-            <Fact label={t("common.hits")} value={String(alert.event_count)} />
-            <Fact label={t("common.sourceIp")} value={alert.source_ip || "—"} />
-            <Fact label={t("common.firstSeen")} value={formatAlertTime(alert.first_seen_at)} />
-            <Fact label={t("common.lastSeen")} value={formatAlertTime(alert.last_seen_at)} />
-            <Fact label={t("alert.opened")} value={formatAlertTime(alert.opened_at)} />
-            <Fact label={t("alert.resolved")} value={formatAlertTime(alert.resolved_at)} />
+          <div className="card">
+            <div className="card-body">
+              <div className="table-responsive">
+                <table className="table table-borderless align-middle mb-0">
+                  <tbody>
+                    <Fact label={t("common.hits")} value={String(alert.event_count)} />
+                    <Fact label={t("common.sourceIp")} value={alert.source_ip || "—"} />
+                    <Fact label={t("common.firstSeen")} value={formatAlertTime(alert.first_seen_at)} />
+                    <Fact label={t("common.lastSeen")} value={formatAlertTime(alert.last_seen_at)} />
+                    <Fact label={t("alert.opened")} value={formatAlertTime(alert.opened_at)} />
+                    <Fact label={t("alert.resolved")} value={formatAlertTime(alert.resolved_at)} />
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
 
           <div className="card">
@@ -148,15 +156,27 @@ export default function AlertDetailPage() {
               {timeline.length === 0 ? (
                 <p className="text-muted mb-0">{t("alert.noTimeline")}</p>
               ) : (
-                <div className="dx-log">
-                  {timeline.map((entry) => (
-                    <div key={entry.id} className="dx-metric">
-                      <span className="fw-medium">{entry.message}</span>
-                      <span className="d-block text-muted fs-12 mt-1">
-                        {entry.event_type} · {formatAlertTime(entry.created_at)}
-                      </span>
-                    </div>
-                  ))}
+                <div className="table-responsive">
+                  <table className="table table-hover align-middle mb-0">
+                    <thead className="table-light">
+                      <tr>
+                        <th>{t("alert.kind")}</th>
+                        <th>{t("alert.timeline")}</th>
+                        <th>{t("alert.when")}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {timeline.map((entry) => (
+                        <tr key={entry.id}>
+                          <td>
+                            <span className="badge bg-info-subtle text-info">{entry.event_type}</span>
+                          </td>
+                          <td className="fw-medium">{entry.message}</td>
+                          <td className="text-muted text-nowrap">{formatAlertTime(entry.created_at)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               )}
             </div>
@@ -164,7 +184,7 @@ export default function AlertDetailPage() {
         </div>
 
         <div className="col-xl-5">
-          <div className="card dx-detail">
+          <div className="card">
             <div className="card-header">
               <h4 className="card-title mb-0">{t("alert.move")}</h4>
             </div>
@@ -223,11 +243,11 @@ export default function AlertDetailPage() {
 
 function Fact({ label, value }: { label: string; value: string }) {
   return (
-    <div className="col-md-6 col-xl-4">
-      <div className="dx-metric">
-        <span className="text-muted text-uppercase fs-12">{label}</span>
-        <strong className="fs-14">{value}</strong>
-      </div>
-    </div>
+    <tr>
+      <th className="text-muted fw-medium" style={{ width: "40%" }}>
+        {label}
+      </th>
+      <td>{value}</td>
+    </tr>
   );
 }

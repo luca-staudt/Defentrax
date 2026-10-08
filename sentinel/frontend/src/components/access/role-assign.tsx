@@ -1,5 +1,6 @@
 "use client";
 
+import { useI18n } from "@/lib/i18n";
 import { roleDisplayName } from "@/lib/permissions";
 import { pageSummary, roleIsFullAccess } from "@/lib/access";
 import type { Role } from "@/lib/types";
@@ -15,6 +16,7 @@ export function RoleAssignList({
   disabled?: boolean;
   onChange: (next: string[]) => void;
 }) {
+  const { t } = useI18n();
   function toggle(name: string) {
     if (disabled) return;
     if (selected.includes(name)) {
@@ -41,8 +43,8 @@ export function RoleAssignList({
             <span className="flex-grow-1 text-start">
               <span className="d-flex align-items-center gap-2">
                 <span className="fw-medium">{roleDisplayName(role.name)}</span>
-                {role.is_system ? <span className="badge bg-secondary-subtle text-secondary">Built-in</span> : null}
-                {roleIsFullAccess(role.name) ? <span className="badge bg-primary-subtle text-primary">Full access</span> : null}
+                {role.is_system ? <span className="badge bg-secondary-subtle text-secondary">{t("access.builtin")}</span> : null}
+                {roleIsFullAccess(role.name) ? <span className="badge bg-primary-subtle text-primary">{t("access.full")}</span> : null}
               </span>
               <span className="d-block text-muted fs-12">{role.description || pageSummary(role)}</span>
             </span>

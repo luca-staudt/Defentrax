@@ -3,6 +3,7 @@
 import { FormEvent, useCallback, useState } from "react";
 import { EmptyState } from "@/components/ui/empty-state";
 import { LoadingBlock } from "@/components/ui/loading-block";
+import { Modal } from "@/components/ui/modal";
 import { PageHeader } from "@/components/ui/page-header";
 import { RoleAssignList } from "@/components/access/role-assign";
 import { apiFetch, ApiRequestError } from "@/lib/api/client";
@@ -98,7 +99,7 @@ export default function TeamUsersPage() {
       setCreating(false);
       await load();
     } catch (err) {
-      setFormError(err instanceof ApiRequestError ? err.message : "Create failed");
+      setFormError(err instanceof ApiRequestError ? err.message : t("people.createFailed"));
     } finally {
       setSaving(false);
     }
@@ -121,12 +122,12 @@ export default function TeamUsersPage() {
           body: JSON.stringify({ roles: editRoles }),
         });
       }
-      setDetailMsg("Saved profile & roles");
+      setDetailMsg(t("people.saved"));
       await load();
       const refreshed = await apiFetch<User>(`/users/${selected.id}`);
       setSelected(refreshed || { ...selected, display_name: editName.trim(), roles: editRoles });
     } catch (err) {
-      setDetailMsg(err instanceof ApiRequestError ? err.message : "Save failed");
+      setDetailMsg(err instanceof ApiRequestError ? err.message : t("people.saveFailed"));
     } finally {
       setDetailBusy(false);
     }
@@ -142,10 +143,10 @@ export default function TeamUsersPage() {
         body: JSON.stringify({ is_active: active }),
       });
       setSelected(updated);
-      setDetailMsg(active ? "User activated" : "User suspended");
+      setDetailMsg(active ? t("people.activated") : t("people.suspendedMsg"));
       await load();
     } catch (err) {
-      setDetailMsg(err instanceof ApiRequestError ? err.message : "Update failed");
+      setDetailMsg(err instanceof ApiRequestError ? err.message : t("people.updateFailed"));
     } finally {
       setDetailBusy(false);
     }
@@ -153,7 +154,7 @@ export default function TeamUsersPage() {
 
   async function resetPassword() {
     if (!selected || !canWrite || editPassword.length < 12) {
-      setDetailMsg("Password must be at least 12 characters");
+      setDetailMsg(t("people.passwordShort"));
       return;
     }
     setDetailBusy(true);
@@ -164,10 +165,10 @@ export default function TeamUsersPage() {
         body: JSON.stringify({ password: editPassword }),
       });
       setEditPassword("");
-      setDetailMsg("Password reset successfully. Active sessions revoked.");
+      setDetailMsg(t("people.passwordReset"));
       setSessions([]);
     } catch (err) {
-      setDetailMsg(err instanceof ApiRequestError ? err.message : "Password reset failed");
+      setDetailMsg(err instanceof ApiRequestError ? err.message : t("people.saveFailed"));
     } finally {
       setDetailBusy(false);
     }
@@ -175,16 +176,16 @@ export default function TeamUsersPage() {
 
   async function resetTotp() {
     if (!selected || !canWrite) return;
-    if (!confirm("Reset 2FA for this user? They will be required to re-enroll.")) return;
+    if (!confirm(t("people.confirmReset2fa"))) return;
     setDetailBusy(true);
     setDetailMsg(null);
     try {
       await apiFetch(`/users/${selected.id}/totp/reset`, { method: "POST" });
       setSelected({ ...selected, totp_enabled: false });
-      setDetailMsg("2FA reset successfully");
+      setDetailMsg(t("people.totpReset"));
       await load();
     } catch (err) {
-      setDetailMsg(err instanceof ApiRequestError ? err.message : "2FA reset failed");
+      setDetailMsg(err instanceof ApiRequestError ? err.message : t("people.saveFailed"));
     } finally {
       setDetailBusy(false);
     }
@@ -196,9 +197,9 @@ export default function TeamUsersPage() {
     try {
       await apiFetch(`/users/${selected.id}/sessions/${sessionId}`, { method: "DELETE" });
       setSessions((s) => s.filter((x) => x.id !== sessionId));
-      setDetailMsg("Session revoked");
+      setDetailMsg(t("people.sessionRevoked"));
     } catch (err) {
-      setDetailMsg(err instanceof ApiRequestError ? err.message : "Revoke failed");
+      setDetailMsg(err instanceof ApiRequestError ? err.message : t("people.revokeFailed"));
     } finally {
       setDetailBusy(false);
     }
@@ -210,9 +211,9 @@ export default function TeamUsersPage() {
     try {
       await apiFetch(`/users/${selected.id}/sessions`, { method: "DELETE" });
       setSessions([]);
-      setDetailMsg("All sessions revoked");
+      setDetailMsg(t("people.sessionsCleared"));
     } catch (err) {
-      setDetailMsg(err instanceof ApiRequestError ? err.message : "Revoke failed");
+      setDetailMsg(err instanceof ApiRequestError ? err.message : t("people.revokeFailed"));
     } finally {
       setDetailBusy(false);
     }
@@ -245,6 +246,7 @@ export default function TeamUsersPage() {
               className="btn btn-primary"
               onClick={() => {
                 setCreating(true);
+                setSelected(null);
                 setFormError(null);
               }}
             >
@@ -254,156 +256,182 @@ export default function TeamUsersPage() {
         }
       />
 
-      <div className="row g-3 mb-3">
-        <Stat label={t("people.operators")} value={users.length} />
-        <Stat label={t("people.active")} value={activeCount} />
-        <Stat label="2FA" value={totpCount} />
-        <Stat label={t("people.roles")} value={roles.length || roleOptions.length} />
+      <div className="row">
+        <Stat label={t("people.operators")} value={users.length} icon="ri-team-line" tone="primary" />
+        <Stat label={t("people.active")} value={activeCount} icon="ri-user-follow-line" tone="success" />
+        <Stat label="2FA" value={totpCount} icon="ri-shield-keyhole-line" tone="info" />
+        <Stat label={t("people.roles")} value={roles.length || roleOptions.length} icon="ri-key-2-line" tone="warning" />
       </div>
 
       {loadError ? <div className="alert alert-danger">{loadError}</div> : null}
 
-      <div className="row">
-        <div className="col-xl-5">
-          <div className="card">
-            <div className="card-body">
-              <input
-                className="form-control mb-3"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder={t("people.filter")}
-              />
-              {filteredUsers.length === 0 ? (
-                <EmptyState title={t("people.none")} description={t("people.noneHint")} />
-              ) : (
-                <div className="dx-log">
+      <div className="card">
+        <div className="card-body">
+          <input className="form-control mb-3" value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t("people.filter")} />
+          {filteredUsers.length === 0 ? (
+            <EmptyState title={t("people.none")} description={t("people.noneHint")} />
+          ) : (
+            <div className="table-responsive">
+              <table className="table table-hover align-middle mb-0">
+                <thead className="table-light">
+                  <tr>
+                    <th>{t("people.operator")}</th>
+                    <th>{t("login.email")}</th>
+                    <th>{t("people.roles")}</th>
+                    <th>{t("alerts.status")}</th>
+                  </tr>
+                </thead>
+                <tbody>
                   {filteredUsers.map((person) => (
-                    <button
-                      key={person.id}
-                      type="button"
-                      className={!creating && selected?.id === person.id ? "is-on" : ""}
-                      onClick={() => void openDetail(person)}
-                    >
-                      <span className="d-flex justify-content-between gap-2">
-                        <span className="fw-medium">{person.display_name || person.email}</span>
-                        <span className={`badge ${person.is_active ? "bg-success-subtle text-success" : "bg-danger-subtle text-danger"}`}>
-                          {person.is_active ? t("people.active") : t("people.suspended")}
-                        </span>
-                      </span>
-                      <span className="d-block text-muted fs-12 mt-1">{person.email}</span>
-                      <span className="d-block mt-2">
+                    <tr key={person.id}>
+                      <td>
+                        <button type="button" className="btn btn-link p-0 fw-medium" onClick={() => void openDetail(person)}>
+                          {person.display_name || person.email}
+                        </button>
+                        <span className="d-block text-muted fs-12">{person.totp_enabled ? t("people.totpOn") : t("people.totpOff")}</span>
+                      </td>
+                      <td className="text-muted">{person.email}</td>
+                      <td>
                         {(person.roles || []).map((role) => (
                           <span key={role} className="badge bg-primary-subtle text-primary me-1">
                             {roleDisplayName(role)}
                           </span>
                         ))}
-                        <span className="text-muted fs-12">{person.totp_enabled ? t("people.totpOn") : t("people.totpOff")}</span>
-                      </span>
-                    </button>
+                      </td>
+                      <td>
+                        <span className={`badge ${person.is_active ? "bg-success-subtle text-success" : "bg-danger-subtle text-danger"}`}>
+                          {person.is_active ? t("people.active") : t("people.suspended")}
+                        </span>
+                      </td>
+                    </tr>
                   ))}
-                </div>
-              )}
+                </tbody>
+              </table>
             </div>
-          </div>
-        </div>
-
-        <div className="col-xl-7">
-          <div className="card dx-detail">
-            <div className="card-header">
-              <h4 className="card-title mb-0">{creating ? t("people.new") : selected?.email || t("people.operator")}</h4>
-            </div>
-            <div className="card-body">
-              {creating && canWrite ? (
-                <form onSubmit={(e) => void onCreate(e)}>
-                  <label className="form-label">{t("login.email")}</label>
-                  <input required type="email" className="form-control mb-3" value={email} onChange={(e) => setEmail(e.target.value)} />
-                  <label className="form-label">{t("people.displayName")}</label>
-                  <input className="form-control mb-3" value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
-                  <label className="form-label">{t("login.password")}</label>
-                  <input required type="password" minLength={12} className="form-control mb-3" value={password} onChange={(e) => setPassword(e.target.value)} />
-                  <p className="form-label">{t("people.roles")}</p>
-                  <RoleAssignList roles={assignableRoles} selected={createRoles} onChange={setCreateRoles} />
-                  {formError ? <div className="alert alert-danger mt-3">{formError}</div> : null}
-                  <div className="d-flex gap-2 mt-3">
-                    <button type="button" className="btn btn-light" onClick={() => setCreating(false)}>
-                      {t("common.cancel")}
-                    </button>
-                    <button type="submit" className="btn btn-primary" disabled={saving}>
-                      {saving ? t("views.saving") : t("people.create")}
-                    </button>
-                  </div>
-                </form>
-              ) : selected ? (
-                <>
-                  {detailMsg ? <div className="alert alert-info">{detailMsg}</div> : null}
-                  <label className="form-label">{t("people.displayName")}</label>
-                  <input className="form-control mb-3" value={editName} onChange={(e) => setEditName(e.target.value)} disabled={!canWrite || detailBusy} />
-                  <p className="form-label">{t("people.roles")}</p>
-                  <RoleAssignList roles={assignableRoles} selected={editRoles} disabled={!canWrite || detailBusy} onChange={setEditRoles} />
-                  <div className="d-flex flex-wrap gap-2 my-3">
-                    <button type="button" className="btn btn-primary" disabled={!canWrite || detailBusy} onClick={() => void saveProfile()}>
-                      {t("people.save")}
-                    </button>
-                    <button type="button" className="btn btn-light" disabled={!canWrite || detailBusy} onClick={() => void setActive(!selected.is_active)}>
-                      {selected.is_active ? t("people.suspend") : t("people.activate")}
-                    </button>
-                    <button type="button" className="btn btn-light" disabled={!canWrite || detailBusy} onClick={() => void resetTotp()}>
-                      {t("people.reset2fa")}
-                    </button>
-                  </div>
-                  <label className="form-label">{t("people.newPassword")}</label>
-                  <div className="input-group mb-3">
-                    <input type="password" className="form-control" value={editPassword} onChange={(e) => setEditPassword(e.target.value)} disabled={!canWrite || detailBusy} />
-                    <button type="button" className="btn btn-light" disabled={!canWrite || detailBusy} onClick={() => void resetPassword()}>
-                      {t("people.resetPassword")}
-                    </button>
-                  </div>
-                  {canWrite ? (
-                    <div>
-                      <div className="d-flex justify-content-between align-items-center mb-2">
-                        <h6 className="mb-0">{t("people.sessions")}</h6>
-                        <button type="button" className="btn btn-sm btn-light" disabled={detailBusy || sessions.length === 0} onClick={() => void revokeAllSessions()}>
-                          {t("people.revokeAll")}
-                        </button>
-                      </div>
-                      {sessions.length === 0 ? (
-                        <p className="text-muted mb-0">{t("people.noSessions")}</p>
-                      ) : (
-                        <div className="dx-log">
-                          {sessions.map((session) => (
-                            <div key={session.id} className="dx-metric">
-                              <span className="d-flex justify-content-between align-items-center gap-2">
-                                <span>
-                                  {session.ip_address || t("common.unknown")} · {session.created_at}
-                                </span>
-                                <button type="button" className="btn btn-sm btn-light" onClick={() => void revokeSession(session.id)}>
-                                  {t("people.revoke")}
-                                </button>
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  ) : null}
-                </>
-              ) : (
-                <EmptyState title={t("people.pick")} description={t("people.pickHint")} />
-              )}
-            </div>
-          </div>
+          )}
         </div>
       </div>
+
+      <Modal
+        isOpen={creating}
+        onClose={() => {
+          if (saving) return;
+          setCreating(false);
+        }}
+        size="lg"
+        title={t("people.new")}
+        footer={
+          <div className="d-flex gap-2">
+            <button type="button" className="btn btn-light" disabled={saving} onClick={() => setCreating(false)}>
+              {t("common.cancel")}
+            </button>
+            <button type="submit" form="person-create" className="btn btn-primary" disabled={saving}>
+              {saving ? t("views.saving") : t("people.create")}
+            </button>
+          </div>
+        }
+      >
+        <form id="person-create" onSubmit={(e) => void onCreate(e)}>
+          <label className="form-label">{t("login.email")}</label>
+          <input required type="email" className="form-control mb-3" value={email} onChange={(e) => setEmail(e.target.value)} />
+          <label className="form-label">{t("people.displayName")}</label>
+          <input className="form-control mb-3" value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
+          <label className="form-label">{t("login.password")}</label>
+          <input required type="password" minLength={12} className="form-control mb-3" value={password} onChange={(e) => setPassword(e.target.value)} />
+          <p className="form-label">{t("people.roles")}</p>
+          <RoleAssignList roles={assignableRoles} selected={createRoles} onChange={setCreateRoles} />
+          {formError ? <div className="alert alert-danger mt-3 mb-0">{formError}</div> : null}
+        </form>
+      </Modal>
+
+      <Modal isOpen={!!selected && !creating} onClose={() => setSelected(null)} size="xl" title={selected?.display_name || selected?.email || t("people.operator")} subtitle={selected?.email}>
+        {selected ? (
+          <>
+            {detailMsg ? <div className="alert alert-info">{detailMsg}</div> : null}
+            <label className="form-label">{t("people.displayName")}</label>
+            <input className="form-control mb-3" value={editName} onChange={(e) => setEditName(e.target.value)} disabled={!canWrite || detailBusy} />
+            <p className="form-label">{t("people.roles")}</p>
+            <RoleAssignList roles={assignableRoles} selected={editRoles} disabled={!canWrite || detailBusy} onChange={setEditRoles} />
+            <div className="d-flex flex-wrap gap-2 my-3">
+              <button type="button" className="btn btn-primary" disabled={!canWrite || detailBusy} onClick={() => void saveProfile()}>
+                {t("people.save")}
+              </button>
+              <button type="button" className="btn btn-light" disabled={!canWrite || detailBusy} onClick={() => void setActive(!selected.is_active)}>
+                {selected.is_active ? t("people.suspend") : t("people.activate")}
+              </button>
+              <button type="button" className="btn btn-light" disabled={!canWrite || detailBusy} onClick={() => void resetTotp()}>
+                {t("people.reset2fa")}
+              </button>
+            </div>
+            <label className="form-label">{t("people.newPassword")}</label>
+            <div className="input-group mb-3">
+              <input type="password" className="form-control" value={editPassword} onChange={(e) => setEditPassword(e.target.value)} disabled={!canWrite || detailBusy} />
+              <button type="button" className="btn btn-light" disabled={!canWrite || detailBusy} onClick={() => void resetPassword()}>
+                {t("people.resetPassword")}
+              </button>
+            </div>
+            {canWrite ? (
+              <div>
+                <div className="d-flex justify-content-between align-items-center mb-2">
+                  <h6 className="mb-0">{t("people.sessions")}</h6>
+                  <button type="button" className="btn btn-sm btn-light" disabled={detailBusy || sessions.length === 0} onClick={() => void revokeAllSessions()}>
+                    {t("people.revokeAll")}
+                  </button>
+                </div>
+                {sessions.length === 0 ? (
+                  <p className="text-muted mb-0">{t("people.noSessions")}</p>
+                ) : (
+                  <div className="table-responsive">
+                    <table className="table table-sm align-middle mb-0">
+                      <tbody>
+                        {sessions.map((session) => (
+                          <tr key={session.id}>
+                            <td>
+                              {session.ip_address || t("common.unknown")} · {session.created_at}
+                            </td>
+                            <td className="text-end">
+                              <button type="button" className="btn btn-sm btn-light" onClick={() => void revokeSession(session.id)}>
+                                {t("people.revoke")}
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            ) : null}
+          </>
+        ) : null}
+      </Modal>
     </>
   );
 }
 
-function Stat({ label, value }: { label: string; value: number }) {
+function Stat({
+  label,
+  value,
+  icon,
+  tone,
+}: {
+  label: string;
+  value: number;
+  icon: string;
+  tone: "primary" | "success" | "info" | "warning";
+}) {
   return (
     <div className="col-6 col-xl-3">
-      <div className="dx-metric">
-        <span className="text-muted text-uppercase fs-12">{label}</span>
-        <strong>{value}</strong>
+      <div className="card card-animate">
+        <div className="card-body">
+          <p className="text-uppercase fw-medium text-muted text-truncate mb-0">{label}</p>
+          <div className="d-flex align-items-end justify-content-between mt-3">
+            <h4 className="fs-22 fw-semibold ff-secondary mb-0">{value}</h4>
+            <span className={`avatar-title bg-${tone}-subtle text-${tone} rounded fs-3 avatar-sm`}>
+              <i className={icon} />
+            </span>
+          </div>
+        </div>
       </div>
     </div>
   );

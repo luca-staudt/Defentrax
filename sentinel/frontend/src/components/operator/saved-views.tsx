@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useRef, useState } from "react";
+import { DropdownItem, DropdownMenu, DropdownToggle, UncontrolledDropdown } from "reactstrap";
 import { apiFetch, ApiRequestError } from "@/lib/api/client";
 import { useI18n } from "@/lib/i18n";
 import { useQuery } from "@/lib/panel/use-query";
@@ -43,6 +44,7 @@ export function SavedViews({
 
   async function onSave(event: FormEvent) {
     event.preventDefault();
+    if (busy) return;
     setBusy(true);
     setError(null);
     try {
@@ -59,7 +61,7 @@ export function SavedViews({
       setAsDefault(false);
       await viewsQuery.reload();
     } catch (err) {
-      setError(err instanceof ApiRequestError ? err.message : "Save failed");
+      setError(err instanceof ApiRequestError ? err.message : t("rules.saveFailed"));
     } finally {
       setBusy(false);
     }
@@ -71,51 +73,59 @@ export function SavedViews({
       await apiFetch(`/saved-views/${id}`, { method: "DELETE" });
       await viewsQuery.reload();
     } catch (err) {
-      setError(err instanceof ApiRequestError ? err.message : "Delete failed");
+      setError(err instanceof ApiRequestError ? err.message : t("rules.saveFailed"));
     }
   }
 
   return (
-    <div className="card">
-      <div className="card-header">
-        <h4 className="card-title mb-0">{t("alerts.views")}</h4>
-      </div>
-      <div className="card-body">
-        {views.length === 0 ? <p className="text-muted">{t("views.empty")}</p> : null}
-        <div className="dx-log mb-3">
+    <div className="d-flex flex-wrap align-items-center gap-2">
+      <UncontrolledDropdown>
+        <DropdownToggle caret color="light" className="btn">
+          {t("alerts.views")}
+          {views.length > 0 ? <span className="badge bg-primary-subtle text-primary ms-2">{views.length}</span> : null}
+        </DropdownToggle>
+        <DropdownMenu>
+          {views.length === 0 ? <DropdownItem disabled>{t("views.empty")}</DropdownItem> : null}
           {views.map((view) => (
-            <div key={view.id} className="d-flex gap-2">
-              <button type="button" className="flex-grow-1" onClick={() => onApply(view.query || {})}>
-                <span className="fw-medium">{view.name}</span>
+            <DropdownItem key={view.id} tag="div" toggle={false} className="d-flex align-items-center gap-2">
+              <button type="button" className="btn btn-link p-0 text-start flex-grow-1" onClick={() => onApply(view.query || {})}>
+                {view.name}
                 {view.is_default ? <span className="badge bg-primary-subtle text-primary ms-2">{t("views.default")}</span> : null}
               </button>
-              <button type="button" className="btn btn-sm btn-light" onClick={() => void remove(view.id)} aria-label={t("common.delete")}>
-                {t("common.delete")}
+              <button type="button" className="btn btn-sm btn-ghost-danger" onClick={() => void remove(view.id)} aria-label={t("common.delete")}>
+                <i className="ri-delete-bin-line" />
               </button>
-            </div>
+            </DropdownItem>
           ))}
-        </div>
-        <form onSubmit={(event) => void onSave(event)}>
+        </DropdownMenu>
+      </UncontrolledDropdown>
+      <form className="d-flex flex-wrap align-items-center gap-2" onSubmit={(event) => void onSave(event)}>
+        <input
+          className="form-control form-control-sm"
+          style={{ width: 180 }}
+          required
+          value={name}
+          onChange={(event) => setName(event.target.value)}
+          placeholder={t("views.name")}
+          maxLength={80}
+        />
+        <div className="form-check mb-0">
           <input
-            className="form-control mb-2"
-            required
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            placeholder={t("views.name")}
-            maxLength={80}
+            id={`${kind}-default-view`}
+            className="form-check-input"
+            type="checkbox"
+            checked={asDefault}
+            onChange={(event) => setAsDefault(event.target.checked)}
           />
-          <div className="form-check mb-2">
-            <input id={`${kind}-default-view`} className="form-check-input" type="checkbox" checked={asDefault} onChange={(event) => setAsDefault(event.target.checked)} />
-            <label className="form-check-label" htmlFor={`${kind}-default-view`}>
-              {t("views.default")}
-            </label>
-          </div>
-          {error ? <div className="alert alert-danger">{error}</div> : null}
-          <button type="submit" className="btn btn-primary btn-sm" disabled={busy}>
-            {busy ? t("views.saving") : t("views.save")}
-          </button>
-        </form>
-      </div>
+          <label className="form-check-label" htmlFor={`${kind}-default-view`}>
+            {t("views.default")}
+          </label>
+        </div>
+        <button type="submit" className="btn btn-sm btn-primary" disabled={busy}>
+          {busy ? t("views.saving") : t("views.save")}
+        </button>
+      </form>
+      {error ? <span className="text-danger fs-12">{error}</span> : null}
     </div>
   );
 }
