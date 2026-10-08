@@ -61,6 +61,13 @@ export default function DashboardPage() {
               tone={critical > 0 ? "danger" : stats.alerts_open > 0 ? "warning" : "success"}
             />
             <StatWidget
+              label={t("dash.silent")}
+              value={stats.hosts_silent ?? 0}
+              hint={t("dash.silentHint")}
+              icon="ri-wifi-off-line"
+              tone={(stats.hosts_silent ?? 0) > 0 ? "warning" : "success"}
+            />
+            <StatWidget
               label={t("dash.events")}
               value={stats.events_last_24h}
               hint={t("dash.received")}
@@ -220,7 +227,7 @@ function StatWidget({
   suffix?: string;
 }) {
   return (
-    <div className="col-xl-3 col-md-6">
+    <div className="col-6 col-xl">
       <div className="card card-animate">
         <div className="card-body">
           <div className="d-flex align-items-center">
