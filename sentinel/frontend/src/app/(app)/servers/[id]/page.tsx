@@ -3,15 +3,19 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { FormEvent, useRef, useState } from "react";
+import { SilenceControl, writeTargetSilence } from "@/components/operator/silence-control";
 import { EmptyState } from "@/components/ui/empty-state";
 import { LoadingBlock } from "@/components/ui/loading-block";
 import { PageHeader } from "@/components/ui/page-header";
 import { useAuth } from "@/context/auth-context";
+import { formatAlertTime } from "@/lib/alerts";
 import { apiFetch, ApiRequestError } from "@/lib/api/client";
 import { copyText } from "@/lib/clipboard";
+import { useI18n } from "@/lib/i18n";
 import { canSeePage } from "@/lib/pages";
 import { invalidateQueries } from "@/lib/panel/cache";
 import { useQuery } from "@/lib/panel/use-query";
+import { hasPermission } from "@/lib/permissions";
 import type { EnrollmentToken } from "@/lib/types";
 
 type Agent = {
@@ -30,12 +34,21 @@ type ServerDetail = {
   environment: string;
   created_at: string;
   agents: Agent[];
+  silenced_until?: string | null;
+  last_heartbeat_at?: string | null;
+  last_event_at?: string | null;
+  agent_count?: number;
+  silent?: boolean;
 };
 
 export default function ServerDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
+  const { t } = useI18n();
   const canList = canSeePage(user, "servers");
+  const canWrite = hasPermission(user, "servers", "write");
+  const [silenceBusy, setSilenceBusy] = useState(false);
+  const [silenceError, setSilenceError] = useState<string | null>(null);
   const [label, setLabel] = useState("default-agent");
   const [ttl, setTtl] = useState(60);
   const [issuing, setIssuing] = useState(false);
@@ -70,7 +83,7 @@ export default function ServerDetailPage() {
       invalidateQueries(["stats", "servers"]);
       await serverQuery.reload();
     } catch (err) {
-      setIssueError(err instanceof ApiRequestError ? err.message : "Token create failed");
+      setIssueError(err instanceof ApiRequestError ? err.message : t("host.tokenFailed"));
     } finally {
       setIssuing(false);
     }
@@ -88,20 +101,35 @@ export default function ServerDetailPage() {
     setCopyHint(result.message);
   }
 
+  async function changeSilence(until: string | null) {
+    if (!canWrite || !id) return;
+    setSilenceBusy(true);
+    setSilenceError(null);
+    try {
+      await writeTargetSilence(`/servers/${id}/silence`, until);
+      invalidateQueries(["servers", "stats"]);
+      await serverQuery.reload();
+    } catch (err) {
+      setSilenceError(err instanceof ApiRequestError ? err.message : t("host.tokenFailed"));
+    } finally {
+      setSilenceBusy(false);
+    }
+  }
+
   if (loading) return <LoadingBlock />;
   if (error || !server) {
-    return <EmptyState title="Server not found" description={error || undefined} />;
+    return <EmptyState title={t("host.notFound")} description={error || undefined} />;
   }
 
   return (
     <>
       <PageHeader
         title={server.name}
-        subtitle={`${server.hostname || "—"} · ${server.environment || "default env"}`}
+        subtitle={`${server.hostname || "—"} · ${server.environment || t("common.default")}${server.silent ? ` · ${t("fleet.silent")}` : ""}`}
         actions={
           canList ? (
             <Link href="/servers" className="btn btn-light">
-              Fleet
+              {t("host.back")}
             </Link>
           ) : null
         }
@@ -112,20 +140,20 @@ export default function ServerDetailPage() {
           <div className="row g-3 mb-3">
             <div className="col-md-4">
               <div className="dx-metric">
-                <span className="text-muted text-uppercase fs-12">Agents</span>
+                <span className="text-muted text-uppercase fs-12">{t("host.agents")}</span>
                 <strong>{server.agents.length}</strong>
               </div>
             </div>
             <div className="col-md-4">
               <div className="dx-metric">
-                <span className="text-muted text-uppercase fs-12">Environment</span>
-                <strong className="fs-14">{server.environment || "default"}</strong>
+                <span className="text-muted text-uppercase fs-12">{t("host.environment")}</span>
+                <strong className="fs-14">{server.environment || t("common.default")}</strong>
               </div>
             </div>
             <div className="col-md-4">
               <div className="dx-metric">
-                <span className="text-muted text-uppercase fs-12">Enrolled</span>
-                <strong className="fs-14">{server.created_at}</strong>
+                <span className="text-muted text-uppercase fs-12">{t("host.enrolled")}</span>
+                <strong className="fs-14">{formatAlertTime(server.created_at)}</strong>
               </div>
             </div>
           </div>
@@ -140,11 +168,11 @@ export default function ServerDetailPage() {
 
           <div className="card">
             <div className="card-header">
-              <h4 className="card-title mb-0">Agents on this host</h4>
+              <h4 className="card-title mb-0">{t("host.onHost")}</h4>
             </div>
             <div className="card-body">
               {server.agents.length === 0 ? (
-                <EmptyState title="No agents enrolled" description="Issue a token and start the agent on the host." />
+                <EmptyState title={t("host.none")} description={t("host.noneHint")} />
               ) : (
                 <div className="dx-log">
                   {server.agents.map((agent) => (
@@ -154,7 +182,7 @@ export default function ServerDetailPage() {
                         <span className="badge bg-secondary-subtle text-secondary">{agent.status}</span>
                       </span>
                       <span className="d-block text-muted fs-12 mt-1">
-                        v{agent.agent_version || "?"} · {agent.last_heartbeat_at || "no heartbeat yet"}
+                        v{agent.agent_version || "?"} · {agent.last_heartbeat_at ? formatAlertTime(agent.last_heartbeat_at) : t("host.noHeartbeat")}
                       </span>
                     </div>
                   ))}
@@ -167,15 +195,23 @@ export default function ServerDetailPage() {
         <div className="col-xl-5">
           <div className="card dx-detail">
             <div className="card-header">
-              <h4 className="card-title mb-0">Enroll an agent</h4>
+              <h4 className="card-title mb-0">{t("host.enroll")}</h4>
             </div>
             <div className="card-body">
-              <p className="text-muted">
-                One-time <code>senr_…</code> token for the agent on this host. Shown only once — copy it now.
-              </p>
+              {canWrite ? (
+                <div className="mb-3">
+                  <SilenceControl until={server.silenced_until} busy={silenceBusy} onChange={changeSilence} />
+                  {silenceError ? <div className="alert alert-danger mt-2 mb-0">{silenceError}</div> : null}
+                  <p className="text-muted fs-12 mt-2 mb-0">
+                    {t("fleet.heartbeat")}: {server.last_heartbeat_at ? formatAlertTime(server.last_heartbeat_at) : "—"} · {t("fleet.lastEvent")}:{" "}
+                    {server.last_event_at ? formatAlertTime(server.last_event_at) : "—"}
+                  </p>
+                </div>
+              ) : null}
+              <p className="text-muted">{t("host.enrollHint")}</p>
               <form onSubmit={onIssue}>
                 <label className="form-label" htmlFor="enroll-label">
-                  Label
+                  {t("host.label")}
                 </label>
                 <input
                   id="enroll-label"
@@ -185,7 +221,7 @@ export default function ServerDetailPage() {
                   placeholder="main-agent"
                 />
                 <label className="form-label" htmlFor="enroll-ttl">
-                  TTL (minutes)
+                  {t("host.ttl")}
                 </label>
                 <input
                   id="enroll-ttl"
@@ -198,21 +234,21 @@ export default function ServerDetailPage() {
                 />
                 {issueError ? <div className="alert alert-danger">{issueError}</div> : null}
                 <button type="submit" className="btn btn-primary" disabled={issuing}>
-                  {issuing ? "Issuing…" : "Issue enrollment token"}
+                  {issuing ? t("host.issuing") : t("host.issue")}
                 </button>
               </form>
 
               {issued?.token ? (
                 <div className="alert alert-success mt-4 mb-0">
-                  <p className="fw-medium mb-2">Copy now — will not be shown again</p>
+                  <p className="fw-medium mb-2">{t("host.copyNow")}</p>
                   <code ref={tokenRef} className="d-block user-select-all">
                     {issued.token}
                   </code>
                   <p className="text-muted mt-2 mb-2">
-                    Expires {issued.expires_at} · prefix {issued.token_prefix}
+                    {t("host.expires")} {formatAlertTime(issued.expires_at)} · {t("host.prefix")} {issued.token_prefix}
                   </p>
                   <button type="button" className="btn btn-sm btn-light" onClick={() => void copyToken()}>
-                    {copied ? "Copied" : "Copy token"}
+                    {copied ? t("host.copied") : t("host.copy")}
                   </button>
                   {copyHint ? <p className="text-warning mt-2 mb-0">{copyHint}</p> : null}
                   <pre className="bg-dark text-white p-3 rounded mt-3 mb-0">

@@ -4,6 +4,7 @@ import { FormEvent, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { apiFetch, ApiRequestError } from "@/lib/api/client";
+import { LanguageSelect, useI18n } from "@/lib/i18n";
 
 type LoginResponse = {
   requires_totp?: boolean;
@@ -12,6 +13,7 @@ type LoginResponse = {
 
 export default function LoginPage() {
   const router = useRouter();
+  const { t } = useI18n();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [totp, setTotp] = useState("");
@@ -60,9 +62,9 @@ export default function LoginPage() {
           <p className="mt-4 mb-1 text-uppercase fs-12" style={{ letterSpacing: "0.16em", opacity: 0.6 }}>
             Defentrax
           </p>
-          <h1 className="display-6 mb-3">See what is happening on the hosts you watch.</h1>
+          <h1 className="display-6 mb-3">{t("login.aside")}</h1>
           <p className="mb-0" style={{ maxWidth: 420, opacity: 0.75 }}>
-            Alerts, events, and the people who can act on them live in one workspace.
+            {t("login.asideBody")}
           </p>
         </div>
         <p className="mb-0 fs-12" style={{ opacity: 0.5 }}>
@@ -72,14 +74,15 @@ export default function LoginPage() {
 
       <main className="dx-auth-panel">
         <div className="w-100" style={{ maxWidth: 380 }}>
-          <h2 className="h4 mb-1">{challenge ? "Confirm it is you" : "Sign in"}</h2>
-          <p className="text-muted mb-4">
-            {challenge ? "Enter the code from your authenticator." : "Use the operator account for this panel."}
-          </p>
+          <div className="d-flex justify-content-end mb-3">
+            <LanguageSelect />
+          </div>
+          <h2 className="h4 mb-1">{challenge ? t("login.confirm") : t("login.signIn")}</h2>
+          <p className="text-muted mb-4">{challenge ? t("login.codeLead") : t("login.lead")}</p>
           {error ? <div className="alert alert-danger">{error}</div> : null}
           <form onSubmit={handleSubmit}>
             <label className="form-label" htmlFor="email">
-              Email
+              {t("login.email")}
             </label>
             <input
               id="email"
@@ -94,14 +97,14 @@ export default function LoginPage() {
               autoComplete="username"
             />
             <label className="form-label" htmlFor="password-input">
-              Password
+              {t("login.password")}
             </label>
             <div className="input-group mb-3">
               <input
                 name="password"
                 type={passwordShow ? "text" : "password"}
                 className="form-control"
-                placeholder="Password"
+                placeholder={t("login.password")}
                 id="password-input"
                 required
                 value={password}
@@ -110,13 +113,13 @@ export default function LoginPage() {
                 autoComplete={challenge ? "off" : "current-password"}
               />
               <button className="btn btn-light" type="button" onClick={() => setPasswordShow(!passwordShow)}>
-                {passwordShow ? "Hide" : "Show"}
+                {passwordShow ? t("login.hide") : t("login.show")}
               </button>
             </div>
             {challenge ? (
               <>
                 <label className="form-label" htmlFor="totp">
-                  Authenticator code
+                  {t("login.code")}
                 </label>
                 <input
                   id="totp"
@@ -131,7 +134,7 @@ export default function LoginPage() {
               </>
             ) : null}
             <button className="btn btn-primary w-100" type="submit" disabled={submitting}>
-              {submitting ? "Working…" : challenge ? "Verify code" : "Sign in"}
+              {submitting ? t("login.working") : challenge ? t("login.verify") : t("login.submit")}
             </button>
             {challenge ? (
               <button
@@ -143,7 +146,7 @@ export default function LoginPage() {
                   setError(null);
                 }}
               >
-                Use a different account
+                {t("login.other")}
               </button>
             ) : null}
           </form>

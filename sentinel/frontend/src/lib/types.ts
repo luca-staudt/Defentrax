@@ -44,6 +44,8 @@ export type DashboardStats = {
   agents_active: number;
   events_last_24h: number;
   alerts_open: number;
+  hosts_silent?: number;
+  hosts_silent_minutes?: number;
   alerts_by_status: Record<string, number>;
   alerts_by_severity: Record<string, number>;
   events_by_severity_24h: Record<string, number>;
@@ -90,6 +92,11 @@ export type Server = {
   description?: string;
   environment?: string;
   created_at: string;
+  silenced_until?: string | null;
+  last_heartbeat_at?: string | null;
+  last_event_at?: string | null;
+  agent_count?: number;
+  silent?: boolean;
 };
 
 export type EnrollmentToken = {
@@ -158,6 +165,7 @@ export type Rule = {
   enabled: boolean;
   severity: string;
   custom?: boolean;
+  silenced_until?: string | null;
   definition?: RuleDefinition;
 };
 

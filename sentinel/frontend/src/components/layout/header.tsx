@@ -102,7 +102,7 @@ export function Header() {
     setSearchOpen(false);
   };
 
-  const display = user?.display_name || user?.email || "Operator";
+  const display = user?.display_name || user?.email || t("header.operator");
   const openAlerts = stats?.alerts_open ?? 0;
 
   return (
@@ -176,7 +176,7 @@ export function Header() {
                         value={query}
                         onChange={(e) => setQuery(e.target.value)}
                       />
-                      <button className="btn btn-primary" type="submit" aria-label="Submit search">
+                      <button className="btn btn-primary" type="submit" aria-label={t("header.submitSearch")}>
                         <i className="mdi mdi-magnify"></i>
                       </button>
                     </div>
@@ -196,14 +196,14 @@ export function Header() {
                   {stats && openAlerts > 0 ? (
                     <span className="position-absolute topbar-badge fs-10 translate-middle badge rounded-pill bg-danger">
                       {openAlerts > 99 ? "99+" : openAlerts}
-                      <span className="visually-hidden">open alerts</span>
+                      <span className="visually-hidden">{t("dash.open")}</span>
                     </span>
                   ) : null}
                 </Link>
               </div>
             ) : null}
 
-            <div className="ms-1 header-item d-none d-md-flex align-items-center">
+            <div className="ms-1 header-item d-flex align-items-center">
               <LanguageSelect />
             </div>
 
@@ -233,7 +233,7 @@ export function Header() {
                   <span className="text-start ms-xl-2">
                     <span className="d-none d-xl-inline-block ms-1 fw-medium user-name-text">{display}</span>
                     <span className="d-none d-xl-block ms-1 fs-12 user-name-sub-text">
-                      {user?.roles?.[0] || "Operator"}
+                      {user?.roles?.[0] || t("header.operator")}
                     </span>
                   </span>
                 </span>

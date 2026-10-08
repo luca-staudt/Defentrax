@@ -92,6 +92,39 @@ func (m *memAlertStore) AggregateAlert(_ context.Context, alertID uuid.UUID, las
 	return nil
 }
 
+type alwaysSilent struct{}
+
+func (alwaysSilent) Active(context.Context, uuid.UUID, uuid.UUID) (bool, error) {
+	return true, nil
+}
+
+func TestHandleMatchSilenceSkipsNewAlert(t *testing.T) {
+	mem := newMemAlertStore()
+	mgr := &alerts.Manager{
+		Store:         mem,
+		CooldownStore: alerts.NewMemoryCooldownStore(),
+		Silence:       alwaysSilent{},
+	}
+	_, created, err := mgr.HandleMatch(context.Background(), alerts.MatchInput{
+		Match: detection.MatchResult{
+			RuleID:   "custom.possible-test",
+			Severity: "medium",
+			Title:    "Possible test",
+			ServerID: uuid.New(),
+			EventID:  uuid.New(),
+			Group:    map[string]string{},
+		},
+		RuleDBID:   uuid.New(),
+		OccurredAt: time.Now().UTC(),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if created || mem.created != 0 {
+		t.Fatalf("silenced match created an alert: created=%v count=%d", created, mem.created)
+	}
+}
+
 func TestManagerDedup100EventsOneAlert(t *testing.T) {
 	mem := newMemAlertStore()
 	mgr := &alerts.Manager{

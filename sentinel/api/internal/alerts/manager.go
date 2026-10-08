@@ -26,6 +26,19 @@ type MatchInput struct {
 	OccurredAt time.Time
 }
 
+// SilenceChecker reports an active maintenance window for a rule or server.
+type SilenceChecker interface {
+	Active(ctx context.Context, ruleID, serverID uuid.UUID) (bool, error)
+}
+
+type poolSilence struct {
+	pool *pgxpool.Pool
+}
+
+func (p poolSilence) Active(ctx context.Context, ruleID, serverID uuid.UUID) (bool, error) {
+	return store.SilenceActive(ctx, p.pool, ruleID, serverID)
+}
+
 // AlertStore persists alerts (implemented by store package and test doubles).
 type AlertStore interface {
 	GetActiveAlertByDedupKey(ctx context.Context, dedupKey string) (*store.Alert, error)
@@ -59,6 +72,7 @@ func NewManagerFromPool(log *slog.Logger, pool *pgxpool.Pool, cooldown CooldownS
 	return &Manager{
 		Log:              log,
 		Store:            poolAlertStore{pool: pool},
+		Silence:          poolSilence{pool: pool},
 		CooldownStore:    cooldown,
 		CooldownDuration: cooldownDur,
 		Hub:              hub,
@@ -73,6 +87,7 @@ type Manager struct {
 	CooldownDuration time.Duration
 	Hub              *realtime.Hub
 	Notifier         Notifier
+	Silence          SilenceChecker
 }
 
 // HandleMatch returns alert id and whether a new alert was created (false when aggregated).
@@ -89,6 +104,16 @@ func (m *Manager) HandleMatch(ctx context.Context, in MatchInput) (uuid.UUID, bo
 	if err != nil {
 		return uuid.Nil, false, err
 	}
+	if existing == nil && m.Silence != nil {
+		silenced, err := m.Silence.Active(ctx, in.RuleDBID, in.Match.ServerID)
+		if err != nil {
+			return uuid.Nil, false, err
+		}
+		if silenced {
+			return uuid.Nil, false, nil
+		}
+	}
+
 	if existing != nil {
 		if err := m.Store.AggregateAlert(ctx, existing.ID, in.OccurredAt, in.Match.EventID); err != nil {
 			return uuid.Nil, false, err

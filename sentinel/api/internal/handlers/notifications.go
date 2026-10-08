@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/google/uuid"
@@ -238,6 +239,41 @@ func (h *NotificationsHandler) DeleteChannel(w http.ResponseWriter, r *http.Requ
 	}
 	h.audit(r, "notification_channel.delete", "notification_channel", &id, nil)
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *NotificationsHandler) ListDeliveries(w http.ResponseWriter, r *http.Request, id uuid.UUID) {
+	if _, err := store.GetNotificationChannel(r.Context(), h.Pool, id); err != nil {
+		if errors.Is(err, store.ErrNotFound) {
+			apperrors.WriteJSON(w, http.StatusNotFound, "not_found", "channel not found", middleware.RequestIDFromContext(r.Context()))
+			return
+		}
+		internalError(w, r)
+		return
+	}
+	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
+	rows, err := store.ListChannelDeliveries(r.Context(), h.Pool, id, limit)
+	if err != nil {
+		internalError(w, r)
+		return
+	}
+	out := make([]map[string]any, 0, len(rows))
+	for _, row := range rows {
+		item := map[string]any{
+			"id":            row.ID,
+			"alert_id":      row.AlertID,
+			"alert_title":   row.AlertTitle,
+			"status":        row.Status,
+			"error":         row.Error,
+			"attempt_count": row.AttemptCount,
+			"trigger":       row.TriggerEvent,
+			"created_at":    row.CreatedAt.UTC().Format(timeRFC3339),
+		}
+		if row.SentAt != nil {
+			item["sent_at"] = row.SentAt.UTC().Format(timeRFC3339)
+		}
+		out = append(out, item)
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"deliveries": out})
 }
 
 // TestChannel sends a synthetic notification via the existing dispatch send path.

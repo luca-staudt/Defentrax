@@ -4,11 +4,13 @@ import { FormEvent, useState } from "react";
 import { EmptyState } from "@/components/ui/empty-state";
 import { LoadingBlock } from "@/components/ui/loading-block";
 import { PageHeader } from "@/components/ui/page-header";
+import { useI18n } from "@/lib/i18n";
 import { apiFetch } from "@/lib/api/client";
 import { useQuery } from "@/lib/panel/use-query";
 import type { AuditLog } from "@/lib/types";
 
 export default function AuditLogsPage() {
+  const { t } = useI18n();
   const [offset, setOffset] = useState(0);
   const [q, setQ] = useState("");
   const [action, setAction] = useState("");
@@ -45,7 +47,7 @@ export default function AuditLogsPage() {
 
   return (
     <>
-      <PageHeader title="Audit" subtitle="Every privileged change, with the person who made it." />
+      <PageHeader title={t("audit.title")} subtitle={t("audit.subtitle")} />
 
       <form
         className="card"
@@ -58,23 +60,23 @@ export default function AuditLogsPage() {
         <div className="card-body">
           <div className="row g-2">
             <div className="col-md-3">
-              <input className="form-control" value={q} onChange={(event) => setQ(event.target.value)} placeholder="Search" />
+              <input className="form-control" value={q} onChange={(event) => setQ(event.target.value)} placeholder={t("audit.search")} />
             </div>
             <div className="col-md-2">
-              <input className="form-control" value={action} onChange={(event) => setAction(event.target.value)} placeholder="Action" />
+              <input className="form-control" value={action} onChange={(event) => setAction(event.target.value)} placeholder={t("audit.action")} />
             </div>
             <div className="col-md-2">
-              <input className="form-control" value={user} onChange={(event) => setUser(event.target.value)} placeholder="Actor email" />
+              <input className="form-control" value={user} onChange={(event) => setUser(event.target.value)} placeholder={t("audit.actor")} />
             </div>
             <div className="col-md-2">
-              <input className="form-control" type="datetime-local" value={since} onChange={(event) => setSince(event.target.value)} aria-label="Since" />
+              <input className="form-control" type="datetime-local" value={since} onChange={(event) => setSince(event.target.value)} aria-label={t("audit.since")} />
             </div>
             <div className="col-md-2">
-              <input className="form-control" type="datetime-local" value={until} onChange={(event) => setUntil(event.target.value)} aria-label="Until" />
+              <input className="form-control" type="datetime-local" value={until} onChange={(event) => setUntil(event.target.value)} aria-label={t("audit.until")} />
             </div>
             <div className="col-md-1">
               <button type="submit" className="btn btn-primary w-100">
-                Go
+                {t("audit.go")}
               </button>
             </div>
           </div>
@@ -82,8 +84,8 @@ export default function AuditLogsPage() {
       </form>
 
       {loading ? <LoadingBlock /> : null}
-      {error ? <EmptyState title="Cannot load the audit log" description={error} /> : null}
-      {!loading && !error && rows.length === 0 ? <EmptyState title="No entries" description="Nothing matches these filters." /> : null}
+      {error ? <EmptyState title={t("audit.cannot")} description={error} /> : null}
+      {!loading && !error && rows.length === 0 ? <EmptyState title={t("audit.none")} description={t("audit.noneHint")} /> : null}
 
       {rows.length > 0 ? (
         <div className="row">
@@ -103,11 +105,11 @@ export default function AuditLogsPage() {
             </div>
             <div className="d-flex justify-content-between align-items-center mt-3">
               <button type="button" className="btn btn-light" disabled={offset === 0 || loading} onClick={() => setOffset(Math.max(0, offset - limit))}>
-                Previous
+                {t("common.previous")}
               </button>
-              <span className="text-muted">{total === 0 ? "0" : `${offset + 1}–${Math.min(offset + limit, total)} of ${total}`}</span>
+              <span className="text-muted">{total === 0 ? "0" : `${offset + 1}–${Math.min(offset + limit, total)} ${t("common.of")} ${total}`}</span>
               <button type="button" className="btn btn-light" disabled={offset + limit >= total || loading} onClick={() => setOffset(offset + limit)}>
-                Next
+                {t("common.next")}
               </button>
             </div>
           </div>
@@ -117,20 +119,20 @@ export default function AuditLogsPage() {
                 <div className="card-body">
                   <h4 className="mb-3">{selected.action}</h4>
                   <dl className="row">
-                    <dt className="col-4 text-muted">When</dt>
+                    <dt className="col-4 text-muted">{t("audit.when")}</dt>
                     <dd className="col-8">{selected.created_at}</dd>
-                    <dt className="col-4 text-muted">Actor</dt>
+                    <dt className="col-4 text-muted">{t("audit.actorLabel")}</dt>
                     <dd className="col-8">
                       {selected.actor_email || "—"} <span className="text-muted">({selected.actor_type})</span>
                     </dd>
-                    <dt className="col-4 text-muted">Entity</dt>
+                    <dt className="col-4 text-muted">{t("audit.entity")}</dt>
                     <dd className="col-8 text-break">
                       {selected.entity_type}
                       {selected.entity_id ? <span className="d-block text-muted fs-12">{selected.entity_id}</span> : null}
                     </dd>
-                    <dt className="col-4 text-muted">IP</dt>
+                    <dt className="col-4 text-muted">{t("audit.ip")}</dt>
                     <dd className="col-8">{selected.ip_address || "—"}</dd>
-                    <dt className="col-4 text-muted">Agent</dt>
+                    <dt className="col-4 text-muted">{t("audit.agent")}</dt>
                     <dd className="col-8 text-break">{selected.user_agent || "—"}</dd>
                   </dl>
                   <pre className="bg-light-subtle border rounded p-3 mb-0">{JSON.stringify(selected.metadata ?? {}, null, 2)}</pre>

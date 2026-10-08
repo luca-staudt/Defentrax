@@ -2030,6 +2030,193 @@ paths:
         "404":
           $ref: "#/components/responses/Error"
 
+  /api/v1/rules/{id}/silence:
+    post:
+      tags: [Rules]
+      operationId: silenceRule
+      summary: Silence a detection rule until a time
+      description: "Requires `rules:write` and `pages:rules`. Matching events are still stored. No new alert is opened while the window is active."
+      security:
+        - SessionCookie: []
+        - BearerApiKey: []
+      parameters:
+        - $ref: "#/components/parameters/PathUUID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [until]
+              properties:
+                until:
+                  type: string
+                  format: date-time
+      responses:
+        "200":
+          description: Silence stored
+        "400":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+    delete:
+      tags: [Rules]
+      operationId: clearRuleSilence
+      summary: Clear a rule silence
+      description: "Requires `rules:write` and `pages:rules`."
+      security:
+        - SessionCookie: []
+        - BearerApiKey: []
+      parameters:
+        - $ref: "#/components/parameters/PathUUID"
+      responses:
+        "204":
+          description: Cleared
+        "404":
+          $ref: "#/components/responses/Error"
+
+  /api/v1/servers/{id}/silence:
+    post:
+      tags: [Servers]
+      operationId: silenceServer
+      summary: Silence a server until a time
+      description: "Requires `servers:write` and `pages:servers`. Events keep arriving. No new alert is opened for this host while the window is active."
+      security:
+        - SessionCookie: []
+        - BearerApiKey: []
+      parameters:
+        - $ref: "#/components/parameters/PathUUID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [until]
+              properties:
+                until:
+                  type: string
+                  format: date-time
+      responses:
+        "200":
+          description: Silence stored
+        "400":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+    delete:
+      tags: [Servers]
+      operationId: clearServerSilence
+      summary: Clear a server silence
+      description: "Requires `servers:write` and `pages:servers`."
+      security:
+        - SessionCookie: []
+        - BearerApiKey: []
+      parameters:
+        - $ref: "#/components/parameters/PathUUID"
+      responses:
+        "204":
+          description: Cleared
+        "404":
+          $ref: "#/components/responses/Error"
+
+  /api/v1/saved-views:
+    get:
+      tags: [Views]
+      operationId: listSavedViews
+      summary: List saved alert or event filters for the current operator
+      description: "Requires the read permission and page permission of the requested kind (`alerts` or `events`)."
+      security:
+        - SessionCookie: []
+        - BearerApiKey: []
+      parameters:
+        - name: kind
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [alerts, events]
+      responses:
+        "200":
+          description: Views
+        "403":
+          $ref: "#/components/responses/Error"
+    post:
+      tags: [Views]
+      operationId: createSavedView
+      summary: Save the current alert or event filter
+      security:
+        - SessionCookie: []
+        - BearerApiKey: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SavedViewWrite"
+      responses:
+        "201":
+          description: Created
+        "409":
+          $ref: "#/components/responses/Error"
+
+  /api/v1/saved-views/{id}:
+    patch:
+      tags: [Views]
+      operationId: updateSavedView
+      summary: Rename or replace a saved view
+      security:
+        - SessionCookie: []
+        - BearerApiKey: []
+      parameters:
+        - $ref: "#/components/parameters/PathUUID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SavedViewWrite"
+      responses:
+        "200":
+          description: Updated
+        "404":
+          $ref: "#/components/responses/Error"
+    delete:
+      tags: [Views]
+      operationId: deleteSavedView
+      summary: Delete a saved view
+      security:
+        - SessionCookie: []
+        - BearerApiKey: []
+      parameters:
+        - $ref: "#/components/parameters/PathUUID"
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          $ref: "#/components/responses/Error"
+
+  /api/v1/notification-channels/{id}/deliveries:
+    get:
+      tags: [Notifications]
+      operationId: listNotificationDeliveries
+      summary: List delivery attempts for a channel
+      description: "Requires `notifications:read` and `pages:notifications`. Returns time, alert, status, and the short error text. Channel secrets are not included."
+      security:
+        - SessionCookie: []
+        - BearerApiKey: []
+      parameters:
+        - $ref: "#/components/parameters/PathUUID"
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deliveries
+        "404":
+          $ref: "#/components/responses/Error"
+
 components:
   securitySchemes:
     SessionCookie:
@@ -2709,9 +2896,25 @@ components:
             type: string
             format: uuid
 
+    SavedViewWrite:
+      type: object
+      required: [kind, name]
+      properties:
+        kind:
+          type: string
+          enum: [alerts, events]
+        name:
+          type: string
+        is_default:
+          type: boolean
+        query:
+          type: object
+          additionalProperties:
+            type: string
+
     DashboardStats:
       type: object
-      required: [servers_total, agents_active, events_last_24h, alerts_open, alerts_by_status, alerts_by_severity, events_by_severity_24h]
+      required: [servers_total, agents_active, events_last_24h, alerts_open, hosts_silent, hosts_silent_minutes, alerts_by_status, alerts_by_severity, events_by_severity_24h]
       properties:
         servers_total:
           type: integer
@@ -2720,6 +2923,10 @@ components:
         events_last_24h:
           type: integer
         alerts_open:
+          type: integer
+        hosts_silent:
+          type: integer
+        hosts_silent_minutes:
           type: integer
         alerts_by_status:
           type: object

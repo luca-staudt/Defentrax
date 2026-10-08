@@ -5,6 +5,7 @@ import Link from "next/link";
 import { EmptyState } from "@/components/ui/empty-state";
 import { LoadingBlock } from "@/components/ui/loading-block";
 import { PageHeader } from "@/components/ui/page-header";
+import { useI18n } from "@/lib/i18n";
 import { useAuth } from "@/context/auth-context";
 import {
   PAGE_GRANTS,
@@ -30,6 +31,7 @@ const EMPTY_USERS: User[] = [];
 
 export default function RolesPage() {
   const { user } = useAuth();
+  const { t } = useI18n();
   const canWrite = hasPermission(user, "roles", "write");
   const canAssign = hasPermission(user, "users", "write");
   const canReadUsers = hasPermission(user, "users", "read");
@@ -110,10 +112,10 @@ export default function RolesPage() {
         body: JSON.stringify({ permissions: draft }),
       });
       setDraft([...(updated.permissions || [])]);
-      setMessage("Saved. People with this role see the change on their next request.");
+      setMessage(t("access.saved"));
       await reload();
     } catch (err) {
-      setError(err instanceof ApiRequestError ? err.message : "Could not save this role");
+      setError(err instanceof ApiRequestError ? err.message : t("access.saveFailed"));
     } finally {
       setBusy(false);
     }
@@ -142,7 +144,7 @@ export default function RolesPage() {
       setMessage(`Created ${roleDisplayName(created.name)}.`);
       await reload();
     } catch (err) {
-      setError(err instanceof ApiRequestError ? err.message : "Could not create the role");
+      setError(err instanceof ApiRequestError ? err.message : t("access.createFailed"));
     } finally {
       setBusy(false);
     }
@@ -151,7 +153,7 @@ export default function RolesPage() {
   async function removeRole() {
     if (!selected || !canWrite || selected.is_system) return;
     if (members.length > 0) {
-      setError("Move every person off this role before deleting it.");
+      setError(t("access.moveOff"));
       return;
     }
     if (!window.confirm(`Delete ${roleDisplayName(selected.name)}?`)) return;
@@ -160,10 +162,10 @@ export default function RolesPage() {
     try {
       await apiFetch(`/roles/${selected.id}`, { method: "DELETE" });
       setSelectedId(null);
-      setMessage("Role deleted.");
+      setMessage(t("access.deleted"));
       await reload();
     } catch (err) {
-      setError(err instanceof ApiRequestError ? err.message : "Could not delete the role");
+      setError(err instanceof ApiRequestError ? err.message : t("access.deleteFailed"));
     } finally {
       setBusy(false);
     }
@@ -185,7 +187,7 @@ export default function RolesPage() {
       setMessage(`${person.display_name || person.email} now has ${roleDisplayName(selected.name)}.`);
       await reload();
     } catch (err) {
-      setError(err instanceof ApiRequestError ? err.message : "Could not assign the role");
+      setError(err instanceof ApiRequestError ? err.message : t("access.assignFailed"));
     } finally {
       setBusy(false);
     }
@@ -195,7 +197,7 @@ export default function RolesPage() {
     if (!selected || !canAssign) return;
     const next = (person.roles || []).filter((role) => role !== selected.name);
     if (next.length === 0) {
-      setError("Give them another role first. An operator cannot have zero roles.");
+      setError(t("access.needRole"));
       return;
     }
     setBusy(true);
@@ -208,23 +210,23 @@ export default function RolesPage() {
       setMessage(`${person.display_name || person.email} no longer has ${roleDisplayName(selected.name)}.`);
       await reload();
     } catch (err) {
-      setError(err instanceof ApiRequestError ? err.message : "Could not remove the role");
+      setError(err instanceof ApiRequestError ? err.message : t("access.removeFailed"));
     } finally {
       setBusy(false);
     }
   }
 
-  if (rolesQuery.loading || permissionsQuery.loading) return <LoadingBlock label="Loading access..." />;
+  if (rolesQuery.loading || permissionsQuery.loading) return <LoadingBlock label={t("access.loading")} />;
 
   return (
     <>
       <PageHeader
-        title="Access"
-        subtitle="Choose a role, decide which pages it opens, then put people on it."
+        title={t("access.title")}
+        subtitle={t("access.subtitle")}
         actions={
           canWrite ? (
             <button type="button" className="btn btn-primary" onClick={() => setCreating((open) => !open)}>
-              {creating ? "Close" : "New role"}
+              {creating ? t("common.close") : t("access.new")}
             </button>
           ) : null
         }
@@ -241,13 +243,13 @@ export default function RolesPage() {
           <div className="card-body">
             <form className="row g-3" onSubmit={(event) => void createRole(event)}>
               <div className="col-md-4">
-                <label className="form-label">Name</label>
+                <label className="form-label">{t("common.name")}</label>
                 <input className="form-control" required value={name} onChange={(event) => setName(event.target.value)} placeholder="Shift lead" />
               </div>
               <div className="col-md-4">
-                <label className="form-label">Start from</label>
+                <label className="form-label">{t("access.start")}</label>
                 <select className="form-select" value={templateId} onChange={(event) => setTemplateId(event.target.value)}>
-                  <option value="">Empty</option>
+                  <option value="">{t("access.empty")}</option>
                   {roles.map((role) => (
                     <option key={role.id} value={role.id}>
                       {roleDisplayName(role.name)}
@@ -256,12 +258,12 @@ export default function RolesPage() {
                 </select>
               </div>
               <div className="col-md-4">
-                <label className="form-label">Description</label>
+                <label className="form-label">{t("rules.f.description")}</label>
                 <input className="form-control" value={createDescription} onChange={(event) => setCreateDescription(event.target.value)} />
               </div>
               <div className="col-12 text-end">
                 <button type="submit" className="btn btn-primary" disabled={busy}>
-                  {busy ? "Creating…" : "Create role"}
+                  {busy ? t("access.creating") : t("access.create")}
                 </button>
               </div>
             </form>
@@ -273,9 +275,9 @@ export default function RolesPage() {
         <div className="col-xl-3">
           <div className="card">
             <div className="card-body">
-              <input className="form-control mb-3" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Find a role" />
+              <input className="form-control mb-3" value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t("access.find")} />
               {visible.length === 0 ? (
-                <EmptyState title="No roles" description="Nothing matches that search." />
+                <EmptyState title={t("access.none")} description={t("access.noneHint")} />
               ) : (
                 <div className="d-flex flex-column gap-2">
                   {visible.map((role) => {
@@ -306,7 +308,7 @@ export default function RolesPage() {
 
         <div className="col-xl-9">
           {!selected ? (
-            <EmptyState title="No role selected" description="Create a role to start granting pages." />
+            <EmptyState title={t("access.noneSelected")} description={t("access.noneSelectedHint")} />
           ) : (
             <>
               <div className="card">
@@ -317,7 +319,7 @@ export default function RolesPage() {
                       <div className="text-muted fs-12">{selected.name}</div>
                     </div>
                     <div className="d-flex gap-2">
-                      {selected.is_system ? <span className="badge bg-secondary-subtle text-secondary">Built-in</span> : <span className="badge bg-primary-subtle text-primary">Custom</span>}
+                      {selected.is_system ? <span className="badge bg-secondary-subtle text-secondary">{t("access.builtin")}</span> : <span className="badge bg-primary-subtle text-primary">{t("access.custom")}</span>}
                     </div>
                   </div>
                   {locked ? (
@@ -326,7 +328,7 @@ export default function RolesPage() {
                     </div>
                   ) : (
                     <>
-                      <label className="form-label">What this role is for</label>
+                      <label className="form-label">{t("access.purpose")}</label>
                       <textarea
                         className="form-control"
                         rows={2}
@@ -343,10 +345,10 @@ export default function RolesPage() {
                 <>
                   <div className="card">
                     <div className="card-header">
-                      <h4 className="card-title mb-0">Pages</h4>
+                      <h4 className="card-title mb-0">{t("access.pages")}</h4>
                     </div>
                     <div className="card-body">
-                      <p className="text-muted">Turning a page on also grants the view right that page needs to load.</p>
+                      <p className="text-muted">{t("access.pagesHint")}</p>
                       <div className="row g-3">
                         {PAGE_GRANTS.map((grant) => {
                           const open = grantIsOpen(draft, grant);
@@ -370,7 +372,7 @@ export default function RolesPage() {
                                 </div>
                                 <p className="text-muted fs-12 mb-0">{grant.hint}</p>
                                 {grantNeedsView(draft, grant) ? (
-                                  <p className="text-warning fs-12 mb-0 mt-2">View access is off, so this page stays closed.</p>
+                                  <p className="text-warning fs-12 mb-0 mt-2">{t("access.viewOff")}</p>
                                 ) : null}
                                 {grant.child && open ? (
                                   <div className="form-check form-switch mt-3 mb-0">
@@ -398,15 +400,15 @@ export default function RolesPage() {
 
                   <div className="card">
                     <div className="card-header">
-                      <h4 className="card-title mb-0">What they can change</h4>
+                      <h4 className="card-title mb-0">{t("access.change")}</h4>
                     </div>
                     <div className="card-body">
                       <div className="table-responsive">
                         <table className="table align-middle mb-0">
                           <thead className="table-light">
                             <tr>
-                              <th>Area</th>
-                              <th>Rights</th>
+                              <th>{t("access.area")}</th>
+                              <th>{t("access.rights")}</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -445,21 +447,21 @@ export default function RolesPage() {
 
               <div className="card">
                 <div className="card-header d-flex align-items-center">
-                  <h4 className="card-title mb-0 flex-grow-1">People</h4>
+                  <h4 className="card-title mb-0 flex-grow-1">{t("access.people")}</h4>
                   <Link href="/users" className="btn btn-sm btn-light">
                     Team
                   </Link>
                 </div>
                 <div className="card-body">
                   {!canReadUsers ? (
-                    <p className="text-muted mb-0">You can edit this role, but you cannot see who has it.</p>
+                    <p className="text-muted mb-0">{t("access.cannotSee")}</p>
                   ) : (
                     <>
                       {canAssign ? (
                         <div className="row g-2 mb-3">
                           <div className="col">
                             <select className="form-select" value={memberId} onChange={(event) => setMemberId(event.target.value)} disabled={busy}>
-                              <option value="">Add a person…</option>
+                              <option value="">{t("access.addPerson")}</option>
                               {outsiders.map((person) => (
                                 <option key={person.id} value={person.id}>
                                   {person.display_name || person.email}
@@ -475,7 +477,7 @@ export default function RolesPage() {
                         </div>
                       ) : null}
                       {members.length === 0 ? (
-                        <p className="text-muted mb-0">Nobody has this role.</p>
+                        <p className="text-muted mb-0">{t("access.nobody")}</p>
                       ) : (
                         <ul className="list-group">
                           {members.map((person) => (
@@ -508,7 +510,7 @@ export default function RolesPage() {
                 )}
                 {!locked && canWrite ? (
                   <button type="button" className="btn btn-primary" disabled={!dirty || busy} onClick={() => void save()}>
-                    {busy ? "Saving…" : "Save access"}
+                    {busy ? t("views.saving") : t("access.saveAccess")}
                   </button>
                 ) : null}
               </div>

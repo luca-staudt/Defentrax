@@ -26,7 +26,7 @@ export function Sidebar() {
   const { t } = useI18n();
   const { user, logout } = useAuth();
   const items = PANEL_PAGES.filter((page) => page.nav && page.href && canSeePage(user, page.action));
-  const display = user?.display_name || user?.email || "Operator";
+  const display = user?.display_name || user?.email || t("header.operator");
 
   useEffect(() => {
     const verticalOverlay = document.getElementsByClassName("vertical-overlay");

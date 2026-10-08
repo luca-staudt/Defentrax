@@ -120,6 +120,10 @@ func (r *Runner) processOne(pe PendingEvent) {
 			r.log.Error("alert handle failed", "error", err, "rule_id", m.RuleID)
 			continue
 		}
+		if alertID == uuid.Nil && !created {
+			r.log.Info("detection match silenced", "rule_id", m.RuleID, "event_id", pe.ID, "server_id", pe.ServerID)
+			continue
+		}
 		if created {
 			r.log.Info("detection alert opened", "alert_id", alertID, "rule_id", m.RuleID, "event_id", pe.ID)
 		} else {

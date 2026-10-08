@@ -395,6 +395,48 @@ LIMIT $1
 	return out, rows.Err()
 }
 
+type ChannelDeliveryRow struct {
+	ID           uuid.UUID
+	AlertID      uuid.UUID
+	AlertTitle   string
+	Status       string
+	Error        string
+	AttemptCount int
+	TriggerEvent string
+	SentAt       *time.Time
+	CreatedAt    time.Time
+}
+
+func ListChannelDeliveries(ctx context.Context, pool *pgxpool.Pool, channelID uuid.UUID, limit int) ([]ChannelDeliveryRow, error) {
+	if limit < 1 {
+		limit = 30
+	}
+	if limit > 100 {
+		limit = 100
+	}
+	rows, err := pool.Query(ctx, `
+SELECT n.id, n.alert_id, COALESCE(a.title, ''), n.status, n.error, n.attempt_count, n.trigger_event, n.sent_at, n.created_at
+FROM notifications n
+LEFT JOIN alerts a ON a.id = n.alert_id
+WHERE n.channel_id = $1
+ORDER BY n.created_at DESC
+LIMIT $2
+`, channelID, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []ChannelDeliveryRow
+	for rows.Next() {
+		var row ChannelDeliveryRow
+		if err := rows.Scan(&row.ID, &row.AlertID, &row.AlertTitle, &row.Status, &row.Error, &row.AttemptCount, &row.TriggerEvent, &row.SentAt, &row.CreatedAt); err != nil {
+			return nil, err
+		}
+		out = append(out, row)
+	}
+	return out, rows.Err()
+}
+
 func GetNotificationDelivery(ctx context.Context, pool *pgxpool.Pool, id uuid.UUID) (NotificationDelivery, error) {
 	var d NotificationDelivery
 	err := pool.QueryRow(ctx, `

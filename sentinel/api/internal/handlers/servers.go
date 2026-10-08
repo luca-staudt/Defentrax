@@ -29,10 +29,15 @@ type createServerRequest struct {
 }
 
 type serverResponse struct {
-	ID        uuid.UUID `json:"id"`
-	Name      string    `json:"name"`
-	Hostname  string    `json:"hostname"`
-	CreatedAt string    `json:"created_at"`
+	ID              uuid.UUID `json:"id"`
+	Name            string    `json:"name"`
+	Hostname        string    `json:"hostname"`
+	CreatedAt       string    `json:"created_at"`
+	SilencedUntil   *string   `json:"silenced_until,omitempty"`
+	LastHeartbeatAt *string   `json:"last_heartbeat_at,omitempty"`
+	LastEventAt     *string   `json:"last_event_at,omitempty"`
+	AgentCount      int       `json:"agent_count"`
+	Silent          bool      `json:"silent"`
 }
 
 type agentResponse struct {
@@ -65,19 +70,14 @@ type enrollmentTokenResponse struct {
 }
 
 func (h *ServersHandler) List(w http.ResponseWriter, r *http.Request) {
-	servers, err := store.ListServers(r.Context(), h.Pool)
+	servers, err := store.ListServerSignals(r.Context(), h.Pool, time.Now().UTC().Add(-store.SilentHostAfter))
 	if err != nil {
 		internalError(w, r)
 		return
 	}
 	out := make([]serverResponse, 0, len(servers))
 	for _, s := range servers {
-		out = append(out, serverResponse{
-			ID:        s.ID,
-			Name:      s.Name,
-			Hostname:  s.Hostname,
-			CreatedAt: s.CreatedAt.UTC().Format(timeRFC3339),
-		})
+		out = append(out, signalResponse(s))
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"servers": out})
 }
@@ -96,17 +96,59 @@ func (h *ServersHandler) Get(w http.ResponseWriter, r *http.Request, id uuid.UUI
 	for _, a := range d.Agents {
 		agents = append(agents, toAgentResponse(a))
 	}
+	signal, err := store.ServerSignalByID(r.Context(), h.Pool, id, time.Now().UTC().Add(-store.SilentHostAfter))
+	if err != nil && !errors.Is(err, store.ErrNotFound) {
+		internalError(w, r)
+		return
+	}
+	base := serverResponse{
+		ID:        d.ID,
+		Name:      d.Name,
+		Hostname:  d.Hostname,
+		CreatedAt: d.CreatedAt.UTC().Format(timeRFC3339),
+	}
+	if err == nil {
+		base = signalResponse(signal)
+	}
 	writeJSON(w, http.StatusOK, serverDetailResponse{
-		serverResponse: serverResponse{
-			ID:        d.ID,
-			Name:      d.Name,
-			Hostname:  d.Hostname,
-			CreatedAt: d.CreatedAt.UTC().Format(timeRFC3339),
-		},
-		Description: d.Description,
-		Environment: d.Environment,
-		Agents:      agents,
+		serverResponse: base,
+		Description:    d.Description,
+		Environment:    d.Environment,
+		Agents:         agents,
 	})
+}
+
+func signalResponse(s store.ServerSignal) serverResponse {
+	return serverResponse{
+		ID:              s.ID,
+		Name:            s.Name,
+		Hostname:        s.Hostname,
+		CreatedAt:       s.CreatedAt.UTC().Format(timeRFC3339),
+		SilencedUntil:   formatSilence(s.SilencedUntil),
+		LastHeartbeatAt: formatOptionalTime(s.LastHeartbeatAt),
+		LastEventAt:     formatOptionalTime(s.LastEventAt),
+		AgentCount:      s.AgentCount,
+		Silent:          s.Silent,
+	}
+}
+
+func (h *ServersHandler) SetSilence(w http.ResponseWriter, r *http.Request, id uuid.UUID) {
+	writeSilence(w, h.Pool, r, "server", id, func() error {
+		_, err := store.GetServerByID(r.Context(), h.Pool, id)
+		return err
+	})
+}
+
+func (h *ServersHandler) ClearSilence(w http.ResponseWriter, r *http.Request, id uuid.UUID) {
+	if _, err := store.GetServerByID(r.Context(), h.Pool, id); err != nil {
+		if errors.Is(err, store.ErrNotFound) {
+			apperrors.WriteJSON(w, http.StatusNotFound, "not_found", "server not found", middleware.RequestIDFromContext(r.Context()))
+			return
+		}
+		internalError(w, r)
+		return
+	}
+	clearSilence(w, h.Pool, r, "server", id)
 }
 
 func toAgentResponse(a store.AgentRecord) agentResponse {

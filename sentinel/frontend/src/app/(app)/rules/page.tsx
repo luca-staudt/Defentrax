@@ -5,8 +5,10 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { LoadingBlock } from "@/components/ui/loading-block";
 import { PageHeader } from "@/components/ui/page-header";
 import { SeverityBadge } from "@/components/ui/severity-badge";
+import { SilenceControl, writeTargetSilence } from "@/components/operator/silence-control";
 import { useAuth } from "@/context/auth-context";
 import { apiFetch, ApiRequestError } from "@/lib/api/client";
+import { severityLabel, useI18n } from "@/lib/i18n";
 import { patchQuery } from "@/lib/panel/cache";
 import { useQuery } from "@/lib/panel/use-query";
 import { hasPermission } from "@/lib/permissions";
@@ -21,6 +23,7 @@ function Hint({ children }: { children: React.ReactNode }) {
 
 export default function RulesPage() {
   const { user } = useAuth();
+  const { t } = useI18n();
   const canWrite = hasPermission(user, "rules", "write");
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -29,6 +32,7 @@ export default function RulesPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [composerReady, setComposerReady] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [silenceBusy, setSilenceBusy] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -61,7 +65,7 @@ export default function RulesPage() {
       });
       patchQuery<Rule[]>("rules", (prev) => prev.map((r) => (r.id === id ? { ...r, enabled: !enabled } : r)));
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Toggle failed");
+      setError(e instanceof Error ? e.message : t("rules.toggleFailed"));
     } finally {
       setBusyId(null);
     }
@@ -131,7 +135,7 @@ export default function RulesPage() {
       if (!trimmed) continue;
       const eq = trimmed.indexOf("=");
       if (eq <= 0) {
-        setFormError("Each field line must look like key=value");
+        setFormError(t("rules.fieldError"));
         return;
       }
       fields[trimmed.slice(0, eq).trim()] = trimmed.slice(eq + 1).trim();
@@ -166,9 +170,25 @@ export default function RulesPage() {
       if (!rulesQuery.data) await rulesQuery.reload();
       setEditingId(created.id);
     } catch (err) {
-      setFormError(err instanceof ApiRequestError ? err.message : "Could not create rule");
+      setFormError(err instanceof ApiRequestError ? err.message : t("rules.saveFailed"));
     } finally {
       setSaving(false);
+    }
+  }
+
+  const editing = rules.find((rule) => rule.id === editingId) ?? null;
+
+  async function changeSilence(until: string | null) {
+    if (!editingId || !canWrite) return;
+    setSilenceBusy(true);
+    setFormError(null);
+    try {
+      await writeTargetSilence(`/rules/${editingId}/silence`, until);
+      await rulesQuery.reload();
+    } catch (err) {
+      setFormError(err instanceof ApiRequestError ? err.message : t("rules.saveFailed"));
+    } finally {
+      setSilenceBusy(false);
     }
   }
 
@@ -183,22 +203,22 @@ export default function RulesPage() {
   return (
     <>
       <PageHeader
-        title="Detection"
-        subtitle="Signatures that turn matching events into alerts."
+        title={t("rules.title")}
+        subtitle={t("rules.subtitle")}
         actions={
           canWrite ? (
             <button type="button" className="btn btn-primary" onClick={resetComposer}>
-              New rule
+              {t("rules.new")}
             </button>
           ) : null
         }
       />
 
       <div className="row g-3 mb-3">
-        <Metric label="Armed" value={enabledCount} />
-        <Metric label="Critical" value={counts.critical} />
-        <Metric label="High" value={counts.high} />
-        <Metric label="Total" value={rules.length} />
+        <Metric label={t("rules.armed")} value={enabledCount} />
+        <Metric label={t("rules.critical")} value={counts.critical} />
+        <Metric label={t("rules.high")} value={counts.high} />
+        <Metric label={t("rules.total")} value={rules.length} />
       </div>
 
       {error || loadError ? <div className="alert alert-danger">{error || loadError}</div> : null}
@@ -211,13 +231,13 @@ export default function RulesPage() {
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search name, ID, or description"
+                placeholder={t("rules.search")}
                 className="form-control mb-2"
               />
               <select className="form-select" value={severityFilter} onChange={(e) => setSeverityFilter(e.target.value)}>
                 {SEVERITIES.map((level) => (
                   <option key={level} value={level}>
-                    {level === "ALL" ? "Every severity" : level}
+                    {level === "ALL" ? t("rules.every") : severityLabel(t, level)}
                   </option>
                 ))}
               </select>
@@ -226,7 +246,7 @@ export default function RulesPage() {
           <div className="card">
             <div className="card-body">
               {filtered.length === 0 ? (
-                <EmptyState title="No rules match" description="Adjust your search or severity filter." />
+                <EmptyState title={t("rules.none")} description={t("rules.noneHint")} />
               ) : (
                 <div className="dx-log">
                   {filtered.map((rule) => (
@@ -239,14 +259,15 @@ export default function RulesPage() {
                         <span className="d-flex justify-content-between gap-2">
                           <span className="fw-medium">
                             {rule.name}
-                            {rule.custom ? <span className="badge bg-success-subtle text-success ms-2">Custom</span> : null}
+                            {rule.custom ? <span className="badge bg-success-subtle text-success ms-2">{t("rules.custom")}</span> : null}
+                            {rule.silenced_until ? <span className="badge bg-warning-subtle text-warning ms-2">{t("silence.quiet")}</span> : null}
                           </span>
                           <SeverityBadge severity={rule.severity} />
                         </span>
                         <span className="d-block text-muted fs-12 mt-1">{rule.rule_id}</span>
                       </button>
                       {canWrite ? (
-                        <div className="form-check form-switch d-flex align-items-center m-0 px-1" title={rule.enabled ? "Armed" : "Off"}>
+                        <div className="form-check form-switch d-flex align-items-center m-0 px-1" title={rule.enabled ? t("rules.on") : t("rules.off")}>
                           <input
                             className="form-check-input"
                             type="checkbox"
@@ -254,7 +275,7 @@ export default function RulesPage() {
                             checked={rule.enabled}
                             disabled={busyId === rule.id}
                             onChange={() => void toggleRule(rule.id, rule.enabled)}
-                            aria-label={`Arm ${rule.name}`}
+                            aria-label={`${t("rules.arm")} ${rule.name}`}
                           />
                         </div>
                       ) : null}
@@ -269,100 +290,101 @@ export default function RulesPage() {
         <div className="col-xl-8">
           <div className="card">
             <div className="card-header">
-              <h4 className="card-title mb-0">{editingId ? "Edit rule" : "New rule"}</h4>
+              <h4 className="card-title mb-0">{editingId ? t("rules.edit") : t("rules.createTitle")}</h4>
             </div>
             <div className="card-body">
               {!canWrite ? (
-                <p className="text-muted mb-0">Read-only — you can review rules, not change them.</p>
+                <p className="text-muted mb-0">{t("rules.readonly")}</p>
               ) : !composerReady ? (
-                <EmptyState title="Pick a rule" description="Open one from the list, or start a new signature." />
+                <EmptyState title={t("rules.pick")} description={t("rules.pickHint")} />
               ) : (
                 <form onSubmit={(e) => void createRule(e)}>
+                  {editing ? (
+                    <div className="mb-3">
+                      <SilenceControl until={editing.silenced_until} disabled={!canWrite} busy={silenceBusy} onChange={changeSilence} />
+                    </div>
+                  ) : null}
                   <div className="alert alert-info">
-                    Mindestens ein Match ausfüllen: Source, Category, Event type, Message contains oder ein Feld. Namen und
-                    Alert-Texte als Möglichkeit formulieren, zum Beispiel „Possible …“. Wörter wie „confirmed attack“ werden
-                    abgelehnt.
-                    {editingId
-                      ? " Die Regel-ID bleibt gleich, damit bestehende Alerts daran hängen bleiben."
-                      : " Neue Regeln bekommen eine ID mit dem Präfix custom."}
+                    {t("rules.banner")}
+                    {editingId ? t("rules.bannerEdit") : t("rules.bannerNew")}
                   </div>
                   <div className="row g-3">
                     <div className="col-md-6">
-                      <label className="form-label">Name</label>
-                      <input required value={name} onChange={(e) => setName(e.target.value)} className="form-control" placeholder="Possible repeated sudo" />
-                      <Hint>Anzeigename in der Liste. Beispiel: Possible SSH brute-force.</Hint>
+                      <label className="form-label">{t("rules.f.name")}</label>
+                      <input required value={name} onChange={(e) => setName(e.target.value)} className="form-control" placeholder={t("rules.ph.name")} />
+                      <Hint>{t("rules.h.name")}</Hint>
                     </div>
                     <div className="col-md-6">
-                      <label className="form-label">Severity</label>
+                      <label className="form-label">{t("rules.f.severity")}</label>
                       <select value={severity} onChange={(e) => setSeverity(e.target.value)} className="form-select">
                         {["info", "low", "medium", "high", "critical"].map((level) => (
                           <option key={level} value={level}>
-                            {level}
+                            {severityLabel(t, level)}
                           </option>
                         ))}
                       </select>
-                      <Hint>Gewichtung des Alerts. critical ist am höchsten, info am niedrigsten.</Hint>
+                      <Hint>{t("rules.h.severity")}</Hint>
                     </div>
                     <div className="col-12">
-                      <label className="form-label">Description</label>
+                      <label className="form-label">{t("rules.f.description")}</label>
                       <textarea required rows={2} value={description} onChange={(e) => setDescription(e.target.value)} className="form-control" />
-                      <Hint>Was die Regel sucht und warum das auffällig sein kann. Das ist der Erklärungstext, nicht der Alert selbst.</Hint>
+                      <Hint>{t("rules.h.description")}</Hint>
                     </div>
                     <div className="col-md-6">
-                      <label className="form-label">Source</label>
+                      <label className="form-label">{t("rules.f.source")}</label>
                       <input value={source} onChange={(e) => setSource(e.target.value)} className="form-control" placeholder="authlog" />
-                      <Hint>Ereignisquelle, zum Beispiel authlog, docker oder nginx. Leer lassen, wenn jede Quelle gelten soll.</Hint>
+                      <Hint>{t("rules.h.source")}</Hint>
                     </div>
                     <div className="col-md-6">
-                      <label className="form-label">Category</label>
+                      <label className="form-label">{t("rules.f.category")}</label>
                       <input value={category} onChange={(e) => setCategory(e.target.value)} className="form-control" placeholder="auth" />
-                      <Hint>Kategorie des Events, zum Beispiel auth. Muss exakt zum eingehenden Event passen.</Hint>
+                      <Hint>{t("rules.h.category")}</Hint>
                     </div>
                     <div className="col-md-6">
-                      <label className="form-label">Event type</label>
+                      <label className="form-label">{t("rules.f.eventType")}</label>
                       <input value={eventType} onChange={(e) => setEventType(e.target.value)} className="form-control" />
-                      <Hint>Optionaler genauer Typ, falls der Agent einen setzt. Sonst leer lassen.</Hint>
+                      <Hint>{t("rules.h.eventType")}</Hint>
                     </div>
                     <div className="col-md-6">
-                      <label className="form-label">Message contains</label>
+                      <label className="form-label">{t("rules.f.message")}</label>
                       <input value={messageContains} onChange={(e) => setMessageContains(e.target.value)} className="form-control" placeholder="failed password" />
-                      <Hint>Text, der in der Meldung vorkommen muss. Groß- und Kleinschreibung wird nicht unterschieden.</Hint>
+                      <Hint>{t("rules.h.message")}</Hint>
                     </div>
                     <div className="col-12">
-                      <label className="form-label">Fields, one key=value per line</label>
+                      <label className="form-label">{t("rules.f.fields")}</label>
                       <textarea rows={3} value={fieldsText} onChange={(e) => setFieldsText(e.target.value)} className="form-control" placeholder={"result=failed\nprogram=sshd"} />
-                      <Hint>Zusätzliche Felder, die exakt passen müssen. Eine Zeile pro Feld, Format key=value. Beispiel: result=failed.</Hint>
+                      <Hint>{t("rules.h.fields")}</Hint>
                     </div>
                     <div className="col-md-4">
-                      <label className="form-label">Threshold count</label>
+                      <label className="form-label">{t("rules.f.threshold")}</label>
                       <input inputMode="numeric" value={thresholdCount} onChange={(e) => setThresholdCount(e.target.value)} className="form-control" placeholder="5" />
-                      <Hint>Wie oft das Muster im Zeitfenster vorkommen muss. Leer = jedes passende Event öffnet einen Alert. Sonst mindestens 2.</Hint>
+                      <Hint>{t("rules.h.threshold")}</Hint>
                     </div>
                     <div className="col-md-4">
-                      <label className="form-label">Window seconds</label>
+                      <label className="form-label">{t("rules.f.window")}</label>
                       <input inputMode="numeric" value={windowSeconds} onChange={(e) => setWindowSeconds(e.target.value)} className="form-control" placeholder="300" />
-                      <Hint>Zeitfenster in Sekunden für den Schwellwert. 300 bedeutet fünf Minuten. Nur zusammen mit Threshold count.</Hint>
+                      <Hint>{t("rules.h.window")}</Hint>
                     </div>
                     <div className="col-md-4">
-                      <label className="form-label">Group by</label>
+                      <label className="form-label">{t("rules.f.group")}</label>
                       <input value={groupBy} onChange={(e) => setGroupBy(e.target.value)} className="form-control" placeholder="src_ip, host" />
-                      <Hint>Zählt getrennt pro Wert, kommagetrennt. src_ip zählt jede Quell-IP für sich.</Hint>
+                      <Hint>{t("rules.h.group")}</Hint>
                     </div>
                     <div className="col-md-6">
-                      <label className="form-label">Alert title</label>
-                      <input value={actionTitle} onChange={(e) => setActionTitle(e.target.value)} className="form-control" placeholder="Possible sudo from {{src_ip}}" />
-                      <Hint>Titel des Alerts. Platzhalter wie {"{{src_ip}}"} und {"{{host}}"} werden aus dem Event eingesetzt. Leer = Name der Regel.</Hint>
+                      <label className="form-label">{t("rules.f.alertTitle")}</label>
+                      <input value={actionTitle} onChange={(e) => setActionTitle(e.target.value)} className="form-control" placeholder={t("rules.ph.alertTitle")} />
+                      <Hint>{t("rules.h.alertTitle")}</Hint>
                     </div>
                     <div className="col-md-6">
-                      <label className="form-label">Alert description</label>
-                      <input value={actionDescription} onChange={(e) => setActionDescription(e.target.value)} className="form-control" placeholder="Defaults to the rule description" />
-                      <Hint>Text im Alert. Leer lassen, dann wird die Beschreibung der Regel verwendet.</Hint>
+                      <label className="form-label">{t("rules.f.alertDescription")}</label>
+                      <input value={actionDescription} onChange={(e) => setActionDescription(e.target.value)} className="form-control" placeholder={t("rules.ph.alertDesc")} />
+                      <Hint>{t("rules.h.alertDescription")}</Hint>
                     </div>
                   </div>
                   {formError ? <div className="alert alert-danger mt-3">{formError}</div> : null}
                   <div className="d-flex justify-content-end gap-2 mt-3">
                     <button type="submit" disabled={saving} className="btn btn-primary">
-                      {saving ? "Saving…" : editingId ? "Save changes" : "Create rule"}
+                      {saving ? t("rules.saving") : editingId ? t("rules.save") : t("rules.create")}
                     </button>
                   </div>
                 </form>

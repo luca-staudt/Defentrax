@@ -9,7 +9,8 @@ import { PageHeader } from "@/components/ui/page-header";
 import { SeverityBadge } from "@/components/ui/severity-badge";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { useAuth } from "@/context/auth-context";
-import { alertActionLabel, formatAlertTime, nextAlertStatuses } from "@/lib/alerts";
+import { formatAlertTime, nextAlertStatuses } from "@/lib/alerts";
+import { actionLabel, useI18n } from "@/lib/i18n";
 import { apiFetch, ApiRequestError } from "@/lib/api/client";
 import { hasPermission } from "@/lib/permissions";
 import { canSeePage } from "@/lib/pages";
@@ -28,6 +29,7 @@ export default function AlertDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const { user } = useAuth();
+  const { t } = useI18n();
   const canWrite = hasPermission(user, "alerts", "write");
   const canServer = canSeePage(user, "server_detail");
   const [notes, setNotes] = useState("");
@@ -72,15 +74,15 @@ export default function AlertDetailPage() {
     }
   }
 
-  if (loading) return <LoadingBlock label="Loading alert…" />;
+  if (loading) return <LoadingBlock label={t("alert.loading")} />;
   if (error || !alert) {
     return (
       <EmptyState
-        title="Alert not found"
+        title={t("alert.notFound")}
         description={error || undefined}
         action={
           <Link href="/alerts" className="btn btn-light">
-            Back to alerts
+            {t("alert.back")}
           </Link>
         }
       />
@@ -93,13 +95,13 @@ export default function AlertDetailPage() {
     <>
       <PageHeader
         title={alert.title}
-        subtitle={alert.description || "No description provided."}
+        subtitle={alert.description || t("alert.noDescription")}
         actions={
           <div className="d-flex align-items-center gap-2">
             <StatusBadge status={alert.status} />
             <SeverityBadge severity={alert.severity} />
             <Link href="/alerts" className="btn btn-light">
-              Queue
+              {t("alert.queue")}
             </Link>
           </div>
         }
@@ -108,21 +110,21 @@ export default function AlertDetailPage() {
       <div className="row">
         <div className="col-xl-7">
           <div className="row g-3 mb-3">
-            <Fact label="Hits" value={String(alert.event_count)} />
-            <Fact label="Source IP" value={alert.source_ip || "—"} />
-            <Fact label="First seen" value={formatAlertTime(alert.first_seen_at)} />
-            <Fact label="Last seen" value={formatAlertTime(alert.last_seen_at)} />
-            <Fact label="Opened" value={formatAlertTime(alert.opened_at)} />
-            <Fact label="Resolved" value={formatAlertTime(alert.resolved_at)} />
+            <Fact label={t("common.hits")} value={String(alert.event_count)} />
+            <Fact label={t("common.sourceIp")} value={alert.source_ip || "—"} />
+            <Fact label={t("common.firstSeen")} value={formatAlertTime(alert.first_seen_at)} />
+            <Fact label={t("common.lastSeen")} value={formatAlertTime(alert.last_seen_at)} />
+            <Fact label={t("alert.opened")} value={formatAlertTime(alert.opened_at)} />
+            <Fact label={t("alert.resolved")} value={formatAlertTime(alert.resolved_at)} />
           </div>
 
           <div className="card">
             <div className="card-header">
-              <h4 className="card-title mb-0">Record</h4>
+              <h4 className="card-title mb-0">{t("alert.record")}</h4>
             </div>
             <div className="card-body">
               <p className="mb-2">
-                <span className="text-muted">Server · </span>
+                <span className="text-muted">{t("common.server")} · </span>
                 {canServer ? (
                   <Link href={`/servers/${alert.server_id}`} className="text-break">
                     {alert.server_id}
@@ -132,7 +134,7 @@ export default function AlertDetailPage() {
                 )}
               </p>
               <p className="mb-0">
-                <span className="text-muted">Rule · </span>
+                <span className="text-muted">{t("common.rule")} · </span>
                 {alert.rule_id || "—"}
               </p>
             </div>
@@ -140,11 +142,11 @@ export default function AlertDetailPage() {
 
           <div className="card">
             <div className="card-header">
-              <h4 className="card-title mb-0">Timeline</h4>
+              <h4 className="card-title mb-0">{t("alert.timeline")}</h4>
             </div>
             <div className="card-body">
               {timeline.length === 0 ? (
-                <p className="text-muted mb-0">No timeline events yet.</p>
+                <p className="text-muted mb-0">{t("alert.noTimeline")}</p>
               ) : (
                 <div className="dx-log">
                   {timeline.map((entry) => (
@@ -164,21 +166,21 @@ export default function AlertDetailPage() {
         <div className="col-xl-5">
           <div className="card dx-detail">
             <div className="card-header">
-              <h4 className="card-title mb-0">Move this alert</h4>
+              <h4 className="card-title mb-0">{t("alert.move")}</h4>
             </div>
             <div className="card-body">
               {canWrite ? (
                 <>
-                  <p className="text-muted">Resolve from any open state, or reopen a closed alert.</p>
+                  <p className="text-muted">{t("alert.moveHint")}</p>
                   <label className="form-label" htmlFor="resolution-notes">
-                    Notes
+                    {t("alert.notes")}
                   </label>
                   <textarea
                     id="resolution-notes"
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
                     rows={4}
-                    placeholder="Resolution / investigation notes (optional)"
+                    placeholder={t("alert.notesPh")}
                     className="form-control"
                   />
                   {actionError ? <div className="alert alert-danger mt-3 mb-0">{actionError}</div> : null}
@@ -193,19 +195,19 @@ export default function AlertDetailPage() {
                           onClick={() => void patchStatus(status)}
                           className={primary ? "btn btn-primary" : "btn btn-light"}
                         >
-                          {saving ? "Updating…" : alertActionLabel(status)}
+                          {saving ? t("alert.updating") : actionLabel(t, status)}
                         </button>
                       );
                     })}
-                    {next.length === 0 ? <p className="text-muted mb-0">No further transitions available.</p> : null}
+                    {next.length === 0 ? <p className="text-muted mb-0">{t("alert.noNext")}</p> : null}
                   </div>
                 </>
               ) : (
-                <p className="text-muted mb-0">Read-only — you cannot change alert status.</p>
+                <p className="text-muted mb-0">{t("alert.readonly")}</p>
               )}
               {alert.resolution_notes ? (
                 <div className="mt-4">
-                  <p className="text-muted text-uppercase fs-12 mb-1">Saved notes</p>
+                  <p className="text-muted text-uppercase fs-12 mb-1">{t("alert.savedNotes")}</p>
                   <p className="mb-0" style={{ whiteSpace: "pre-wrap" }}>
                     {alert.resolution_notes}
                   </p>

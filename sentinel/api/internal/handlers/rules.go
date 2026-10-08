@@ -23,17 +23,18 @@ type RulesHandler struct {
 }
 
 type ruleResponse struct {
-	ID          uuid.UUID       `json:"id"`
-	RuleID      string          `json:"rule_id"`
-	Name        string          `json:"name"`
-	Description string          `json:"description"`
-	Enabled     bool            `json:"enabled"`
-	Severity    string          `json:"severity"`
-	Version     int             `json:"version"`
-	Definition  json.RawMessage `json:"definition"`
-	Custom      bool            `json:"custom"`
-	CreatedAt   string          `json:"created_at"`
-	UpdatedAt   string          `json:"updated_at"`
+	ID            uuid.UUID       `json:"id"`
+	RuleID        string          `json:"rule_id"`
+	Name          string          `json:"name"`
+	Description   string          `json:"description"`
+	Enabled       bool            `json:"enabled"`
+	Severity      string          `json:"severity"`
+	Version       int             `json:"version"`
+	Definition    json.RawMessage `json:"definition"`
+	Custom        bool            `json:"custom"`
+	SilencedUntil *string         `json:"silenced_until,omitempty"`
+	CreatedAt     string          `json:"created_at"`
+	UpdatedAt     string          `json:"updated_at"`
 }
 
 func (h *RulesHandler) List(w http.ResponseWriter, r *http.Request) {
@@ -42,9 +43,18 @@ func (h *RulesHandler) List(w http.ResponseWriter, r *http.Request) {
 		internalError(w, r)
 		return
 	}
+	silences, err := store.ListSilences(r.Context(), h.Pool, "rule")
+	if err != nil {
+		internalError(w, r)
+		return
+	}
 	out := make([]ruleResponse, 0, len(rows))
 	for _, row := range rows {
-		out = append(out, toRuleResponse(row))
+		resp := toRuleResponse(row)
+		if until, ok := silences[row.ID]; ok {
+			resp.SilencedUntil = formatSilence(&until)
+		}
+		out = append(out, resp)
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"rules": out})
 }
@@ -59,7 +69,35 @@ func (h *RulesHandler) Get(w http.ResponseWriter, r *http.Request, id uuid.UUID)
 		internalError(w, r)
 		return
 	}
-	writeJSON(w, http.StatusOK, toRuleResponse(row))
+	resp := toRuleResponse(row)
+	silences, err := store.ListSilences(r.Context(), h.Pool, "rule")
+	if err != nil {
+		internalError(w, r)
+		return
+	}
+	if until, ok := silences[row.ID]; ok {
+		resp.SilencedUntil = formatSilence(&until)
+	}
+	writeJSON(w, http.StatusOK, resp)
+}
+
+func (h *RulesHandler) SetSilence(w http.ResponseWriter, r *http.Request, id uuid.UUID) {
+	writeSilence(w, h.Pool, r, "rule", id, func() error {
+		_, err := store.GetRuleByID(r.Context(), h.Pool, id)
+		return err
+	})
+}
+
+func (h *RulesHandler) ClearSilence(w http.ResponseWriter, r *http.Request, id uuid.UUID) {
+	if _, err := store.GetRuleByID(r.Context(), h.Pool, id); err != nil {
+		if errors.Is(err, store.ErrNotFound) {
+			apperrors.WriteJSON(w, http.StatusNotFound, "not_found", "rule not found", middleware.RequestIDFromContext(r.Context()))
+			return
+		}
+		internalError(w, r)
+		return
+	}
+	clearSilence(w, h.Pool, r, "rule", id)
 }
 
 type patchRuleRequest struct {

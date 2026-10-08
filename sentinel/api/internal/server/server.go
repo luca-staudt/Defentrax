@@ -66,6 +66,7 @@ func NewWithOptions(log *slog.Logger, cfg config.Config, pool *pgxpool.Pool, log
 	rolesH := &handlers.RolesHandler{Pool: pool}
 	keysH := &handlers.APIKeysHandler{Pool: pool}
 	serversH := &handlers.ServersHandler{Pool: pool}
+	viewsH := &handlers.ViewsHandler{Pool: pool}
 	agentH := &handlers.AgentHandler{Pool: pool, Config: cfg, IngestLimiter: ingestLimiter, EnrollLimiter: enrollLimiter}
 	rulesH := &handlers.RulesHandler{Pool: pool}
 	alertsH := &handlers.AlertsHandler{Pool: pool, Hub: opts.AlertHub, Notifier: opts.Notifier}
@@ -268,6 +269,24 @@ func NewWithOptions(log *slog.Logger, cfg config.Config, pool *pgxpool.Pool, log
 		serversH.Get(w, r, id)
 	})))
 	apiMux.Handle("POST /api/v1/servers", protectAll(pool, cfg, [][2]string{{"servers", "write"}, {"pages", "servers"}}, http.HandlerFunc(serversH.Create)))
+	apiMux.Handle("POST /api/v1/servers/{id}/silence", protectAll(pool, cfg, [][2]string{{"servers", "write"}, {"pages", "servers"}}, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		id, err := uuid.Parse(r.PathValue("id"))
+		if err != nil {
+			requestID := middleware.RequestIDFromContext(r.Context())
+			apperrors.WriteJSON(w, http.StatusBadRequest, "invalid_id", "invalid server id", requestID)
+			return
+		}
+		serversH.SetSilence(w, r, id)
+	})))
+	apiMux.Handle("DELETE /api/v1/servers/{id}/silence", protectAll(pool, cfg, [][2]string{{"servers", "write"}, {"pages", "servers"}}, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		id, err := uuid.Parse(r.PathValue("id"))
+		if err != nil {
+			requestID := middleware.RequestIDFromContext(r.Context())
+			apperrors.WriteJSON(w, http.StatusBadRequest, "invalid_id", "invalid server id", requestID)
+			return
+		}
+		serversH.ClearSilence(w, r, id)
+	})))
 	apiMux.Handle("POST /api/v1/servers/{id}/enrollment-tokens", protectAll(pool, cfg, [][2]string{{"servers", "write"}, {"pages", "server_detail"}}, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		id, err := uuid.Parse(r.PathValue("id"))
 		if err != nil {
@@ -349,6 +368,15 @@ func NewWithOptions(log *slog.Logger, cfg config.Config, pool *pgxpool.Pool, log
 		}
 		notifH.DeleteChannel(w, r, id)
 	})))
+	apiMux.Handle("GET /api/v1/notification-channels/{id}/deliveries", protectAll(pool, cfg, [][2]string{{"notifications", "read"}, {"pages", "notifications"}}, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		id, err := uuid.Parse(r.PathValue("id"))
+		if err != nil {
+			requestID := middleware.RequestIDFromContext(r.Context())
+			apperrors.WriteJSON(w, http.StatusBadRequest, "invalid_id", "invalid channel id", requestID)
+			return
+		}
+		notifH.ListDeliveries(w, r, id)
+	})))
 	apiMux.Handle("POST /api/v1/notification-channels/{id}/test", protectAll(pool, cfg, [][2]string{{"notifications", "write"}, {"pages", "notifications"}}, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		id, err := uuid.Parse(r.PathValue("id"))
 		if err != nil {
@@ -389,6 +417,44 @@ func NewWithOptions(log *slog.Logger, cfg config.Config, pool *pgxpool.Pool, log
 		notifH.DeleteRule(w, r, id)
 	})))
 
+	apiMux.Handle("POST /api/v1/rules/{id}/silence", protectAll(pool, cfg, [][2]string{{"rules", "write"}, {"pages", "rules"}}, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		id, err := uuid.Parse(r.PathValue("id"))
+		if err != nil {
+			requestID := middleware.RequestIDFromContext(r.Context())
+			apperrors.WriteJSON(w, http.StatusBadRequest, "invalid_id", "invalid rule id", requestID)
+			return
+		}
+		rulesH.SetSilence(w, r, id)
+	})))
+	apiMux.Handle("DELETE /api/v1/rules/{id}/silence", protectAll(pool, cfg, [][2]string{{"rules", "write"}, {"pages", "rules"}}, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		id, err := uuid.Parse(r.PathValue("id"))
+		if err != nil {
+			requestID := middleware.RequestIDFromContext(r.Context())
+			apperrors.WriteJSON(w, http.StatusBadRequest, "invalid_id", "invalid rule id", requestID)
+			return
+		}
+		rulesH.ClearSilence(w, r, id)
+	})))
+	apiMux.Handle("GET /api/v1/saved-views", protect(pool, cfg, http.HandlerFunc(viewsH.List)))
+	apiMux.Handle("POST /api/v1/saved-views", protect(pool, cfg, http.HandlerFunc(viewsH.Create)))
+	apiMux.Handle("PATCH /api/v1/saved-views/{id}", protect(pool, cfg, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		id, err := uuid.Parse(r.PathValue("id"))
+		if err != nil {
+			requestID := middleware.RequestIDFromContext(r.Context())
+			apperrors.WriteJSON(w, http.StatusBadRequest, "invalid_id", "invalid view id", requestID)
+			return
+		}
+		viewsH.Update(w, r, id)
+	})))
+	apiMux.Handle("DELETE /api/v1/saved-views/{id}", protect(pool, cfg, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		id, err := uuid.Parse(r.PathValue("id"))
+		if err != nil {
+			requestID := middleware.RequestIDFromContext(r.Context())
+			apperrors.WriteJSON(w, http.StatusBadRequest, "invalid_id", "invalid view id", requestID)
+			return
+		}
+		viewsH.Delete(w, r, id)
+	})))
 	apiMux.Handle("PATCH /api/v1/rules/{id}", protectAll(pool, cfg, [][2]string{{"rules", "write"}, {"pages", "rules"}}, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		id, err := uuid.Parse(r.PathValue("id"))
 		if err != nil {

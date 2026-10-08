@@ -8,11 +8,13 @@ import { RoleAssignList } from "@/components/access/role-assign";
 import { apiFetch, ApiRequestError } from "@/lib/api/client";
 import { useQuery } from "@/lib/panel/use-query";
 import { hasPermission, roleDisplayName } from "@/lib/permissions";
+import { useI18n } from "@/lib/i18n";
 import { useAuth } from "@/context/auth-context";
 import type { Role, User, UserSession } from "@/lib/types";
 
 export default function TeamUsersPage() {
   const { user: me } = useAuth();
+  const { t } = useI18n();
   const canWrite = hasPermission(me, "users", "write");
 
   const [search, setSearch] = useState("");
@@ -234,8 +236,8 @@ export default function TeamUsersPage() {
   return (
     <>
       <PageHeader
-        title="People"
-        subtitle="Who can sign in, what they can do, and which sessions are live."
+        title={t("people.title")}
+        subtitle={t("people.subtitle")}
         actions={
           canWrite ? (
             <button
@@ -246,17 +248,17 @@ export default function TeamUsersPage() {
                 setFormError(null);
               }}
             >
-              Add operator
+              {t("people.add")}
             </button>
           ) : null
         }
       />
 
       <div className="row g-3 mb-3">
-        <Stat label="Operators" value={users.length} />
-        <Stat label="Active" value={activeCount} />
+        <Stat label={t("people.operators")} value={users.length} />
+        <Stat label={t("people.active")} value={activeCount} />
         <Stat label="2FA" value={totpCount} />
-        <Stat label="Roles" value={roles.length || roleOptions.length} />
+        <Stat label={t("people.roles")} value={roles.length || roleOptions.length} />
       </div>
 
       {loadError ? <div className="alert alert-danger">{loadError}</div> : null}
@@ -269,10 +271,10 @@ export default function TeamUsersPage() {
                 className="form-control mb-3"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Filter by email, name, or role"
+                placeholder={t("people.filter")}
               />
               {filteredUsers.length === 0 ? (
-                <EmptyState title="No operators found" description="Try refining your search keyword." />
+                <EmptyState title={t("people.none")} description={t("people.noneHint")} />
               ) : (
                 <div className="dx-log">
                   {filteredUsers.map((person) => (
@@ -285,7 +287,7 @@ export default function TeamUsersPage() {
                       <span className="d-flex justify-content-between gap-2">
                         <span className="fw-medium">{person.display_name || person.email}</span>
                         <span className={`badge ${person.is_active ? "bg-success-subtle text-success" : "bg-danger-subtle text-danger"}`}>
-                          {person.is_active ? "Active" : "Suspended"}
+                          {person.is_active ? t("people.active") : t("people.suspended")}
                         </span>
                       </span>
                       <span className="d-block text-muted fs-12 mt-1">{person.email}</span>
@@ -295,7 +297,7 @@ export default function TeamUsersPage() {
                             {roleDisplayName(role)}
                           </span>
                         ))}
-                        <span className="text-muted fs-12">{person.totp_enabled ? "2FA on" : "2FA off"}</span>
+                        <span className="text-muted fs-12">{person.totp_enabled ? t("people.totpOn") : t("people.totpOff")}</span>
                       </span>
                     </button>
                   ))}
@@ -308,74 +310,74 @@ export default function TeamUsersPage() {
         <div className="col-xl-7">
           <div className="card dx-detail">
             <div className="card-header">
-              <h4 className="card-title mb-0">{creating ? "New operator" : selected?.email || "Operator"}</h4>
+              <h4 className="card-title mb-0">{creating ? t("people.new") : selected?.email || t("people.operator")}</h4>
             </div>
             <div className="card-body">
               {creating && canWrite ? (
                 <form onSubmit={(e) => void onCreate(e)}>
-                  <label className="form-label">Email</label>
+                  <label className="form-label">{t("login.email")}</label>
                   <input required type="email" className="form-control mb-3" value={email} onChange={(e) => setEmail(e.target.value)} />
-                  <label className="form-label">Display name</label>
+                  <label className="form-label">{t("people.displayName")}</label>
                   <input className="form-control mb-3" value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
-                  <label className="form-label">Password</label>
+                  <label className="form-label">{t("login.password")}</label>
                   <input required type="password" minLength={12} className="form-control mb-3" value={password} onChange={(e) => setPassword(e.target.value)} />
-                  <p className="form-label">Roles</p>
+                  <p className="form-label">{t("people.roles")}</p>
                   <RoleAssignList roles={assignableRoles} selected={createRoles} onChange={setCreateRoles} />
                   {formError ? <div className="alert alert-danger mt-3">{formError}</div> : null}
                   <div className="d-flex gap-2 mt-3">
                     <button type="button" className="btn btn-light" onClick={() => setCreating(false)}>
-                      Cancel
+                      {t("common.cancel")}
                     </button>
                     <button type="submit" className="btn btn-primary" disabled={saving}>
-                      {saving ? "Saving…" : "Create"}
+                      {saving ? t("views.saving") : t("people.create")}
                     </button>
                   </div>
                 </form>
               ) : selected ? (
                 <>
                   {detailMsg ? <div className="alert alert-info">{detailMsg}</div> : null}
-                  <label className="form-label">Display name</label>
+                  <label className="form-label">{t("people.displayName")}</label>
                   <input className="form-control mb-3" value={editName} onChange={(e) => setEditName(e.target.value)} disabled={!canWrite || detailBusy} />
-                  <p className="form-label">Roles</p>
+                  <p className="form-label">{t("people.roles")}</p>
                   <RoleAssignList roles={assignableRoles} selected={editRoles} disabled={!canWrite || detailBusy} onChange={setEditRoles} />
                   <div className="d-flex flex-wrap gap-2 my-3">
                     <button type="button" className="btn btn-primary" disabled={!canWrite || detailBusy} onClick={() => void saveProfile()}>
-                      Save
+                      {t("people.save")}
                     </button>
                     <button type="button" className="btn btn-light" disabled={!canWrite || detailBusy} onClick={() => void setActive(!selected.is_active)}>
-                      {selected.is_active ? "Suspend" : "Activate"}
+                      {selected.is_active ? t("people.suspend") : t("people.activate")}
                     </button>
                     <button type="button" className="btn btn-light" disabled={!canWrite || detailBusy} onClick={() => void resetTotp()}>
-                      Reset 2FA
+                      {t("people.reset2fa")}
                     </button>
                   </div>
-                  <label className="form-label">New password</label>
+                  <label className="form-label">{t("people.newPassword")}</label>
                   <div className="input-group mb-3">
                     <input type="password" className="form-control" value={editPassword} onChange={(e) => setEditPassword(e.target.value)} disabled={!canWrite || detailBusy} />
                     <button type="button" className="btn btn-light" disabled={!canWrite || detailBusy} onClick={() => void resetPassword()}>
-                      Reset password
+                      {t("people.resetPassword")}
                     </button>
                   </div>
                   {canWrite ? (
                     <div>
                       <div className="d-flex justify-content-between align-items-center mb-2">
-                        <h6 className="mb-0">Sessions</h6>
+                        <h6 className="mb-0">{t("people.sessions")}</h6>
                         <button type="button" className="btn btn-sm btn-light" disabled={detailBusy || sessions.length === 0} onClick={() => void revokeAllSessions()}>
-                          Revoke all
+                          {t("people.revokeAll")}
                         </button>
                       </div>
                       {sessions.length === 0 ? (
-                        <p className="text-muted mb-0">No active sessions.</p>
+                        <p className="text-muted mb-0">{t("people.noSessions")}</p>
                       ) : (
                         <div className="dx-log">
                           {sessions.map((session) => (
                             <div key={session.id} className="dx-metric">
                               <span className="d-flex justify-content-between align-items-center gap-2">
                                 <span>
-                                  {session.ip_address || "unknown"} · {session.created_at}
+                                  {session.ip_address || t("common.unknown")} · {session.created_at}
                                 </span>
                                 <button type="button" className="btn btn-sm btn-light" onClick={() => void revokeSession(session.id)}>
-                                  Revoke
+                                  {t("people.revoke")}
                                 </button>
                               </span>
                             </div>
@@ -386,7 +388,7 @@ export default function TeamUsersPage() {
                   ) : null}
                 </>
               ) : (
-                <EmptyState title="Select a person" description="Open someone from the list, or add an operator." />
+                <EmptyState title={t("people.pick")} description={t("people.pickHint")} />
               )}
             </div>
           </div>
