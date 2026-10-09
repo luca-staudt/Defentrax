@@ -80,6 +80,7 @@ export default function DashboardPage() {
               hint={`${stats.agents_active} ${t("dash.agents")}`}
               icon="ri-server-line"
               tone="primary"
+              colClass="col-6 col-xl-6"
             />
             <StatWidget
               label={t("dash.coverage")}
@@ -88,6 +89,7 @@ export default function DashboardPage() {
               hint={t("dash.coverageHint")}
               icon="ri-shield-check-line"
               tone={coverage >= 80 ? "success" : coverage > 0 ? "warning" : "secondary"}
+              colClass="col-6 col-xl-6"
             />
           </div>
 
@@ -204,6 +206,7 @@ function StatWidget({
   icon,
   tone,
   suffix,
+  colClass = "col-6 col-xl-4",
 }: {
   label: string;
   value: number;
@@ -211,9 +214,11 @@ function StatWidget({
   icon: string;
   tone: "primary" | "success" | "info" | "warning" | "danger" | "secondary";
   suffix?: string;
+  /** Bootstrap column classes; default max 3 per xl row. */
+  colClass?: string;
 }) {
   return (
-    <div className="col-6 col-xl">
+    <div className={colClass}>
       <div className={`card card-animate dx-stat-card dx-stat-${tone} h-100`}>
         <div className="card-body">
           <div className="d-flex align-items-center">
