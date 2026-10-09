@@ -55,12 +55,12 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="dx-auth">
+    <div className="dx-auth" data-bs-theme="dark">
       <aside className="dx-auth-aside">
         <div className="dx-auth-aside-glow" aria-hidden />
         <div className="dx-auth-aside-inner">
           <div className="dx-auth-brand">
-            <Image src="/defentrax-logo.png" alt="" width={40} height={40} />
+            <Image src="/defentrax-logo.png" alt="" width={40} height={40} priority />
             <span>DEFENTRAX</span>
           </div>
           <h1 className="dx-auth-headline">{t("login.aside")}</h1>
@@ -87,7 +87,7 @@ export default function LoginPage() {
         <div className="dx-auth-card">
           <div className="d-flex justify-content-between align-items-center mb-4">
             <div className="dx-auth-mobile-brand d-lg-none">
-              <Image src="/defentrax-logo.png" alt="" width={28} height={28} />
+              <Image src="/defentrax-logo.png" alt="" width={28} height={28} priority />
               <span>DEFENTRAX</span>
             </div>
             <LanguageSelect />

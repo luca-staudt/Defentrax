@@ -128,9 +128,9 @@ $topbar-search-color-dark: $white;
 $page-title-border-dark: none;
 $page-title-box-shadow-dark: 0 1px 2px rgba(56, 65, 74, 0.15);
 
-// Topbar - dark
-$dark-header-bg-dark: var(--#{$prefix}primary);
-$dark-header-border-dark: var(--#{$prefix}primary);
+// Topbar - dark (match panel surface; do not bleed brand/primary blue)
+$dark-header-bg-dark: #292e32;
+$dark-header-border-dark: #32383e;
 $dark-header-item-color-dark: rgba($white, 0.85);
 $dark-header-item-bg-dark: #{rgba(var(--#{$prefix}white-rgb), 0.1)};
 $dark-header-item-sub-color-dark: #b0c4d9;

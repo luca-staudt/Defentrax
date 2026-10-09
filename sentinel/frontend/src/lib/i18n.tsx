@@ -436,6 +436,7 @@ const TEXT: Record<string, { en: string; de: string }> = {
   "audit.entity": { en: "Entity", de: "Objekt" },
   "audit.ip": { en: "IP", de: "IP" },
   "audit.agent": { en: "Agent", de: "Agent" },
+  "audit.metadata": { en: "Metadata", de: "Metadaten" },
   "people.subtitle": { en: "Who can sign in, what they can do, and which sessions are live.", de: "Wer sich anmelden kann, was die Person darf, und welche Sitzungen laufen." },
   "access.title": { en: "Access", de: "Zugriff" },
   "access.subtitle": { en: "Choose a role, decide which pages it opens, then put people on it.", de: "Rolle wählen, Seiten festlegen und Personen zuweisen." },

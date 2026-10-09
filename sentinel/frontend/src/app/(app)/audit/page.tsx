@@ -99,19 +99,29 @@ export default function AuditLogsPage() {
                     <th>{t("audit.actorLabel")}</th>
                     <th>{t("audit.entity")}</th>
                     <th>{t("audit.when")}</th>
+                    <th />
                   </tr>
                 </thead>
                 <tbody>
                   {rows.map((row) => (
                     <tr key={row.id}>
                       <td>
-                        <button type="button" className="btn btn-link p-0 fw-medium" onClick={() => setSelectedId(row.id)}>
-                          <code>{row.action}</code>
-                        </button>
+                        <code className="fw-medium">{row.action}</code>
                       </td>
                       <td className="text-muted">{row.actor_email || row.actor_type}</td>
                       <td className="text-muted">{row.entity_type}</td>
                       <td className="text-muted text-nowrap">{row.created_at}</td>
+                      <td className="text-end">
+                        <button
+                          type="button"
+                          className="btn btn-soft-primary btn-sm"
+                          onClick={() => setSelectedId(row.id)}
+                          aria-label={t("common.open")}
+                        >
+                          <i className="ri-eye-line align-middle me-1"></i>
+                          {t("common.open")}
+                        </button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -130,27 +140,52 @@ export default function AuditLogsPage() {
         </div>
       ) : null}
 
-      <Modal isOpen={!!selected} onClose={() => setSelectedId(null)} size="xl" title={selected?.action || t("audit.title")}>
+      <Modal
+        isOpen={!!selected}
+        onClose={() => setSelectedId(null)}
+        size="xl"
+        title={selected?.action || t("audit.title")}
+        subtitle={selected ? selected.created_at : undefined}
+        footer={
+          <button type="button" className="btn btn-light" onClick={() => setSelectedId(null)}>
+            {t("common.close")}
+          </button>
+        }
+      >
         {selected ? (
           <>
-            <dl className="row">
-              <dt className="col-sm-3 text-muted">{t("audit.when")}</dt>
-              <dd className="col-sm-9">{selected.created_at}</dd>
-              <dt className="col-sm-3 text-muted">{t("audit.actorLabel")}</dt>
-              <dd className="col-sm-9">
-                {selected.actor_email || "—"} <span className="text-muted">({selected.actor_type})</span>
-              </dd>
-              <dt className="col-sm-3 text-muted">{t("audit.entity")}</dt>
-              <dd className="col-sm-9 text-break">
-                {selected.entity_type}
-                {selected.entity_id ? <span className="d-block text-muted fs-12">{selected.entity_id}</span> : null}
-              </dd>
-              <dt className="col-sm-3 text-muted">{t("audit.ip")}</dt>
-              <dd className="col-sm-9">{selected.ip_address || "—"}</dd>
-              <dt className="col-sm-3 text-muted">{t("audit.agent")}</dt>
-              <dd className="col-sm-9 text-break">{selected.user_agent || "—"}</dd>
-            </dl>
-            <pre className="bg-light-subtle border rounded p-3 mb-0">{JSON.stringify(selected.metadata ?? {}, null, 2)}</pre>
+            <div className="row g-3 mb-3">
+              <div className="col-md-6">
+                <div className="border rounded p-3 h-100">
+                  <p className="text-muted text-uppercase fs-11 mb-1">{t("audit.actorLabel")}</p>
+                  <p className="mb-0 fw-medium">{selected.actor_email || "—"}</p>
+                  <p className="text-muted fs-12 mb-0">{selected.actor_type}</p>
+                </div>
+              </div>
+              <div className="col-md-6">
+                <div className="border rounded p-3 h-100">
+                  <p className="text-muted text-uppercase fs-11 mb-1">{t("audit.entity")}</p>
+                  <p className="mb-0 fw-medium">{selected.entity_type}</p>
+                  {selected.entity_id ? <p className="text-muted fs-12 mb-0 text-break">{selected.entity_id}</p> : null}
+                </div>
+              </div>
+              <div className="col-md-6">
+                <div className="border rounded p-3 h-100">
+                  <p className="text-muted text-uppercase fs-11 mb-1">{t("audit.ip")}</p>
+                  <p className="mb-0">{selected.ip_address || "—"}</p>
+                </div>
+              </div>
+              <div className="col-md-6">
+                <div className="border rounded p-3 h-100">
+                  <p className="text-muted text-uppercase fs-11 mb-1">{t("audit.when")}</p>
+                  <p className="mb-0">{selected.created_at}</p>
+                </div>
+              </div>
+            </div>
+            <p className="text-muted text-uppercase fs-11 mb-2">{t("audit.agent")}</p>
+            <p className="text-break mb-3">{selected.user_agent || "—"}</p>
+            <p className="text-muted text-uppercase fs-11 mb-2">{t("audit.metadata")}</p>
+            <pre className="bg-light-subtle border rounded p-3 mb-0 dx-audit-json">{JSON.stringify(selected.metadata ?? {}, null, 2)}</pre>
           </>
         ) : null}
       </Modal>

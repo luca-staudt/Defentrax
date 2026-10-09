@@ -214,26 +214,24 @@ function StatWidget({
 }) {
   return (
     <div className="col-6 col-xl">
-      <div className="card card-animate">
+      <div className={`card card-animate dx-stat-card dx-stat-${tone} h-100`}>
         <div className="card-body">
           <div className="d-flex align-items-center">
             <div className="flex-grow-1 overflow-hidden">
               <p className="text-uppercase fw-medium text-muted text-truncate mb-0">{label}</p>
-            </div>
-          </div>
-          <div className="d-flex align-items-end justify-content-between mt-4">
-            <div>
-              <h4 className="fs-22 fw-semibold ff-secondary mb-3">
-                <Counter value={value} />
-                {suffix ? <span>{suffix}</span> : null}
-              </h4>
-              <span className="text-muted">{hint}</span>
             </div>
             <div className="avatar-sm flex-shrink-0">
               <span className={`avatar-title bg-${tone}-subtle text-${tone} rounded fs-3`}>
                 <i className={icon}></i>
               </span>
             </div>
+          </div>
+          <div className="mt-4">
+            <h4 className="fs-22 fw-semibold ff-secondary mb-2">
+              <Counter value={value} />
+              {suffix ? <span>{suffix}</span> : null}
+            </h4>
+            <span className="text-muted">{hint}</span>
           </div>
         </div>
       </div>

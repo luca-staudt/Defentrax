@@ -274,14 +274,16 @@ export default function TeamUsersPage() {
           tone="success"
           progress={users.length > 0 ? Math.round((activeCount / users.length) * 100) : 0}
         />
-        <Stat
-          label="2FA"
-          value={totpCount}
-          hint={`${totpCoverage}% · ${t("people.totpHint")}`}
-          icon="ri-shield-keyhole-line"
-          tone="info"
-          progress={totpCoverage}
-        />
+        {totpCount > 0 ? (
+          <Stat
+            label="2FA"
+            value={totpCount}
+            hint={`${totpCoverage}% · ${t("people.totpHint")}`}
+            icon="ri-shield-keyhole-line"
+            tone="info"
+            progress={totpCoverage}
+          />
+        ) : null}
         <Stat
           label={t("people.roles")}
           value={roles.length || roleOptions.length}
@@ -317,7 +319,7 @@ export default function TeamUsersPage() {
                         <button type="button" className="btn btn-link p-0 fw-medium" onClick={() => void openDetail(person)}>
                           {person.display_name || person.email}
                         </button>
-                        <span className="d-block text-muted fs-12">{person.totp_enabled ? t("people.totpOn") : t("people.totpOff")}</span>
+                        {person.totp_enabled ? <span className="d-block text-muted fs-12">{t("people.totpOn")}</span> : null}
                       </td>
                       <td className="text-muted">{person.email}</td>
                       <td>
@@ -394,9 +396,11 @@ export default function TeamUsersPage() {
               <button type="button" className="btn btn-light" disabled={!canWrite || detailBusy} onClick={() => void setActive(!selected.is_active)}>
                 {selected.is_active ? t("people.suspend") : t("people.activate")}
               </button>
-              <button type="button" className="btn btn-light" disabled={!canWrite || detailBusy} onClick={() => void resetTotp()}>
-                {t("people.reset2fa")}
-              </button>
+              {selected.totp_enabled ? (
+                <button type="button" className="btn btn-light" disabled={!canWrite || detailBusy} onClick={() => void resetTotp()}>
+                  {t("people.reset2fa")}
+                </button>
+              ) : null}
             </div>
             <label className="form-label">{t("people.newPassword")}</label>
             <div className="input-group mb-3">

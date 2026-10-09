@@ -15,27 +15,23 @@ function StatCard({
 }) {
   return (
     <div className="col-xl-3 col-md-6">
-      <div className="card card-animate">
+      <div className="card card-animate dx-stat-card dx-stat-primary h-100">
         <div className="card-body">
           <div className="d-flex align-items-center">
             <div className="flex-grow-1 overflow-hidden">
               <p className="text-uppercase fw-medium text-muted text-truncate mb-0">{label}</p>
             </div>
-            <div className="flex-shrink-0">
-              <span className="avatar-sm">
-                <span className="avatar-title bg-primary-subtle text-primary rounded fs-3">
-                  <i className={icon}></i>
-                </span>
+            <div className="avatar-sm flex-shrink-0">
+              <span className="avatar-title bg-primary-subtle text-primary rounded fs-3">
+                <i className={icon}></i>
               </span>
             </div>
           </div>
-          <div className="d-flex align-items-end justify-content-between mt-4">
-            <div>
-              <h4 className="fs-22 fw-semibold ff-secondary mb-2">
-                <span className="counter-value">{value}</span>
-              </h4>
-              <span className="text-muted">{sublabel}</span>
-            </div>
+          <div className="mt-4">
+            <h4 className="fs-22 fw-semibold ff-secondary mb-2">
+              <span className="counter-value">{value}</span>
+            </h4>
+            <span className="text-muted">{sublabel}</span>
           </div>
         </div>
       </div>

@@ -135,6 +135,7 @@ html[data-sidebar-size="sm-hover"] .app-menu.navbar-menu:hover .dx-sidebar-user 
   background:
     radial-gradient(ellipse at 12% 18%, rgba(64, 81, 137, 0.18), transparent 55%),
     linear-gradient(180deg, #f3f6f9 0%, #eef2f7 100%);
+  color-scheme: dark;
 }
 
 .dx-auth-aside {
@@ -150,6 +151,19 @@ html[data-sidebar-size="sm-hover"] .app-menu.navbar-menu:hover .dx-sidebar-user 
     radial-gradient(circle at 10% 90%, rgba(64, 81, 137, 0.45), transparent 50%),
     #12161b;
   color: #f3f6f9;
+
+  // Soft seam into the form panel — no hard vertical cut.
+  &::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 4.5rem;
+    background: linear-gradient(90deg, transparent, rgba(15, 18, 23, 0.55));
+    pointer-events: none;
+    z-index: 0;
+  }
 }
 
 .dx-auth-aside-glow {
@@ -165,6 +179,7 @@ html[data-sidebar-size="sm-hover"] .app-menu.navbar-menu:hover .dx-sidebar-user 
   position: relative;
   z-index: 1;
   max-width: 28rem;
+  animation: dx-auth-rise 520ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .dx-auth-brand {
@@ -221,21 +236,43 @@ html[data-sidebar-size="sm-hover"] .app-menu.navbar-menu:hover .dx-sidebar-user 
 }
 
 .dx-auth-panel {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 2rem 1.5rem;
+  background: linear-gradient(180deg, #11151a 0%, #0f1217 100%);
 }
 
 .dx-auth-card {
   width: 100%;
   max-width: 420px;
   padding: 1.75rem 1.5rem;
-  border: 1px solid rgba(64, 81, 137, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 1rem;
-  background: rgba(255, 255, 255, 0.88);
-  box-shadow: 0 18px 48px rgba(15, 23, 42, 0.08);
+  background: rgba(33, 37, 41, 0.94);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.35);
   backdrop-filter: blur(8px);
+  color: #f3f6f9;
+  animation: dx-auth-rise 560ms cubic-bezier(0.22, 1, 0.36, 1) 60ms both;
+}
+
+@keyframes dx-auth-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dx-auth-aside-inner,
+  .dx-auth-card {
+    animation: none;
+  }
 }
 
 [data-bs-theme="dark"] .dx-auth {
@@ -244,8 +281,12 @@ html[data-sidebar-size="sm-hover"] .app-menu.navbar-menu:hover .dx-sidebar-user 
     #0f1217;
 }
 
+[data-bs-theme="dark"] .dx-auth-panel {
+  background: linear-gradient(180deg, #11151a 0%, #0f1217 100%);
+}
+
 [data-bs-theme="dark"] .dx-auth-card {
-  background: rgba(33, 37, 41, 0.92);
+  background: rgba(33, 37, 41, 0.94);
   border-color: rgba(255, 255, 255, 0.08);
   box-shadow: 0 18px 48px rgba(0, 0, 0, 0.35);
 }
@@ -375,9 +416,37 @@ html[data-sidebar-size="sm-hover"] .app-menu.navbar-menu:hover .dx-sidebar-user 
   }
 }
 
+// Keep dark topbar on the same charcoal surface as the app chrome.
+[data-bs-theme="dark"][data-topbar="dark"] {
+  --#{$prefix}header-bg: #292e32;
+  --#{$prefix}header-border: #32383e;
+  --#{$prefix}header-item-color: #e9ecef;
+  --#{$prefix}header-item-sub-color: #98a2ad;
+  --#{$prefix}topbar-search-bg: #202328;
+  --#{$prefix}topbar-search-color: #fff;
+}
+
+[data-topbar="dark"] #page-topbar {
+  background-color: #292e32 !important;
+  border-bottom-color: #32383e;
+}
+
 [data-topbar="dark"] #page-topbar .topbar-user .avatar-title {
   background-color: #fff;
   color: var(--#{$prefix}primary);
+}
+
+// Metric / stat cards: icon must stay a fixed square on the right.
+.dx-stat-card .avatar-sm,
+.card-animate .avatar-sm {
+  flex-shrink: 0;
+  display: inline-flex;
+}
+
+.dx-stat-card .avatar-title,
+.card-animate .avatar-sm .avatar-title {
+  width: 100%;
+  height: 100%;
 }
 
 .dx-header-live {
@@ -478,6 +547,14 @@ html[data-sidebar-size="sm-hover"] .app-menu.navbar-menu:hover .dx-sidebar-user 
   &.dx-stat-warning::before {
     background: var(--#{$prefix}warning);
   }
+
+  &.dx-stat-danger::before {
+    background: var(--#{$prefix}danger);
+  }
+
+  &.dx-stat-secondary::before {
+    background: var(--#{$prefix}secondary);
+  }
 }
 
 // Custom scrollbars for the panel chrome and long lists.
@@ -525,4 +602,13 @@ html[data-sidebar-size="sm-hover"] .app-menu.navbar-menu:hover .dx-sidebar-user 
 
 .dx-sidebar-scroll .simplebar-track.simplebar-vertical {
   width: 9px;
+}
+
+.dx-audit-json {
+  max-height: 22rem;
+  overflow: auto;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
