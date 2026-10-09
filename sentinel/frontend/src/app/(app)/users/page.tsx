@@ -230,7 +230,9 @@ export default function TeamUsersPage() {
   });
 
   const activeCount = users.filter((u) => u.is_active).length;
+  const suspendedCount = users.filter((u) => !u.is_active).length;
   const totpCount = users.filter((u) => u.totp_enabled).length;
+  const totpCoverage = users.length > 0 ? Math.round((totpCount / users.length) * 100) : 0;
 
   if (loading) return <LoadingBlock />;
 
@@ -256,11 +258,37 @@ export default function TeamUsersPage() {
         }
       />
 
-      <div className="row">
-        <Stat label={t("people.operators")} value={users.length} icon="ri-team-line" tone="primary" />
-        <Stat label={t("people.active")} value={activeCount} icon="ri-user-follow-line" tone="success" />
-        <Stat label="2FA" value={totpCount} icon="ri-shield-keyhole-line" tone="info" />
-        <Stat label={t("people.roles")} value={roles.length || roleOptions.length} icon="ri-key-2-line" tone="warning" />
+      <div className="row g-3 mb-3">
+        <Stat
+          label={t("people.operators")}
+          value={users.length}
+          hint={t("people.operatorsHint")}
+          icon="ri-team-line"
+          tone="primary"
+        />
+        <Stat
+          label={t("people.active")}
+          value={activeCount}
+          hint={`${suspendedCount} ${t("people.suspended").toLowerCase()}`}
+          icon="ri-user-follow-line"
+          tone="success"
+          progress={users.length > 0 ? Math.round((activeCount / users.length) * 100) : 0}
+        />
+        <Stat
+          label="2FA"
+          value={totpCount}
+          hint={`${totpCoverage}% · ${t("people.totpHint")}`}
+          icon="ri-shield-keyhole-line"
+          tone="info"
+          progress={totpCoverage}
+        />
+        <Stat
+          label={t("people.roles")}
+          value={roles.length || roleOptions.length}
+          hint={t("people.rolesHint")}
+          icon="ri-key-2-line"
+          tone="warning"
+        />
       </div>
 
       {loadError ? <div className="alert alert-danger">{loadError}</div> : null}
@@ -279,6 +307,7 @@ export default function TeamUsersPage() {
                     <th>{t("login.email")}</th>
                     <th>{t("people.roles")}</th>
                     <th>{t("alerts.status")}</th>
+                    <th className="text-end">{t("common.open")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -302,6 +331,12 @@ export default function TeamUsersPage() {
                         <span className={`badge ${person.is_active ? "bg-success-subtle text-success" : "bg-danger-subtle text-danger"}`}>
                           {person.is_active ? t("people.active") : t("people.suspended")}
                         </span>
+                      </td>
+                      <td className="text-end">
+                        <button type="button" className="btn btn-soft-primary btn-sm" onClick={() => void openDetail(person)} aria-label={t("common.open")}>
+                          <i className="ri-eye-line align-middle me-1"></i>
+                          {t("common.open")}
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -412,25 +447,46 @@ export default function TeamUsersPage() {
 function Stat({
   label,
   value,
+  hint,
   icon,
   tone,
+  progress,
 }: {
   label: string;
   value: number;
+  hint: string;
   icon: string;
   tone: "primary" | "success" | "info" | "warning";
+  progress?: number;
 }) {
   return (
     <div className="col-6 col-xl-3">
-      <div className="card card-animate">
+      <div className={`card card-animate dx-stat-card dx-stat-${tone} h-100`}>
         <div className="card-body">
-          <p className="text-uppercase fw-medium text-muted text-truncate mb-0">{label}</p>
-          <div className="d-flex align-items-end justify-content-between mt-3">
-            <h4 className="fs-22 fw-semibold ff-secondary mb-0">{value}</h4>
-            <span className={`avatar-title bg-${tone}-subtle text-${tone} rounded fs-3 avatar-sm`}>
-              <i className={icon} />
+          <div className="d-flex align-items-start justify-content-between gap-2">
+            <div className="overflow-hidden">
+              <p className="text-uppercase fw-medium text-muted text-truncate mb-1 fs-12">{label}</p>
+              <h4 className="fs-22 fw-semibold ff-secondary mb-1">{value.toLocaleString()}</h4>
+              <p className="text-muted mb-0 fs-12 text-truncate">{hint}</p>
+            </div>
+            <span className={`avatar-sm flex-shrink-0`}>
+              <span className={`avatar-title bg-${tone}-subtle text-${tone} rounded-circle fs-3`}>
+                <i className={icon} />
+              </span>
             </span>
           </div>
+          {typeof progress === "number" ? (
+            <div className="progress progress-sm animated-progess mt-3 mb-0">
+              <div
+                className={`progress-bar bg-${tone}`}
+                role="progressbar"
+                style={{ width: `${Math.max(0, Math.min(100, progress))}%` }}
+                aria-valuenow={progress}
+                aria-valuemin={0}
+                aria-valuemax={100}
+              />
+            </div>
+          ) : null}
         </div>
       </div>
     </div>

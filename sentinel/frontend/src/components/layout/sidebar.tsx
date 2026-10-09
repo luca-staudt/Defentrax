@@ -6,7 +6,7 @@ import { useEffect } from "react";
 import SimpleBar from "simplebar-react";
 import { Container, DropdownMenu, DropdownToggle, UncontrolledDropdown } from "reactstrap";
 import { useAuth } from "@/context/auth-context";
-import { canSeePage, PANEL_PAGES } from "@/lib/pages";
+import { canSeePage, PANEL_PAGES, type PanelPage } from "@/lib/pages";
 import { useI18n } from "@/lib/i18n";
 
 const NAV_ICONS: Record<string, string> = {
@@ -21,11 +21,24 @@ const NAV_ICONS: Record<string, string> = {
   audit: "ri-file-list-3-line",
 };
 
+type NavSection = {
+  key: string;
+  labelKey: string;
+  actions: string[];
+};
+
+const NAV_SECTIONS: NavSection[] = [
+  { key: "ops", labelKey: "nav.section.ops", actions: ["dashboard", "alerts", "events"] },
+  { key: "fleet", labelKey: "nav.section.fleet", actions: ["servers", "rules"] },
+  { key: "admin", labelKey: "nav.section.admin", actions: ["notifications", "team", "roles", "audit"] },
+];
+
 export function Sidebar() {
   const pathname = usePathname();
   const { t } = useI18n();
   const { user, logout } = useAuth();
-  const items = PANEL_PAGES.filter((page) => page.nav && page.href && canSeePage(user, page.action));
+  const allowed = PANEL_PAGES.filter((page) => page.nav && page.href && canSeePage(user, page.action));
+  const byAction = new Map(allowed.map((page) => [page.action, page]));
   const display = user?.display_name || user?.email || t("header.operator");
 
   useEffect(() => {
@@ -62,6 +75,15 @@ export function Sidebar() {
     );
   };
 
+  const renderItem = (item: PanelPage) => (
+    <li className="nav-item" key={item.action}>
+      <Link className="nav-link menu-link" href={item.href!}>
+        <i className={NAV_ICONS[item.action] || "ri-pages-line"}></i>
+        <span>{t(`nav.${item.action}`)}</span>
+      </Link>
+    </li>
+  );
+
   return (
     <>
       <div className="app-menu navbar-menu">
@@ -93,21 +115,20 @@ export function Sidebar() {
           </button>
         </div>
 
-        <SimpleBar id="scrollbar" className="h-100">
+        <SimpleBar id="scrollbar" className="h-100 dx-sidebar-scroll">
           <Container fluid>
             <div id="two-column-menu"></div>
             <ul className="navbar-nav" id="navbar-nav">
-              <li className="menu-title">
-                <span>{t("nav.menu")}</span>
-              </li>
-              {items.map((item) => (
-                <li className="nav-item" key={item.action}>
-                  <Link className="nav-link menu-link" href={item.href!}>
-                    <i className={NAV_ICONS[item.action] || "ri-pages-line"}></i>
-                    <span>{t(`nav.${item.action}`)}</span>
-                  </Link>
-                </li>
-              ))}
+              {NAV_SECTIONS.flatMap((section) => {
+                const items = section.actions.map((action) => byAction.get(action)).filter(Boolean) as PanelPage[];
+                if (items.length === 0) return [];
+                return [
+                  <li className="menu-title" key={`${section.key}-title`}>
+                    <span>{t(section.labelKey)}</span>
+                  </li>,
+                  ...items.map(renderItem),
+                ];
+              })}
               <li className="menu-title">
                 <span>{t("nav.links")}</span>
               </li>

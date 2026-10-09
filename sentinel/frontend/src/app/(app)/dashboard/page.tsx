@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { CoverageRadial, SeverityRadar } from "@/components/dashboard/analytics-charts";
+import { CoverageRadial, SeverityLine } from "@/components/dashboard/analytics-charts";
 import { EmptyState } from "@/components/ui/empty-state";
 import { LoadingBlock } from "@/components/ui/loading-block";
 import { PageHeader } from "@/components/ui/page-header";
@@ -99,7 +99,7 @@ export default function DashboardPage() {
                   <span className="text-muted">{t("dash.shapeHint")}</span>
                 </div>
                 <div className="card-body">
-                  <SeverityRadar alerts={stats.alerts_by_severity} events={stats.events_by_severity_24h} />
+                  <SeverityLine alerts={stats.alerts_by_severity} events={stats.events_by_severity_24h} />
                 </div>
               </div>
             </div>

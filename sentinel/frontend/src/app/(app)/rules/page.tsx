@@ -296,8 +296,9 @@ export default function RulesPage() {
                         )}
                       </td>
                       <td className="text-end">
-                        <button type="button" className="btn btn-sm btn-light" onClick={() => openEdit(rule)}>
-                          {canWrite ? t("rules.edit") : t("fleet.open")}
+                        <button type="button" className="btn btn-soft-primary btn-sm" onClick={() => openEdit(rule)}>
+                          <i className="ri-eye-line align-middle me-1"></i>
+                          {canWrite ? t("rules.edit") : t("common.open")}
                         </button>
                       </td>
                     </tr>

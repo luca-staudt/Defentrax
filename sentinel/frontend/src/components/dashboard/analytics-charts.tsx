@@ -44,7 +44,8 @@ function palette(mode: "light" | "dark") {
   };
 }
 
-export function SeverityRadar({
+/** Severity comparison as a smooth line chart (open alerts vs 24h events). */
+export function SeverityLine({
   alerts,
   events,
 }: {
@@ -63,30 +64,37 @@ export function SeverityRadar({
   const options = useMemo<ApexOptions>(
     () => ({
       chart: {
-        type: "radar",
+        type: "line",
         background: "transparent",
         foreColor: colors.fore,
         fontFamily: "inherit",
         toolbar: { show: false },
-        animations: { enabled: true, speed: 700, easing: "easeinout" },
-        dropShadow: { enabled: true, blur: 3, opacity: 0.12 },
+        zoom: { enabled: false },
+        animations: { enabled: true, speed: 650, easing: "easeinout" },
       },
       colors: [BRAND, TEAL],
-      stroke: { width: 2, curve: "smooth" },
-      fill: { opacity: 0.22 },
-      markers: { size: 4, hover: { size: 6 } },
+      stroke: { width: 3, curve: "smooth" },
+      markers: { size: 4, strokeWidth: 0, hover: { size: 6 } },
+      dataLabels: { enabled: false },
+      grid: {
+        borderColor: colors.grid,
+        strokeDashArray: 4,
+        xaxis: { lines: { show: false } },
+        yaxis: { lines: { show: true } },
+        padding: { left: 8, right: 8 },
+      },
       xaxis: {
         categories,
+        axisBorder: { show: false },
+        axisTicks: { show: false },
         labels: { style: { colors: SEVERITIES.map(() => colors.muted), fontSize: "12px" } },
       },
-      yaxis: { show: false, min: 0 },
-      plotOptions: {
-        radar: {
-          polygons: {
-            strokeColors: colors.grid,
-            connectorColors: colors.grid,
-            fill: { colors: mode === "dark" ? ["rgba(255,255,255,0.02)", "transparent"] : ["#f8f9fa", "transparent"] },
-          },
+      yaxis: {
+        min: 0,
+        forceNiceScale: true,
+        labels: {
+          style: { colors: colors.muted, fontSize: "12px" },
+          formatter: (value: number) => `${Math.round(value)}`,
         },
       },
       legend: {
@@ -94,7 +102,7 @@ export function SeverityRadar({
         fontSize: "13px",
         labels: { colors: colors.fore },
       },
-      tooltip: { theme: mode },
+      tooltip: { theme: mode, shared: true, intersect: false },
       theme: { mode },
     }),
     [categories, colors.fore, colors.grid, colors.muted, mode],
@@ -102,10 +110,13 @@ export function SeverityRadar({
 
   return (
     <div className="apex-charts">
-      <Chart key={mode} type="radar" height={340} series={series} options={options} />
+      <Chart key={mode} type="line" height={340} series={series} options={options} />
     </div>
   );
 }
+
+/** @deprecated Prefer SeverityLine — kept as alias during the dashboard chart swap. */
+export const SeverityRadar = SeverityLine;
 
 export function CoverageRadial({ active, total }: { active: number; total: number }) {
   const mode = useChartMode();

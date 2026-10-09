@@ -185,11 +185,24 @@ export function Header() {
               </DropdownMenu>
             </Dropdown>
 
+            {canDashboard && stats ? (
+              <div className="ms-1 header-item d-none d-lg-flex align-items-center gap-2 dx-header-live">
+                <span className="dx-header-pill" title={t("dash.agents")}>
+                  <i className="ri-radar-line"></i>
+                  {(stats.agents_active ?? 0).toLocaleString()}
+                </span>
+                <span className={`dx-header-pill ${openAlerts > 0 ? "is-warn" : ""}`} title={t("dash.open")}>
+                  <i className="ri-alarm-warning-line"></i>
+                  {openAlerts.toLocaleString()}
+                </span>
+              </div>
+            ) : null}
+
             {canAlerts ? (
               <div className="ms-1 header-item d-flex">
                 <Link
                   href="/alerts"
-                  className="btn btn-icon btn-topbar btn-ghost-secondary rounded-circle"
+                  className="btn btn-icon btn-topbar btn-ghost-secondary rounded-circle position-relative"
                   aria-label={t("header.alerts")}
                 >
                   <i className="bx bx-bell fs-22"></i>

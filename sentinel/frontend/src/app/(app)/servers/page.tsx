@@ -112,6 +112,7 @@ export default function ServersPage() {
                     <th>{t("fleet.environment")}</th>
                     <th>{t("fleet.heartbeat")}</th>
                     <th>{t("alerts.status")}</th>
+                    <th className="text-end">{t("common.open")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -134,6 +135,12 @@ export default function ServersPage() {
                         <td className="text-muted">{server.last_heartbeat_at ? formatAlertTime(server.last_heartbeat_at) : "—"}</td>
                         <td>
                           <span className={`badge ${tone}`}>{signal}</span>
+                        </td>
+                        <td className="text-end">
+                          <button type="button" className="btn btn-soft-primary btn-sm" onClick={() => setSelectedId(server.id)} aria-label={t("common.open")}>
+                            <i className="ri-eye-line align-middle me-1"></i>
+                            {t("common.open")}
+                          </button>
                         </td>
                       </tr>
                     );

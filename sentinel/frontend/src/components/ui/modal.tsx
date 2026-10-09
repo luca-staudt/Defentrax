@@ -20,13 +20,23 @@ export function Modal({
   size?: "md" | "lg" | "xl";
 }) {
   return (
-    <RsModal isOpen={isOpen} toggle={onClose} centered scrollable size={size === "md" ? undefined : size} backdrop="static" keyboard>
-      <ModalHeader toggle={onClose}>
-        {title}
-        {subtitle ? <p className="text-muted fs-13 mb-0 fw-normal">{subtitle}</p> : null}
+    <RsModal
+      isOpen={isOpen}
+      toggle={onClose}
+      centered
+      scrollable
+      size={size === "md" ? undefined : size}
+      backdrop="static"
+      keyboard
+      className="dx-modal"
+      contentClassName="dx-modal-content"
+    >
+      <ModalHeader toggle={onClose} className="dx-modal-header">
+        <span className="dx-modal-title">{title}</span>
+        {subtitle ? <p className="dx-modal-subtitle mb-0">{subtitle}</p> : null}
       </ModalHeader>
-      <ModalBody>{children}</ModalBody>
-      {footer ? <ModalFooter>{footer}</ModalFooter> : null}
+      <ModalBody className="dx-modal-body">{children}</ModalBody>
+      {footer ? <ModalFooter className="dx-modal-footer">{footer}</ModalFooter> : null}
     </RsModal>
   );
 }

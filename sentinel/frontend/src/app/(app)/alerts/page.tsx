@@ -207,6 +207,7 @@ export default function AlertsPage() {
                     <th>{t("alerts.status")}</th>
                     <th>{t("common.hits")}</th>
                     <th>{t("common.lastSeen")}</th>
+                    <th className="text-end">{t("common.open")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -225,6 +226,17 @@ export default function AlertsPage() {
                       </td>
                       <td>{alert.event_count || 1}</td>
                       <td className="text-muted">{formatAlertTime(alert.last_seen_at)}</td>
+                      <td className="text-end">
+                        <button
+                          type="button"
+                          className="btn btn-soft-primary btn-sm"
+                          onClick={() => setSelectedId(alert.id)}
+                          aria-label={t("common.open")}
+                        >
+                          <i className="ri-eye-line align-middle me-1"></i>
+                          {t("common.open")}
+                        </button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>

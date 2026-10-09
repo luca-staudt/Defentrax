@@ -57,24 +57,39 @@ export default function LoginPage() {
   return (
     <div className="dx-auth">
       <aside className="dx-auth-aside">
-        <div>
-          <Image src="/defentrax-logo.png" alt="" width={36} height={36} />
-          <p className="mt-4 mb-1 text-uppercase fs-12" style={{ letterSpacing: "0.16em", opacity: 0.6 }}>
-            Defentrax
-          </p>
-          <h1 className="display-6 mb-3">{t("login.aside")}</h1>
-          <p className="mb-0" style={{ maxWidth: 420, opacity: 0.75 }}>
-            {t("login.asideBody")}
-          </p>
+        <div className="dx-auth-aside-glow" aria-hidden />
+        <div className="dx-auth-aside-inner">
+          <div className="dx-auth-brand">
+            <Image src="/defentrax-logo.png" alt="" width={40} height={40} />
+            <span>DEFENTRAX</span>
+          </div>
+          <h1 className="dx-auth-headline">{t("login.aside")}</h1>
+          <p className="dx-auth-lead">{t("login.asideBody")}</p>
+          <ul className="dx-auth-points">
+            <li>
+              <i className="ri-alarm-warning-line" />
+              <span>{t("nav.alerts")}</span>
+            </li>
+            <li>
+              <i className="ri-pulse-line" />
+              <span>{t("nav.events")}</span>
+            </li>
+            <li>
+              <i className="ri-server-line" />
+              <span>{t("nav.servers")}</span>
+            </li>
+          </ul>
         </div>
-        <p className="mb-0 fs-12" style={{ opacity: 0.5 }}>
-          © {new Date().getFullYear()} Defentrax
-        </p>
+        <p className="dx-auth-copy">© {new Date().getFullYear()} Defentrax</p>
       </aside>
 
       <main className="dx-auth-panel">
-        <div className="w-100" style={{ maxWidth: 380 }}>
-          <div className="d-flex justify-content-end mb-3">
+        <div className="dx-auth-card">
+          <div className="d-flex justify-content-between align-items-center mb-4">
+            <div className="dx-auth-mobile-brand d-lg-none">
+              <Image src="/defentrax-logo.png" alt="" width={28} height={28} />
+              <span>DEFENTRAX</span>
+            </div>
             <LanguageSelect />
           </div>
           <h2 className="h4 mb-1">{challenge ? t("login.confirm") : t("login.signIn")}</h2>
@@ -87,7 +102,7 @@ export default function LoginPage() {
             <input
               id="email"
               name="email"
-              className="form-control mb-3"
+              className="form-control form-control-lg mb-3"
               placeholder="name@company"
               type="email"
               required
@@ -99,7 +114,7 @@ export default function LoginPage() {
             <label className="form-label" htmlFor="password-input">
               {t("login.password")}
             </label>
-            <div className="input-group mb-3">
+            <div className="input-group input-group-lg mb-3">
               <input
                 name="password"
                 type={passwordShow ? "text" : "password"}
@@ -123,7 +138,7 @@ export default function LoginPage() {
                 </label>
                 <input
                   id="totp"
-                  className="form-control mb-3"
+                  className="form-control form-control-lg mb-3"
                   inputMode="numeric"
                   autoComplete="one-time-code"
                   required
@@ -133,7 +148,7 @@ export default function LoginPage() {
                 />
               </>
             ) : null}
-            <button className="btn btn-primary w-100" type="submit" disabled={submitting}>
+            <button className="btn btn-primary btn-lg w-100" type="submit" disabled={submitting}>
               {submitting ? t("login.working") : challenge ? t("login.verify") : t("login.submit")}
             </button>
             {challenge ? (

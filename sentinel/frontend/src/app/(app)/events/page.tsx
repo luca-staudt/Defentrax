@@ -214,6 +214,7 @@ export default function EventsPage() {
                     <th>{t("common.source")}</th>
                     <th>{t("common.host")}</th>
                     <th>{t("common.received")}</th>
+                    <th className="text-end">{t("common.open")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -230,6 +231,12 @@ export default function EventsPage() {
                       <td className="text-muted">{event.source || t("common.unknown")}</td>
                       <td className="text-muted">{event.host || "—"}</td>
                       <td className="text-muted text-nowrap">{formatAlertTimeShort(event.received_at)}</td>
+                      <td className="text-end">
+                        <button type="button" className="btn btn-soft-primary btn-sm" onClick={() => setSelectedId(event.id)} aria-label={t("common.open")}>
+                          <i className="ri-eye-line align-middle me-1"></i>
+                          {t("common.open")}
+                        </button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
