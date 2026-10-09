@@ -12,6 +12,7 @@ import (
 	dockercol "github.com/luca-staudt/Defentrax/sentinel/agent/internal/collector/docker"
 	"github.com/luca-staudt/Defentrax/sentinel/agent/internal/config"
 	"github.com/luca-staudt/Defentrax/sentinel/agent/internal/credentials"
+	"github.com/luca-staudt/Defentrax/sentinel/agent/internal/intervention"
 	agentlog "github.com/luca-staudt/Defentrax/sentinel/agent/internal/logging"
 	"github.com/luca-staudt/Defentrax/sentinel/pkg/event"
 )
@@ -74,15 +75,53 @@ func main() {
 
 	heartbeatTicker := time.NewTicker(cfg.HeartbeatEvery)
 	collectTicker := time.NewTicker(cfg.CollectEvery)
+	interventionTicker := time.NewTicker(cfg.InterventionEvery)
 	defer heartbeatTicker.Stop()
 	defer collectTicker.Stop()
+	defer interventionTicker.Stop()
+
+	var lastCaps intervention.Capabilities
 
 	sendHeartbeat := func() {
-		if err := client.Heartbeat(cfg.AgentVersion); err != nil {
+		hb, err := client.Heartbeat(cfg.AgentVersion)
+		if err != nil {
 			log.Warn("heartbeat failed", "err", err)
 			return
 		}
-		log.Debug("heartbeat ok")
+		if hb.Intervention != nil {
+			lastCaps = intervention.Capabilities{
+				Enabled:        hb.Intervention.Enabled,
+				Mode:           hb.Intervention.Mode,
+				CanPollActions: hb.Intervention.CanPollActions,
+				BlockIP:        hb.Intervention.Capabilities["block_ip"],
+				KillProcess:    hb.Intervention.Capabilities["kill_process"],
+				FirewallRule:   hb.Intervention.Capabilities["firewall_rule"],
+				ProtectedCIDRs: hb.Intervention.ProtectedCIDRs,
+			}
+		}
+		log.Debug("heartbeat ok", "intervention_mode", lastCaps.Mode, "intervention_enabled", lastCaps.Enabled)
+	}
+	pollInterventions := func() {
+		if !lastCaps.CanPollActions {
+			return
+		}
+		actions, err := client.ListPendingInterventions()
+		if err != nil {
+			log.Warn("poll interventions failed", "err", err)
+			return
+		}
+		for _, a := range actions {
+			res := intervention.Execute(ctx, lastCaps, intervention.Action{
+				ID:         a.ID,
+				ActionType: a.ActionType,
+				Payload:    a.Payload,
+			}, cfg.InterventionDryRun)
+			if err := client.ReportInterventionResult(a.ID, res.Success, res.Result, res.Error); err != nil {
+				log.Warn("report intervention result failed", "err", err, "action_id", a.ID)
+				continue
+			}
+			log.Info("intervention processed", "action_id", a.ID, "type", a.ActionType, "success", res.Success, "dry_run", cfg.InterventionDryRun)
+		}
 	}
 	ingest := func(events []event.CanonicalEvent, source string) {
 		if len(events) == 0 {
@@ -103,6 +142,8 @@ func main() {
 			return
 		case <-heartbeatTicker.C:
 			sendHeartbeat()
+		case <-interventionTicker.C:
+			pollInterventions()
 		case <-collectTicker.C:
 			events, off, err := collector.CollectTail(fileOffset)
 			if err != nil {

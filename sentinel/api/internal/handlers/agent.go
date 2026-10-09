@@ -138,5 +138,9 @@ func (h *AgentHandler) Heartbeat(w http.ResponseWriter, r *http.Request) {
 		internalError(w, r)
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"status": "ok", "agent_id": a.ID})
+	resp := map[string]any{"status": "ok", "agent_id": a.ID, "server_id": a.ServerID}
+	if eff, err := store.ResolveInterventionSettings(r.Context(), h.Pool, a.ServerID); err == nil {
+		resp["intervention"] = AgentInterventionCapabilities(eff.Settings, eff.Source)
+	}
+	writeJSON(w, http.StatusOK, resp)
 }

@@ -14,7 +14,8 @@ info:
     **Page permissions:** panel routes require a `pages:*` key in addition to the
     data permission named on each operation. `pages:dashboard`, `pages:alerts`,
     `pages:alert_detail`, `pages:events`, `pages:servers`, `pages:server_detail`,
-    `pages:rules`, `pages:notifications`, `pages:team`, `pages:roles`, `pages:audit`.
+    `pages:rules`, `pages:notifications`, `pages:team`, `pages:roles`, `pages:audit`,
+    `pages:interventions`, `pages:ai`.
     `SUPER_ADMIN` and `ADMIN` bypass these checks. Plugins and API keys have no page key.
 
     Interactive UI: `GET /api/v1/docs` (Swagger UI). Raw spec: `GET /api/v1/openapi.yaml`.
@@ -53,6 +54,10 @@ tags:
     description: Audit log list/detail (`audit_logs:read`)
   - name: Roles
     description: Role and permission management (`roles:read` / `roles:write`)
+  - name: Intervention
+    description: Opt-in host intervention policy and action review (`intervention:*`, `pages:interventions`)
+  - name: AI
+    description: Optional OpenAI-compatible analysis (`ai:*`, `pages:ai`)
 
 paths:
   /healthz:
@@ -1032,6 +1037,9 @@ paths:
       tags: [Agents]
       operationId: agentHeartbeat
       summary: Agent heartbeat
+      description: |
+        Also returns the effective intervention policy for the agent's server so
+        agents learn allowed capabilities without a separate config pull.
       security:
         - BearerAgentToken: []
       requestBody:
@@ -1056,6 +1064,12 @@ paths:
                   agent_id:
                     type: string
                     format: uuid
+                  server_id:
+                    type: string
+                    format: uuid
+                  intervention:
+                    type: object
+                    description: Effective intervention capabilities for this agent
         "401":
           $ref: "#/components/responses/Error"
 
@@ -2214,6 +2228,372 @@ paths:
       responses:
         "200":
           description: Deliveries
+        "404":
+          $ref: "#/components/responses/Error"
+
+  /api/v1/agent/interventions/pending:
+    get:
+      tags: [Agents, Intervention]
+      operationId: agentListPendingInterventions
+      summary: Poll queued intervention actions for this agent
+      security:
+        - BearerAgentToken: []
+      responses:
+        "200":
+          description: Pending/queued actions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  actions:
+                    type: array
+                    items:
+                      type: object
+        "401":
+          $ref: "#/components/responses/Error"
+
+  /api/v1/agent/interventions/{id}/result:
+    post:
+      tags: [Agents, Intervention]
+      operationId: agentReportInterventionResult
+      summary: Report intervention action outcome
+      security:
+        - BearerAgentToken: []
+      parameters:
+        - $ref: "#/components/parameters/PathUUID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [success]
+              properties:
+                success:
+                  type: boolean
+                result:
+                  type: object
+                error:
+                  type: string
+      responses:
+        "200":
+          description: Updated action
+        "401":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+
+  /api/v1/intervention/settings:
+    get:
+      tags: [Intervention]
+      operationId: getInterventionSettings
+      summary: Get global intervention policy
+      description: "Requires `intervention:read` and `pages:interventions`. Default is disabled observe-only."
+      security:
+        - SessionCookie: []
+        - BearerApiKey: []
+      responses:
+        "200":
+          description: Settings
+    put:
+      tags: [Intervention]
+      operationId: putInterventionSettings
+      summary: Update global intervention policy
+      description: "Requires `intervention:write` and `pages:interventions`. Modes: observe | suggest | act."
+      security:
+        - SessionCookie: []
+        - BearerApiKey: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                enabled:
+                  type: boolean
+                mode:
+                  type: string
+                  enum: [observe, suggest, act]
+                allow_block_ip:
+                  type: boolean
+                allow_kill_process:
+                  type: boolean
+                allow_firewall_rule:
+                  type: boolean
+                protected_cidrs:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        "200":
+          description: Updated settings
+
+  /api/v1/intervention/actions:
+    get:
+      tags: [Intervention]
+      operationId: listInterventionActions
+      summary: List intervention actions
+      security:
+        - SessionCookie: []
+        - BearerApiKey: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: server_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: limit
+          in: query
+          schema:
+            type: integer
+        - name: offset
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Actions
+    post:
+      tags: [Intervention]
+      operationId: createInterventionAction
+      summary: Request a host intervention
+      description: |
+        Requires `intervention:write` and `pages:interventions`.
+        In `suggest` mode the action stays `pending` until approve.
+        In `act` mode it is queued for the agent immediately.
+      security:
+        - SessionCookie: []
+        - BearerApiKey: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [server_id, action_type, payload]
+              properties:
+                server_id:
+                  type: string
+                  format: uuid
+                agent_id:
+                  type: string
+                  format: uuid
+                alert_id:
+                  type: string
+                  format: uuid
+                event_id:
+                  type: string
+                  format: uuid
+                action_type:
+                  type: string
+                  enum: [block_ip, kill_process, firewall_rule]
+                payload:
+                  type: object
+                reason:
+                  type: string
+      responses:
+        "201":
+          description: Created
+        "400":
+          $ref: "#/components/responses/Error"
+
+  /api/v1/intervention/actions/{id}/approve:
+    post:
+      tags: [Intervention]
+      operationId: approveInterventionAction
+      summary: Approve a pending suggested action
+      description: "Requires `intervention:approve` and `pages:interventions`."
+      security:
+        - SessionCookie: []
+        - BearerApiKey: []
+      parameters:
+        - $ref: "#/components/parameters/PathUUID"
+      responses:
+        "200":
+          description: Queued for agent
+        "404":
+          $ref: "#/components/responses/Error"
+
+  /api/v1/intervention/actions/{id}/deny:
+    post:
+      tags: [Intervention]
+      operationId: denyInterventionAction
+      summary: Deny a pending suggested action
+      description: "Requires `intervention:approve` and `pages:interventions`."
+      security:
+        - SessionCookie: []
+        - BearerApiKey: []
+      parameters:
+        - $ref: "#/components/parameters/PathUUID"
+      responses:
+        "200":
+          description: Denied
+        "404":
+          $ref: "#/components/responses/Error"
+
+  /api/v1/servers/{id}/intervention:
+    get:
+      tags: [Intervention, Servers]
+      operationId: getServerInterventionSettings
+      summary: Effective intervention policy for a server
+      security:
+        - SessionCookie: []
+        - BearerApiKey: []
+      parameters:
+        - $ref: "#/components/parameters/PathUUID"
+      responses:
+        "200":
+          description: Effective settings (source global|server)
+    put:
+      tags: [Intervention, Servers]
+      operationId: putServerInterventionSettings
+      summary: Set per-server intervention override
+      security:
+        - SessionCookie: []
+        - BearerApiKey: []
+      parameters:
+        - $ref: "#/components/parameters/PathUUID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          description: Updated
+    delete:
+      tags: [Intervention, Servers]
+      operationId: deleteServerInterventionSettings
+      summary: Remove per-server override (fall back to global)
+      security:
+        - SessionCookie: []
+        - BearerApiKey: []
+      parameters:
+        - $ref: "#/components/parameters/PathUUID"
+      responses:
+        "200":
+          description: Removed
+
+  /api/v1/ai/settings:
+    get:
+      tags: [AI]
+      operationId: getAISettings
+      summary: Get AI analysis settings
+      description: "Requires `ai:read` and `pages:ai`. Never returns the raw API key (`has_api_key` only)."
+      security:
+        - SessionCookie: []
+        - BearerApiKey: []
+      responses:
+        "200":
+          description: Settings
+    put:
+      tags: [AI]
+      operationId: putAISettings
+      summary: Update AI analysis settings
+      description: "Requires `ai:write` and `pages:ai`. API key is encrypted at rest."
+      security:
+        - SessionCookie: []
+        - BearerApiKey: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                enabled:
+                  type: boolean
+                provider:
+                  type: string
+                  enum: [openai, openai_compatible]
+                base_url:
+                  type: string
+                model:
+                  type: string
+                api_key:
+                  type: string
+                  description: Write-only; omit to keep existing key; empty string clears
+      responses:
+        "200":
+          description: Updated settings
+
+  /api/v1/ai/analyze:
+    post:
+      tags: [AI]
+      operationId: analyzeWithAI
+      summary: Run a possibility-oriented AI assessment
+      description: |
+        Requires `ai:write` and `pages:ai`. Server-side only — the browser never receives the API key.
+        Assessments are possibility-oriented and never claim a confirmed attack.
+        Rate limited per user.
+      security:
+        - SessionCookie: []
+        - BearerApiKey: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                alert_id:
+                  type: string
+                  format: uuid
+                event_id:
+                  type: string
+                  format: uuid
+      responses:
+        "200":
+          description: Assessment
+        "400":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/Error"
+        "502":
+          $ref: "#/components/responses/Error"
+
+  /api/v1/ai/analyses:
+    get:
+      tags: [AI]
+      operationId: listAIAnalyses
+      summary: List recent AI analyses
+      security:
+        - SessionCookie: []
+        - BearerApiKey: []
+      parameters:
+        - name: alert_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Analyses
+
+  /api/v1/ai/analyses/{id}:
+    get:
+      tags: [AI]
+      operationId: getAIAnalysis
+      summary: Get one AI analysis
+      security:
+        - SessionCookie: []
+        - BearerApiKey: []
+      parameters:
+        - $ref: "#/components/parameters/PathUUID"
+      responses:
+        "200":
+          description: Analysis
         "404":
           $ref: "#/components/responses/Error"
 

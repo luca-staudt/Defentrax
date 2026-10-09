@@ -60,9 +60,52 @@ func (c *Client) Enroll(enrollmentToken, name, version string) (enrollResponse, 
 	return postJSON[enrollResponse](c, "/api/v1/agent/enroll", body, "")
 }
 
-func (c *Client) Heartbeat(version string) error {
+// HeartbeatResponse includes optional intervention policy from the control plane.
+type HeartbeatResponse struct {
+	Status       string              `json:"status"`
+	AgentID      uuid.UUID           `json:"agent_id"`
+	ServerID     uuid.UUID           `json:"server_id"`
+	Intervention *InterventionPolicy `json:"intervention,omitempty"`
+}
+
+type InterventionPolicy struct {
+	Enabled        bool            `json:"enabled"`
+	Mode           string          `json:"mode"`
+	Source         string          `json:"source"`
+	Capabilities   map[string]bool `json:"capabilities"`
+	CanPollActions bool            `json:"can_poll_actions"`
+	ProtectedCIDRs []string        `json:"protected_cidrs"`
+}
+
+type InterventionAction struct {
+	ID         uuid.UUID       `json:"id"`
+	ActionType string          `json:"action_type"`
+	Payload    json.RawMessage `json:"payload"`
+	Status     string          `json:"status"`
+}
+
+func (c *Client) Heartbeat(version string) (HeartbeatResponse, error) {
 	body, _ := json.Marshal(map[string]string{"agent_version": version})
-	_, err := postJSON[map[string]any](c, "/api/v1/agent/heartbeat", body, c.token)
+	return postJSON[HeartbeatResponse](c, "/api/v1/agent/heartbeat", body, c.token)
+}
+
+func (c *Client) ListPendingInterventions() ([]InterventionAction, error) {
+	resp, err := getJSON[struct {
+		Actions []InterventionAction `json:"actions"`
+	}](c, "/api/v1/agent/interventions/pending", c.token)
+	if err != nil {
+		return nil, err
+	}
+	return resp.Actions, nil
+}
+
+func (c *Client) ReportInterventionResult(id uuid.UUID, success bool, result map[string]any, errMsg string) error {
+	body, _ := json.Marshal(map[string]any{
+		"success": success,
+		"result":  result,
+		"error":   errMsg,
+	})
+	_, err := postJSON[map[string]any](c, "/api/v1/agent/interventions/"+id.String()+"/result", body, c.token)
 	return err
 }
 
@@ -87,12 +130,26 @@ func (c *Client) ingestBatch(events []event.CanonicalEvent) error {
 }
 
 func postJSON[T any](c *Client, path string, body []byte, bearer string) (T, error) {
+	return doJSON[T](c, http.MethodPost, path, body, bearer)
+}
+
+func getJSON[T any](c *Client, path string, bearer string) (T, error) {
+	return doJSON[T](c, http.MethodGet, path, nil, bearer)
+}
+
+func doJSON[T any](c *Client, method, path string, body []byte, bearer string) (T, error) {
 	var zero T
-	req, err := http.NewRequest(http.MethodPost, c.baseURL+path, bytes.NewReader(body))
+	var reader io.Reader
+	if body != nil {
+		reader = bytes.NewReader(body)
+	}
+	req, err := http.NewRequest(method, c.baseURL+path, reader)
 	if err != nil {
 		return zero, err
 	}
-	req.Header.Set("Content-Type", "application/json")
+	if body != nil {
+		req.Header.Set("Content-Type", "application/json")
+	}
 	if bearer != "" {
 		req.Header.Set("Authorization", "Bearer "+bearer)
 	}

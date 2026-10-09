@@ -13,18 +13,20 @@ import (
 
 // Config holds agent runtime settings (env + optional file overrides via SENTINEL_AGENT_*).
 type Config struct {
-	APIBaseURL      string
-	TLSSkipVerify   bool
-	CredentialPath  string
-	EnrollmentToken string
-	AgentName       string
-	AgentVersion    string
-	HeartbeatEvery  time.Duration
-	CollectEvery    time.Duration
-	AuthLogPath     string
-	UseJournald     bool
-	DockerEnabled   bool
-	DockerSocket    string
+	APIBaseURL         string
+	TLSSkipVerify      bool
+	CredentialPath     string
+	EnrollmentToken    string
+	AgentName          string
+	AgentVersion       string
+	HeartbeatEvery     time.Duration
+	CollectEvery       time.Duration
+	AuthLogPath        string
+	UseJournald        bool
+	DockerEnabled      bool
+	DockerSocket       string
+	InterventionDryRun bool
+	InterventionEvery  time.Duration
 }
 
 // Default on-disk path for agent enrollment credentials (not a secret value).
@@ -64,6 +66,10 @@ func Load() (Config, error) {
 	}
 	cfg.HeartbeatEvery = durationEnv("SENTINEL_HEARTBEAT_INTERVAL", 30*time.Second)
 	cfg.CollectEvery = durationEnv("SENTINEL_COLLECT_INTERVAL", 60*time.Second)
+	cfg.InterventionEvery = durationEnv("SENTINEL_INTERVENTION_INTERVAL", 20*time.Second)
+	if v := strings.TrimSpace(os.Getenv("SENTINEL_INTERVENTION_DRY_RUN")); v == "1" || strings.EqualFold(v, "true") {
+		cfg.InterventionDryRun = true
+	}
 
 	if cfg.APIBaseURL == "" {
 		return cfg, errors.New("SENTINEL_API_URL is required")

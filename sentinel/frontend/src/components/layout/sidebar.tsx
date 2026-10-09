@@ -19,6 +19,8 @@ const NAV_ICONS: Record<string, string> = {
   team: "ri-team-line",
   roles: "ri-key-2-line",
   audit: "ri-file-list-3-line",
+  interventions: "ri-shield-flash-line",
+  ai: "ri-sparkling-line",
 };
 
 type NavSection = {
@@ -30,7 +32,7 @@ type NavSection = {
 const NAV_SECTIONS: NavSection[] = [
   { key: "ops", labelKey: "nav.section.ops", actions: ["dashboard", "alerts", "events"] },
   { key: "fleet", labelKey: "nav.section.fleet", actions: ["servers", "rules"] },
-  { key: "admin", labelKey: "nav.section.admin", actions: ["notifications", "team", "roles", "audit"] },
+  { key: "admin", labelKey: "nav.section.admin", actions: ["notifications", "interventions", "ai", "team", "roles", "audit"] },
 ];
 
 export function Sidebar() {

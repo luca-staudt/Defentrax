@@ -81,6 +81,15 @@ func NewWithOptions(log *slog.Logger, cfg config.Config, pool *pgxpool.Pool, log
 	}
 	pluginsH := &handlers.PluginsHandler{Pool: pool, Runtime: opts.Plugins}
 	auditH := &handlers.AuditHandler{Pool: pool}
+	intervH := &handlers.InterventionHandler{Pool: pool}
+	aiH := &handlers.AIHandler{
+		Pool:       pool,
+		SecretsKey: opts.SecretsKey,
+		Limiter:    ratelimit.NewMemory(10, time.Minute),
+	}
+	if len(aiH.SecretsKey) == 0 {
+		aiH.SecretsKey = cfg.SecretsEncryptionKey
+	}
 	if opts.Detection != nil && opts.Detection.Runner != nil {
 		runner := opts.Detection.Runner
 		agentH.OnDetect = func(eventID, serverID, agentID uuid.UUID, occurredAt time.Time, source, category, severity, host, message string, fields []byte) {
@@ -246,6 +255,16 @@ func NewWithOptions(log *slog.Logger, cfg config.Config, pool *pgxpool.Pool, log
 	apiMux.HandleFunc("POST /api/v1/agent/enroll", agentH.Enroll)
 	apiMux.Handle("POST /api/v1/agent/heartbeat", agentAuth(http.HandlerFunc(agentH.Heartbeat)))
 	apiMux.Handle("POST /api/v1/agent/events", agentAuth(http.HandlerFunc(agentH.IngestEvents)))
+	apiMux.Handle("GET /api/v1/agent/interventions/pending", agentAuth(http.HandlerFunc(intervH.AgentListPending)))
+	apiMux.Handle("POST /api/v1/agent/interventions/{id}/result", agentAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		id, err := uuid.Parse(r.PathValue("id"))
+		if err != nil {
+			requestID := middleware.RequestIDFromContext(r.Context())
+			apperrors.WriteJSON(w, http.StatusBadRequest, "invalid_id", "invalid action id", requestID)
+			return
+		}
+		intervH.AgentReportResult(w, r, id)
+	})))
 
 	apiMux.Handle("GET /api/v1/dashboard/stats", protectAll(pool, cfg, [][2]string{{"alerts", "read"}, {"pages", "dashboard"}}, http.HandlerFunc(dashboardH.Stats)))
 	apiMux.Handle("GET /api/v1/events", protectAll(pool, cfg, [][2]string{{"events", "read"}, {"pages", "events"}}, http.HandlerFunc(eventsH.List)))
@@ -476,6 +495,70 @@ func NewWithOptions(log *slog.Logger, cfg config.Config, pool *pgxpool.Pool, log
 			return
 		}
 		auditH.Get(w, r, id)
+	})))
+
+	apiMux.Handle("GET /api/v1/intervention/settings", protectAll(pool, cfg, [][2]string{{"intervention", "read"}, {"pages", "interventions"}}, http.HandlerFunc(intervH.GetSettings)))
+	apiMux.Handle("PUT /api/v1/intervention/settings", protectAll(pool, cfg, [][2]string{{"intervention", "write"}, {"pages", "interventions"}}, http.HandlerFunc(intervH.PutSettings)))
+	apiMux.Handle("GET /api/v1/intervention/actions", protectAll(pool, cfg, [][2]string{{"intervention", "read"}, {"pages", "interventions"}}, http.HandlerFunc(intervH.ListActions)))
+	apiMux.Handle("POST /api/v1/intervention/actions", protectAll(pool, cfg, [][2]string{{"intervention", "write"}, {"pages", "interventions"}}, http.HandlerFunc(intervH.CreateAction)))
+	apiMux.Handle("POST /api/v1/intervention/actions/{id}/approve", protectAll(pool, cfg, [][2]string{{"intervention", "approve"}, {"pages", "interventions"}}, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		id, err := uuid.Parse(r.PathValue("id"))
+		if err != nil {
+			requestID := middleware.RequestIDFromContext(r.Context())
+			apperrors.WriteJSON(w, http.StatusBadRequest, "invalid_id", "invalid action id", requestID)
+			return
+		}
+		intervH.ApproveAction(w, r, id)
+	})))
+	apiMux.Handle("POST /api/v1/intervention/actions/{id}/deny", protectAll(pool, cfg, [][2]string{{"intervention", "approve"}, {"pages", "interventions"}}, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		id, err := uuid.Parse(r.PathValue("id"))
+		if err != nil {
+			requestID := middleware.RequestIDFromContext(r.Context())
+			apperrors.WriteJSON(w, http.StatusBadRequest, "invalid_id", "invalid action id", requestID)
+			return
+		}
+		intervH.DenyAction(w, r, id)
+	})))
+	apiMux.Handle("GET /api/v1/servers/{id}/intervention", protectAll(pool, cfg, [][2]string{{"intervention", "read"}, {"pages", "server_detail"}}, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		id, err := uuid.Parse(r.PathValue("id"))
+		if err != nil {
+			requestID := middleware.RequestIDFromContext(r.Context())
+			apperrors.WriteJSON(w, http.StatusBadRequest, "invalid_id", "invalid server id", requestID)
+			return
+		}
+		intervH.GetServerSettings(w, r, id)
+	})))
+	apiMux.Handle("PUT /api/v1/servers/{id}/intervention", protectAll(pool, cfg, [][2]string{{"intervention", "write"}, {"pages", "server_detail"}}, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		id, err := uuid.Parse(r.PathValue("id"))
+		if err != nil {
+			requestID := middleware.RequestIDFromContext(r.Context())
+			apperrors.WriteJSON(w, http.StatusBadRequest, "invalid_id", "invalid server id", requestID)
+			return
+		}
+		intervH.PutServerSettings(w, r, id)
+	})))
+	apiMux.Handle("DELETE /api/v1/servers/{id}/intervention", protectAll(pool, cfg, [][2]string{{"intervention", "write"}, {"pages", "server_detail"}}, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		id, err := uuid.Parse(r.PathValue("id"))
+		if err != nil {
+			requestID := middleware.RequestIDFromContext(r.Context())
+			apperrors.WriteJSON(w, http.StatusBadRequest, "invalid_id", "invalid server id", requestID)
+			return
+		}
+		intervH.DeleteServerSettings(w, r, id)
+	})))
+
+	apiMux.Handle("GET /api/v1/ai/settings", protectAll(pool, cfg, [][2]string{{"ai", "read"}, {"pages", "ai"}}, http.HandlerFunc(aiH.GetSettings)))
+	apiMux.Handle("PUT /api/v1/ai/settings", protectAll(pool, cfg, [][2]string{{"ai", "write"}, {"pages", "ai"}}, http.HandlerFunc(aiH.PutSettings)))
+	apiMux.Handle("POST /api/v1/ai/analyze", protectAll(pool, cfg, [][2]string{{"ai", "write"}, {"pages", "ai"}}, http.HandlerFunc(aiH.Analyze)))
+	apiMux.Handle("GET /api/v1/ai/analyses", protectAll(pool, cfg, [][2]string{{"ai", "read"}, {"pages", "ai"}}, http.HandlerFunc(aiH.ListAnalyses)))
+	apiMux.Handle("GET /api/v1/ai/analyses/{id}", protectAll(pool, cfg, [][2]string{{"ai", "read"}, {"pages", "ai"}}, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		id, err := uuid.Parse(r.PathValue("id"))
+		if err != nil {
+			requestID := middleware.RequestIDFromContext(r.Context())
+			apperrors.WriteJSON(w, http.StatusBadRequest, "invalid_id", "invalid analysis id", requestID)
+			return
+		}
+		aiH.GetAnalysis(w, r, id)
 	})))
 
 	apiMux.Handle("GET /api/v1/plugins", protectPerm(pool, cfg, "plugins", "read", http.HandlerFunc(pluginsH.List)))

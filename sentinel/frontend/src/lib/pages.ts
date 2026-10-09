@@ -27,6 +27,8 @@ export const PANEL_PAGES: PanelPage[] = [
   { action: "team", label: "Team", href: "/users", nav: true },
   { action: "roles", label: "Access", href: "/roles", nav: true },
   { action: "audit", label: "Audit logs", href: "/audit", nav: true },
+  { action: "interventions", label: "Interventions", href: "/interventions", nav: true },
+  { action: "ai", label: "AI analysis", href: "/ai", nav: true },
 ];
 
 function byAction(action: string): PanelPage {
@@ -61,6 +63,8 @@ const PAGE_READ: Record<string, readonly [string, string]> = {
   team: ["users", "read"],
   roles: ["roles", "read"],
   audit: ["audit_logs", "read"],
+  interventions: ["intervention", "read"],
+  ai: ["ai", "read"],
 };
 
 export function canSeePage(user: PageUser, action: string): boolean {

@@ -76,6 +76,20 @@ export const PAGE_GRANTS: PageGrant[] = [
     page: "audit",
     requires: ["audit_logs", "read"],
   },
+  {
+    id: "interventions",
+    label: "Interventions",
+    hint: "Opt-in host block / kill / firewall actions.",
+    page: "interventions",
+    requires: ["intervention", "read"],
+  },
+  {
+    id: "ai",
+    label: "AI analysis",
+    hint: "Optional OpenAI-compatible assessments.",
+    page: "ai",
+    requires: ["ai", "read"],
+  },
 ];
 
 const RESOURCE_LABELS: Record<string, string> = {
@@ -88,11 +102,14 @@ const RESOURCE_LABELS: Record<string, string> = {
   roles: "Roles",
   audit_logs: "Audit log",
   api_keys: "API keys",
+  intervention: "Interventions",
+  ai: "AI analysis",
 };
 
 const ACTION_LABELS: Record<string, string> = {
   read: "View",
   write: "Change",
+  approve: "Approve",
 };
 
 export function permKey(resource: string, action: string) {

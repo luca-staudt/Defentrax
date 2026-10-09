@@ -32,9 +32,12 @@ export default function AlertDetailPage() {
   const { t } = useI18n();
   const canWrite = hasPermission(user, "alerts", "write");
   const canServer = canSeePage(user, "server_detail");
+  const canAI = canSeePage(user, "ai") && hasPermission(user, "ai", "write");
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
+  const [analyzing, setAnalyzing] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [aiSummary, setAiSummary] = useState<string | null>(null);
   const detailQuery = useQuery(
     id ? `alert:${id}` : null,
     () => apiFetch<{ alert: Alert; timeline: TimelineEntry[] }>(`/alerts/${id}`),
@@ -71,6 +74,25 @@ export default function AlertDetailPage() {
       );
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function runAI() {
+    if (!canAI || analyzing || !id) return;
+    setAnalyzing(true);
+    setActionError(null);
+    setAiSummary(null);
+    try {
+      const res = await apiFetch<{ assessment?: { summary?: string; disclaimer?: string } }>("/ai/analyze", {
+        method: "POST",
+        body: JSON.stringify({ alert_id: id }),
+      });
+      const summary = res.assessment?.summary || t("ai.emptyAssessment");
+      setAiSummary(summary);
+    } catch (e) {
+      setActionError(e instanceof ApiRequestError ? e.message : t("ai.analyzeFailed"));
+    } finally {
+      setAnalyzing(false);
     }
   }
 
@@ -235,6 +257,23 @@ export default function AlertDetailPage() {
               ) : null}
             </div>
           </div>
+
+          {canAI ? (
+            <div className="card">
+              <div className="card-header d-flex justify-content-between align-items-center">
+                <h4 className="card-title mb-0">{t("nav.ai")}</h4>
+                <button type="button" className="btn btn-soft-primary btn-sm" disabled={analyzing} onClick={() => void runAI()}>
+                  {analyzing ? t("ai.working") : t("alert.analyzeAI")}
+                </button>
+              </div>
+              <div className="card-body">
+                {aiSummary ? <p className="mb-2">{aiSummary}</p> : <p className="text-muted mb-2">{t("ai.providerHint")}</p>}
+                <Link href="/ai" className="btn btn-link px-0">
+                  {t("nav.ai")}
+                </Link>
+              </div>
+            </div>
+          ) : null}
         </div>
       </div>
     </>

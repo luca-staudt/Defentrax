@@ -172,3 +172,57 @@ export type Rule = {
 export type ApiError = {
   error?: { code?: string; message?: string };
 };
+
+export type InterventionSettings = {
+  id?: string;
+  scope: string;
+  server_id?: string;
+  enabled: boolean;
+  mode: "observe" | "suggest" | "act" | string;
+  allow_block_ip: boolean;
+  allow_kill_process: boolean;
+  allow_firewall_rule: boolean;
+  protected_cidrs: string[];
+  source?: string;
+  updated_at?: string;
+};
+
+export type InterventionAction = {
+  id: string;
+  server_id: string;
+  agent_id?: string;
+  alert_id?: string;
+  event_id?: string;
+  action_type: string;
+  payload: Record<string, unknown>;
+  status: string;
+  mode_at_request: string;
+  reason?: string;
+  requested_by?: string;
+  decided_by?: string;
+  result?: Record<string, unknown>;
+  error_message?: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type AISettings = {
+  enabled: boolean;
+  provider: string;
+  base_url: string;
+  model: string;
+  has_api_key: boolean;
+  updated_at?: string;
+};
+
+export type AIAnalysis = {
+  id: string;
+  alert_id?: string;
+  event_id?: string;
+  status: string;
+  model: string;
+  assessment?: Record<string, unknown>;
+  error_message?: string;
+  created_by?: string;
+  created_at: string;
+};
