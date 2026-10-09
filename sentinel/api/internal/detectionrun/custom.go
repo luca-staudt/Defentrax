@@ -164,7 +164,7 @@ func normalizeRule(rule detection.Rule, requireCustomPrefix bool) (detection.Rul
 	rule.Severity = strings.ToLower(strings.TrimSpace(rule.Severity))
 	rule.ID = strings.TrimSpace(rule.ID)
 	if requireCustomPrefix && !strings.HasPrefix(rule.ID, "custom.") {
-		return detection.Rule{}, fmt.Errorf("custom rule id must start with custom.")
+		return detection.Rule{}, fmt.Errorf("custom rule id must start with custom")
 	}
 	if rule.Version < 1 {
 		rule.Version = 1

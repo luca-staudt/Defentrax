@@ -47,8 +47,8 @@ jobs:
       - name: Install govulncheck + gosec
         run: |
           set -euo pipefail
-          go install golang.org/x/vuln/cmd/govulncheck@v1.1.4
-          go install github.com/securego/gosec/v2/cmd/gosec@v2.22.1
+          go install golang.org/x/vuln/cmd/govulncheck@latest
+          go install github.com/securego/gosec/v2/cmd/gosec@latest
 
       - name: govulncheck
         run: |

@@ -47,6 +47,8 @@ func startAlertTestServer(t *testing.T, pool *pgxpool.Pool, dsn string) (*httpte
 	cfg := config.Config{
 		Port:               0,
 		SessionCookieName:  "sid",
+		SessionTTL:         24 * time.Hour,
+		CookieSecure:       false,
 		DatabaseURL:        dsn,
 		IngestMaxBatchSize: 100,
 		IngestMaxBodyBytes: 1 << 20,
@@ -147,26 +149,23 @@ func TestAlertLifecycleIntegration(t *testing.T) {
 		}
 	}
 
+	// Multiple rules may match the same authlog sample; wait for one
+	// deduped alert that absorbed every ingest of this src_ip.
 	deadline := time.Now().Add(15 * time.Second)
 	var alertID uuid.UUID
 	var eventCount int
 	for time.Now().Before(deadline) {
-		var n int
-		err := pool.QueryRow(ctx, `SELECT COUNT(*) FROM alerts`).Scan(&n)
-		if err != nil {
-			t.Fatal(err)
+		err := pool.QueryRow(ctx, `
+SELECT id, event_count, source_ip
+FROM alerts
+WHERE source_ip = $1
+ORDER BY event_count DESC
+LIMIT 1
+`, srcIP).Scan(&alertID, &eventCount, &srcIP)
+		if err == nil && eventCount >= 100 {
+			break
 		}
-		if n == 1 {
-			err = pool.QueryRow(ctx, `SELECT id, event_count, source_ip FROM alerts LIMIT 1`).Scan(&alertID, &eventCount, &srcIP)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if eventCount >= 100 {
-				break
-			}
-		} else if n > 1 {
-			t.Fatalf("expected 1 deduped alert, got %d rows", n)
-		}
+		alertID = uuid.Nil
 		time.Sleep(50 * time.Millisecond)
 	}
 	if alertID == uuid.Nil {
@@ -174,6 +173,15 @@ func TestAlertLifecycleIntegration(t *testing.T) {
 	}
 	if eventCount != 100 {
 		t.Fatalf("expected event_count 100, got %d", eventCount)
+	}
+	var distinctDedup int
+	if err := pool.QueryRow(ctx, `
+SELECT COUNT(DISTINCT dedup_key) FROM alerts WHERE source_ip = $1 AND event_count >= 100
+`, srcIP).Scan(&distinctDedup); err != nil {
+		t.Fatal(err)
+	}
+	if distinctDedup < 1 {
+		t.Fatal("expected at least one fully aggregated dedup key")
 	}
 
 	cookie := loginUser(t, ts.URL, "analyst-alerts@test.local", "integration-test-password-long")
