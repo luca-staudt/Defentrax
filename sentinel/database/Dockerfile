@@ -2,7 +2,7 @@
 # Build context: repository root.
 # syntax=docker/dockerfile:1
 
-FROM golang:1.22-alpine AS builder
+FROM golang:1.27-alpine AS builder
 RUN apk add --no-cache ca-certificates git
 WORKDIR /src
 
@@ -17,7 +17,7 @@ WORKDIR /src/sentinel/database
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
     go build -trimpath -ldflags="-s -w" -o /out/migrate ./cmd/migrate
 
-FROM alpine:3.20 AS runtime
+FROM alpine:3.22 AS runtime
 RUN apk add --no-cache ca-certificates \
     && addgroup -g 65532 -S sentinel \
     && adduser -u 65532 -S -G sentinel -H -s /sbin/nologin sentinel

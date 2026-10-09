@@ -24,7 +24,7 @@ Bump all of the above together. Validate with:
 
 | Component | Compatible / tested baseline | Notes |
 |-----------|------------------------------|--------|
-| Go toolchain | **1.22.x** | Matches CI `setup-go` |
+| Go toolchain | **1.27.x** | Matches CI `setup-go` |
 | Node.js (frontend build) | **20.x** LTS (CI / local) | Next.js 15 app |
 | PostgreSQL | **16.x** | Compose / K8s / Helm defaults use 16 |
 | Redis | **7.x** | Cache / rate-limit / session helpers — not durable SoT |

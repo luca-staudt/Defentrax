@@ -1,13 +1,13 @@
 module github.com/luca-staudt/Defentrax/sentinel/detection
 
-go 1.22
+go 1.27
 
 replace github.com/luca-staudt/Defentrax/sentinel/pkg/event => ../pkg/event
 
 require (
 	github.com/google/uuid v1.6.0
 	github.com/luca-staudt/Defentrax/sentinel/pkg/event v0.0.0
-	github.com/redis/go-redis/v9 v9.7.0
+	github.com/redis/go-redis/v9 v9.7.3
 	gopkg.in/yaml.v3 v3.0.1
 )
 

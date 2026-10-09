@@ -2,7 +2,7 @@
 # Build context: repository root.
 # syntax=docker/dockerfile:1
 
-FROM golang:1.22-alpine AS builder
+FROM golang:1.27-alpine AS builder
 RUN apk add --no-cache ca-certificates git
 WORKDIR /src
 
@@ -26,7 +26,7 @@ RUN VER="${SENTINEL_VERSION:-$(tr -d '[:space:]' < /src/VERSION)}" && \
       -ldflags="-s -w -X github.com/luca-staudt/Defentrax/sentinel/pkg/version.buildVersion=${VER}" \
       -o /out/sentinel-agent ./cmd/sentinel-agent
 
-FROM alpine:3.20 AS runtime
+FROM alpine:3.22 AS runtime
 RUN apk add --no-cache ca-certificates tzdata \
     && addgroup -g 65532 -S sentinel \
     && adduser -u 65532 -S -G sentinel -H -s /sbin/nologin sentinel \

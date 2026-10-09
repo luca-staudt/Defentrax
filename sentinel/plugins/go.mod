@@ -1,6 +1,6 @@
 module github.com/luca-staudt/Defentrax/sentinel/plugins
 
-go 1.22
+go 1.27
 
 replace github.com/luca-staudt/Defentrax/sentinel/pkg/event => ../pkg/event
 

@@ -24,7 +24,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.22.x"
+          go-version: "1.27.x"
 
       - name: gofmt check (make fmt-check)
         run: make fmt-check
@@ -39,7 +39,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.22.x"
+          go-version: "1.27.x"
           cache-dependency-path: |
             sentinel/api/go.sum
             sentinel/agent/go.sum
@@ -82,7 +82,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.22.x"
+          go-version: "1.27.x"
           cache-dependency-path: |
             sentinel/api/go.sum
             sentinel/agent/go.sum
@@ -122,7 +122,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.22.x"
+          go-version: "1.27.x"
           cache-dependency-path: |
             sentinel/api/go.sum
             sentinel/agent/go.sum
@@ -153,7 +153,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.22.x"
+          go-version: "1.27.x"
           cache-dependency-path: |
             sentinel/api/go.sum
             sentinel/agent/go.sum

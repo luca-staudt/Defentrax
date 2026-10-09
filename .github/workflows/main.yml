@@ -20,7 +20,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
-          go-version: "1.22.x"
+          go-version: "1.27.x"
       - run: make fmt-check
 
   lint:
@@ -30,7 +30,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
-          go-version: "1.22.x"
+          go-version: "1.27.x"
           cache-dependency-path: |
             sentinel/api/go.sum
             sentinel/agent/go.sum
@@ -61,7 +61,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
-          go-version: "1.22.x"
+          go-version: "1.27.x"
           cache-dependency-path: |
             sentinel/api/go.sum
             sentinel/agent/go.sum
@@ -96,7 +96,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
-          go-version: "1.22.x"
+          go-version: "1.27.x"
           cache-dependency-path: |
             sentinel/api/go.sum
             sentinel/agent/go.sum
@@ -120,7 +120,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
-          go-version: "1.22.x"
+          go-version: "1.27.x"
           cache-dependency-path: |
             sentinel/api/go.sum
             sentinel/agent/go.sum
