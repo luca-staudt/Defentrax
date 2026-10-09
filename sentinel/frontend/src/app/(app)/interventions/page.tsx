@@ -11,6 +11,55 @@ import { useQuery } from "@/lib/panel/use-query";
 import { hasPermission } from "@/lib/permissions";
 import type { InterventionAction, InterventionSettings, Server } from "@/lib/types";
 
+const DEFAULT_SETTINGS: InterventionSettings = {
+  scope: "global",
+  enabled: false,
+  mode: "observe",
+  allow_block_ip: false,
+  allow_kill_process: false,
+  allow_firewall_rule: false,
+  protected_cidrs: [],
+};
+
+function normalizeSettings(raw: InterventionSettings | null | undefined): InterventionSettings {
+  if (!raw || typeof raw !== "object") return { ...DEFAULT_SETTINGS };
+  const cidrs = Array.isArray(raw.protected_cidrs)
+    ? raw.protected_cidrs.filter((c): c is string => typeof c === "string")
+    : [];
+  return {
+    ...DEFAULT_SETTINGS,
+    ...raw,
+    scope: typeof raw.scope === "string" && raw.scope ? raw.scope : "global",
+    enabled: Boolean(raw.enabled),
+    mode: typeof raw.mode === "string" && raw.mode ? raw.mode : "observe",
+    allow_block_ip: Boolean(raw.allow_block_ip),
+    allow_kill_process: Boolean(raw.allow_kill_process),
+    allow_firewall_rule: Boolean(raw.allow_firewall_rule),
+    protected_cidrs: cidrs,
+  };
+}
+
+function normalizeActions(raw: { actions?: InterventionAction[] | null } | null | undefined): InterventionAction[] {
+  const list = raw?.actions;
+  if (!Array.isArray(list)) return [];
+  return list.filter((a): a is InterventionAction => Boolean(a && typeof a === "object" && a.id));
+}
+
+function normalizeServers(raw: { servers?: Server[] | null } | Server[] | null | undefined): Server[] {
+  // Shared cache key "servers" stores { servers: Server[] } elsewhere; tolerate a bare array too.
+  const list = Array.isArray(raw) ? raw : raw?.servers;
+  if (!Array.isArray(list)) return [];
+  return list.filter((s): s is Server => Boolean(s && typeof s === "object" && s.id));
+}
+
+function payloadPreview(payload: unknown): string {
+  try {
+    return JSON.stringify(payload ?? {});
+  } catch {
+    return "{}";
+  }
+}
+
 export default function InterventionsPage() {
   const { user } = useAuth();
   const { t } = useI18n();
@@ -18,15 +67,17 @@ export default function InterventionsPage() {
   const canApprove = hasPermission(user, "intervention", "approve");
 
   const settingsQuery = useQuery("intervention-settings", () => apiFetch<InterventionSettings>("/intervention/settings"));
-  const actionsQuery = useQuery("intervention-actions", async () => {
-    const res = await apiFetch<{ actions: InterventionAction[]; total: number }>("/intervention/actions?limit=50");
-    return res;
-  }, { refreshMs: 15000 });
-  const serversQuery = useQuery("servers", async () => (await apiFetch<{ servers: Server[] }>("/servers")).servers || []);
+  const actionsQuery = useQuery(
+    "intervention-actions",
+    async () => apiFetch<{ actions: InterventionAction[]; total: number }>("/intervention/actions?limit=50"),
+    { refreshMs: 15000 },
+  );
+  // Must match other pages: cache key "servers" holds { servers: Server[] }, not a bare array.
+  const serversQuery = useQuery("servers", () => apiFetch<{ servers: Server[] }>("/servers"));
 
-  const settings = settingsQuery.data;
-  const actions = actionsQuery.data?.actions || [];
-  const servers = serversQuery.data || [];
+  const settings = normalizeSettings(settingsQuery.data);
+  const actions = normalizeActions(actionsQuery.data);
+  const servers = normalizeServers(serversQuery.data);
 
   const [enabled, setEnabled] = useState<boolean | null>(null);
   const [mode, setMode] = useState<string | null>(null);
@@ -43,12 +94,12 @@ export default function InterventionsPage() {
   const [reason, setReason] = useState("");
   const [creating, setCreating] = useState(false);
 
-  const formEnabled = enabled ?? settings?.enabled ?? false;
-  const formMode = mode ?? settings?.mode ?? "observe";
-  const formBlock = allowBlock ?? settings?.allow_block_ip ?? false;
-  const formKill = allowKill ?? settings?.allow_kill_process ?? false;
-  const formFw = allowFw ?? settings?.allow_firewall_rule ?? false;
-  const formCidrs = cidrs ?? (settings?.protected_cidrs || []).join("\n");
+  const formEnabled = enabled ?? settings.enabled;
+  const formMode = mode ?? settings.mode;
+  const formBlock = allowBlock ?? settings.allow_block_ip;
+  const formKill = allowKill ?? settings.allow_kill_process;
+  const formFw = allowFw ?? settings.allow_firewall_rule;
+  const formCidrs = cidrs ?? settings.protected_cidrs.join("\n");
 
   async function saveSettings(e: FormEvent) {
     e.preventDefault();
@@ -114,13 +165,18 @@ export default function InterventionsPage() {
     }
   }
 
-  if (settingsQuery.loading && !settings) return <LoadingBlock />;
+  if (settingsQuery.loading && !settingsQuery.data) return <LoadingBlock />;
   if (settingsQuery.error) return <EmptyState title={t("interv.cannot")} description={settingsQuery.error} />;
+
+  const actionsError = actionsQuery.error;
+  const serversError = canWrite ? serversQuery.error : null;
 
   return (
     <>
       <PageHeader title={t("interv.title")} subtitle={t("interv.subtitle")} />
       {msg ? <div className="alert alert-info">{msg}</div> : null}
+      {actionsError ? <div className="alert alert-warning">{actionsError}</div> : null}
+      {serversError ? <div className="alert alert-warning">{serversError}</div> : null}
 
       <div className="row">
         <div className="col-xl-5">
@@ -227,7 +283,9 @@ export default function InterventionsPage() {
             </div>
             <div className="card-body">
               {actionsQuery.loading && actions.length === 0 ? <LoadingBlock /> : null}
-              {actions.length === 0 ? <EmptyState title={t("interv.none")} description={t("interv.noneHint")} /> : null}
+              {!actionsQuery.loading && actions.length === 0 && !actionsError ? (
+                <EmptyState title={t("interv.none")} description={t("interv.noneHint")} />
+              ) : null}
               {actions.length > 0 ? (
                 <div className="table-responsive">
                   <table className="table table-hover align-middle mb-0">
@@ -244,18 +302,18 @@ export default function InterventionsPage() {
                       {actions.map((a) => (
                         <tr key={a.id}>
                           <td>
-                            <code>{a.action_type}</code>
+                            <code>{a.action_type || "—"}</code>
                             <span className="d-block text-muted fs-12 text-truncate" style={{ maxWidth: 220 }}>
-                              {JSON.stringify(a.payload)}
+                              {payloadPreview(a.payload)}
                             </span>
                           </td>
                           <td className="text-muted fs-12 text-truncate" style={{ maxWidth: 120 }}>
-                            {a.server_id}
+                            {a.server_id || "—"}
                           </td>
                           <td>
-                            <span className="badge bg-secondary-subtle text-secondary">{a.status}</span>
+                            <span className="badge bg-secondary-subtle text-secondary">{a.status || "—"}</span>
                           </td>
-                          <td className="text-muted text-nowrap fs-12">{a.created_at}</td>
+                          <td className="text-muted text-nowrap fs-12">{a.created_at || "—"}</td>
                           <td className="text-end text-nowrap">
                             {a.status === "pending" && canApprove ? (
                               <>
