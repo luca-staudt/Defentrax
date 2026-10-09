@@ -52,13 +52,15 @@ export default function DashboardPage() {
 
       {stats ? (
         <>
-          <div className="row">
+          {/* 3 + 2: first row three equal cards; last two in a nested full-width row (no center void). */}
+          <div className="row g-3">
             <StatWidget
               label={t("dash.open")}
               value={stats.alerts_open}
               hint={critical > 0 ? `${critical} ${t("dash.critical")}` : t("dash.noneCritical")}
               icon="ri-alarm-warning-line"
               tone={critical > 0 ? "danger" : stats.alerts_open > 0 ? "warning" : "success"}
+              colClass="col-12 col-sm-6 col-xl-4"
             />
             <StatWidget
               label={t("dash.silent")}
@@ -66,6 +68,7 @@ export default function DashboardPage() {
               hint={t("dash.silentHint")}
               icon="ri-wifi-off-line"
               tone={(stats.hosts_silent ?? 0) > 0 ? "warning" : "success"}
+              colClass="col-12 col-sm-6 col-xl-4"
             />
             <StatWidget
               label={t("dash.events")}
@@ -73,27 +76,32 @@ export default function DashboardPage() {
               hint={t("dash.received")}
               icon="ri-pulse-line"
               tone="info"
+              colClass="col-12 col-sm-6 col-xl-4"
             />
-            <StatWidget
-              label={t("dash.servers")}
-              value={stats.servers_total}
-              hint={`${stats.agents_active} ${t("dash.agents")}`}
-              icon="ri-server-line"
-              tone="primary"
-              colClass="col-6 col-xl-6"
-            />
-            <StatWidget
-              label={t("dash.coverage")}
-              value={coverage}
-              suffix="%"
-              hint={t("dash.coverageHint")}
-              icon="ri-shield-check-line"
-              tone={coverage >= 80 ? "success" : coverage > 0 ? "warning" : "secondary"}
-              colClass="col-6 col-xl-6"
-            />
+            <div className="col-12">
+              <div className="row g-3">
+                <StatWidget
+                  label={t("dash.servers")}
+                  value={stats.servers_total}
+                  hint={`${stats.agents_active} ${t("dash.agents")}`}
+                  icon="ri-server-line"
+                  tone="primary"
+                  colClass="col-12 col-md-6"
+                />
+                <StatWidget
+                  label={t("dash.coverage")}
+                  value={coverage}
+                  suffix="%"
+                  hint={t("dash.coverageHint")}
+                  icon="ri-shield-check-line"
+                  tone={coverage >= 80 ? "success" : coverage > 0 ? "warning" : "secondary"}
+                  colClass="col-12 col-md-6"
+                />
+              </div>
+            </div>
           </div>
 
-          <div className="row">
+          <div className="row g-3">
             <div className="col-xl-8">
               <div className="card card-height-100">
                 <div className="card-header align-items-center d-flex">
@@ -206,7 +214,7 @@ function StatWidget({
   icon,
   tone,
   suffix,
-  colClass = "col-6 col-xl-4",
+  colClass = "col-12 col-sm-6 col-xl-4",
 }: {
   label: string;
   value: number;
@@ -214,7 +222,7 @@ function StatWidget({
   icon: string;
   tone: "primary" | "success" | "info" | "warning" | "danger" | "secondary";
   suffix?: string;
-  /** Bootstrap column classes; default max 3 per xl row. */
+  /** Bootstrap column classes for the responsive stats grid. */
   colClass?: string;
 }) {
   return (

@@ -464,7 +464,7 @@ function Stat({
   progress?: number;
 }) {
   return (
-    <div className="col-6 col-xl-3">
+    <div className="col-12 col-sm-6 col-xl">
       <div className={`card card-animate dx-stat-card dx-stat-${tone} h-100`}>
         <div className="card-body">
           <div className="d-flex align-items-start justify-content-between gap-2">
