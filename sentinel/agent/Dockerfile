@@ -36,7 +36,9 @@ RUN apk add --no-cache ca-certificates tzdata \
 COPY --from=builder /out/sentinel-agent /usr/local/bin/sentinel-agent
 
 USER 65532:65532
-ENV SENTINEL_AGENT_CREDENTIAL_PATH=/var/lib/sentinel/credentials.json
+# Default credential file path is compiled into the agent
+# (/var/lib/sentinel/agent/credentials.json). Do not set a
+# *CREDENTIAL* ENV here — Trivy DS-0031 treats that as a secret leak.
 VOLUME ["/var/lib/sentinel"]
 
 # Agent has no HTTP listener; process liveness only.

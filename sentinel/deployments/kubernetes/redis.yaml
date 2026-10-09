@@ -37,6 +37,11 @@ spec:
     spec:
       securityContext:
         fsGroup: 999
+        runAsNonRoot: true
+        runAsUser: 999
+        runAsGroup: 999
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: redis
           image: redis:7.4.2-alpine
@@ -49,6 +54,8 @@ spec:
           volumeMounts:
             - name: data
               mountPath: /data
+            - name: tmp
+              mountPath: /tmp
           readinessProbe:
             exec:
               command: ["redis-cli", "ping"]
@@ -74,10 +81,17 @@ spec:
             allowPrivilegeEscalation: false
             runAsNonRoot: true
             runAsUser: 999
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+            seccompProfile:
+              type: RuntimeDefault
       volumes:
         - name: data
           persistentVolumeClaim:
             claimName: redis-data
+        - name: tmp
+          emptyDir: {}
 ---
 apiVersion: v1
 kind: Service

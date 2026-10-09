@@ -1,0 +1,5 @@
+# Accepted / false-positive Trivy misconfig findings for Defentrax.
+# Keep vulns and secrets scanners fully enforced.
+
+# ConfigMap keys like API_PORT / PORT are not secrets; Trivy KSV-01010 is noisy here.
+KSV-01010

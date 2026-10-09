@@ -77,3 +77,4 @@ jobs:
           ignore-unfixed: true
           format: table
           scanners: vuln,misconfig,secret
+          trivyignores: .trivyignore
