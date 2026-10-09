@@ -20,7 +20,7 @@ require (
 	github.com/luca-staudt/Defentrax/sentinel/plugins v0.0.0
 	github.com/pquerna/otp v1.4.0
 	github.com/redis/go-redis/v9 v9.7.3
-	golang.org/x/crypto v0.55.0
+	golang.org/x/crypto v0.56.0
 )
 
 require (

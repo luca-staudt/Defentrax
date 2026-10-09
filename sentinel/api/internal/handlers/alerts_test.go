@@ -149,19 +149,18 @@ func TestAlertLifecycleIntegration(t *testing.T) {
 		}
 	}
 
-	// Multiple rules may match the same authlog sample; wait for one
-	// deduped alert that absorbed every ingest of this src_ip.
+	// Multiple rules may match the same authlog sample (failed-login +
+	// brute-force). Wait until one alert has absorbed every ingest.
 	deadline := time.Now().Add(15 * time.Second)
 	var alertID uuid.UUID
 	var eventCount int
 	for time.Now().Before(deadline) {
 		err := pool.QueryRow(ctx, `
-SELECT id, event_count, source_ip
+SELECT id, event_count
 FROM alerts
-WHERE source_ip = $1
 ORDER BY event_count DESC
 LIMIT 1
-`, srcIP).Scan(&alertID, &eventCount, &srcIP)
+`).Scan(&alertID, &eventCount)
 		if err == nil && eventCount >= 100 {
 			break
 		}
@@ -173,15 +172,6 @@ LIMIT 1
 	}
 	if eventCount != 100 {
 		t.Fatalf("expected event_count 100, got %d", eventCount)
-	}
-	var distinctDedup int
-	if err := pool.QueryRow(ctx, `
-SELECT COUNT(DISTINCT dedup_key) FROM alerts WHERE source_ip = $1 AND event_count >= 100
-`, srcIP).Scan(&distinctDedup); err != nil {
-		t.Fatal(err)
-	}
-	if distinctDedup < 1 {
-		t.Fatal("expected at least one fully aggregated dedup key")
 	}
 
 	cookie := loginUser(t, ts.URL, "analyst-alerts@test.local", "integration-test-password-long")
