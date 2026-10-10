@@ -14,7 +14,7 @@ PostgreSQL is the **system of record**. Redis is cache/ephemeral. Backup Postgre
 
 ## Docker Compose
 
-Postgres uses the named volume `sentinel-postgres-data` (see [deployment.md](deployment.md)).
+Postgres uses the named volume `sentinel-postgres-data` (legacy external name; containers are `defentrax-*` — see [deployment.md](deployment.md)).
 
 ### Logical backup (recommended)
 

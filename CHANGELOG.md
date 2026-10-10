@@ -15,9 +15,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
-- Compose `sentinel-agent` no longer reads `SENTINEL_ENROLLMENT_TOKEN` from `.env` for ongoing runs
+- Compose project/service/container/network names renamed to `defentrax-*` / `defentrax-net` (DNS: `http://defentrax-api:8080`); volume **external** names stay `sentinel-*-data` for data continuity
+- Migrate entrypoint fails fast on Postgres auth/config errors (stops long Compose “Waiting” on bad `POSTGRES_PASSWORD`)
+- Compose `defentrax-agent` no longer reads `SENTINEL_ENROLLMENT_TOKEN` from `.env` for ongoing runs
 - `SENTINEL_INTERVENTION_DRY_RUN` is an optional override only when explicitly set
-- Compose local image tags renamed to `defentrax-*` with `pull_policy: build` (no Docker Hub pull; service DNS stays `sentinel-*`)
+- Compose local image tags renamed to `defentrax-*` with `pull_policy: build` (no Docker Hub pull)
 - User-facing runtime strings: API/agent startup logs, `/api/v1` `service` field, and webhook `source` use **Defentrax**
 - Migrate entrypoint prints last DB error + password/volume hints; docs note `docker compose logs migrate`
 

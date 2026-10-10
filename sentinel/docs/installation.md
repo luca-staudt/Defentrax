@@ -43,7 +43,7 @@ picks up the new env (a plain `restart` is not enough if compose already started
 without those vars):
 
 ```bash
-docker compose up -d --force-recreate --no-deps sentinel-api
+docker compose up -d --force-recreate --no-deps defentrax-api
 ```
 
 Then remove or comment out the bootstrap vars and recreate again once login works.
@@ -67,18 +67,18 @@ If `migrate` fails (`service migrate didn't complete successfully`), inspect:
 docker compose logs migrate
 ```
 
-Services: `postgres`, `redis`, `migrate` (one-shot), `sentinel-api`, `sentinel-frontend`.
+Services: `postgres`, `redis`, `migrate` (one-shot), `defentrax-api`, `defentrax-frontend`.
 
 The frontend image bakes Next.js `/api/v1/*` rewrites at **build** time from
-`API_PROXY_TARGET` (Compose default: `http://sentinel-api:8080`). That must be
+`API_PROXY_TARGET` (Compose default: `http://defentrax-api:8080`). That must be
 the API’s Docker DNS name — `http://127.0.0.1:8080` inside the frontend
 container points at itself and causes login `ECONNREFUSED` / Internal Server
 Error. Override via build arg / `.env` only if your service name differs, then
 rebuild:
 
 ```bash
-docker compose build --no-cache sentinel-frontend
-docker compose up -d sentinel-frontend
+docker compose build --no-cache defentrax-frontend
+docker compose up -d defentrax-frontend
 ```
 
 | Endpoint | URL |
@@ -118,7 +118,7 @@ docker compose down          # keep volumes
 docker compose down -v       # delete Postgres/Redis volumes (data loss)
 ```
 
-Postgres data lives in the named volume `sentinel-postgres-data` — see [deployment.md](deployment.md) and [backup.md](backup.md).
+Postgres data lives in the named volume `sentinel-postgres-data` (legacy external name kept for existing installs; containers are `defentrax-*`) — see [deployment.md](deployment.md) and [backup.md](backup.md).
 
 ## Kubernetes (kind / minikube / cluster)
 

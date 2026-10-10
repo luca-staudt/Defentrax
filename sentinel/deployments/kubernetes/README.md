@@ -35,17 +35,17 @@ openssl rand -base64 32   # → SESSION_SECRET / TOTP_ENCRYPTION_KEY / SECRETS_E
 ```bash
 # aus dem Repo-Root
 export SENTINEL_IMAGE_TAG=0.3.0
-docker compose build sentinel-api sentinel-frontend migrate
+docker compose build defentrax-api defentrax-frontend migrate
 
-# kind
-kind load docker-image sentinel-api:${SENTINEL_IMAGE_TAG}
-kind load docker-image sentinel-frontend:${SENTINEL_IMAGE_TAG}
-kind load docker-image sentinel-migrate:${SENTINEL_IMAGE_TAG}
+# kind (load Compose local tags; Kustomize image names may still say sentinel-*)
+kind load docker-image defentrax-api:${SENTINEL_IMAGE_TAG}
+kind load docker-image defentrax-frontend:${SENTINEL_IMAGE_TAG}
+kind load docker-image defentrax-migrate:${SENTINEL_IMAGE_TAG}
 
 # minikube
-minikube image load sentinel-api:${SENTINEL_IMAGE_TAG}
-minikube image load sentinel-frontend:${SENTINEL_IMAGE_TAG}
-minikube image load sentinel-migrate:${SENTINEL_IMAGE_TAG}
+minikube image load defentrax-api:${SENTINEL_IMAGE_TAG}
+minikube image load defentrax-frontend:${SENTINEL_IMAGE_TAG}
+minikube image load defentrax-migrate:${SENTINEL_IMAGE_TAG}
 ```
 
 Registry-Tags in `kustomization.yaml` (`images:`) oder per `kustomize edit set image` anpassen.

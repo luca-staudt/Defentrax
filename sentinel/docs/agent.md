@@ -51,7 +51,7 @@ Secrets are **never** written to logs; the agent redacts `senr_`, `sagt_`, and `
      -e SENTINEL_ENROLLMENT_TOKEN=senr_… \
      -e SENTINEL_AGENT_NAME=compose-agent \
      -e SENTINEL_ENROLL_ONLY=1 \
-     sentinel-agent
+     defentrax-agent
 
    docker compose --profile agent up -d
    ```

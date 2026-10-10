@@ -48,7 +48,7 @@ function composeEnrollCommand(token: string, agentName: string): string {
     `  -e SENTINEL_ENROLLMENT_TOKEN=${token} \\`,
     `  -e SENTINEL_AGENT_NAME=${name} \\`,
     "  -e SENTINEL_ENROLL_ONLY=1 \\",
-    "  sentinel-agent",
+    "  defentrax-agent",
     "",
     "docker compose --profile agent up -d",
   ].join("\n");

@@ -8,22 +8,22 @@
 # docker.io/library/defentrax-* (or legacy sentinel-*) pulls.
 #
 # If migrate fails the whole stack: docker compose logs migrate
-# Common cause: POSTGRES_PASSWORD changed while volume sentinel-postgres-data still has the old password.
+# Common cause: POSTGRES_PASSWORD changed while the existing Postgres volume
+# (still named sentinel-postgres-data for data continuity) has the old password.
 #
 # Optional profiles:
 #   --profile agent   include host agent (enroll once via panel one-shot; credentials in volume)
 #   --profile proxy   include Caddy reverse proxy on :80
 #
 # Image tags: pin immutable versions/digests in production — do not use :latest.
-# Compose project/network/service names remain `sentinel*` for DNS compatibility
-# (e.g. http://sentinel-api:8080). Local image tags use defentrax-* for branding.
+# Compose project/service/container names use defentrax-* (DNS: http://defentrax-api:8080).
 
-name: sentinel
+name: defentrax
 
 services:
   postgres:
     image: postgres:16.6-alpine
-    container_name: sentinel-postgres
+    container_name: defentrax-postgres
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-sentinel}
@@ -38,11 +38,11 @@ services:
       retries: 10
       start_period: 10s
     networks:
-      - sentinel
+      - defentrax
 
   redis:
     image: redis:7.4.2-alpine
-    container_name: sentinel-redis
+    container_name: defentrax-redis
     restart: unless-stopped
     command: ["redis-server", "--appendonly", "yes", "--save", ""]
     volumes:
@@ -54,7 +54,7 @@ services:
       retries: 10
       start_period: 5s
     networks:
-      - sentinel
+      - defentrax
 
   migrate:
     build:
@@ -62,7 +62,7 @@ services:
       dockerfile: sentinel/database/Dockerfile
     image: defentrax-migrate:${SENTINEL_IMAGE_TAG:-0.3.0}
     pull_policy: build
-    container_name: sentinel-migrate
+    container_name: defentrax-migrate
     restart: "no"
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER:-sentinel}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-sentinel}?sslmode=disable
@@ -70,15 +70,15 @@ services:
       postgres:
         condition: service_healthy
     networks:
-      - sentinel
+      - defentrax
 
-  sentinel-api:
+  defentrax-api:
     build:
       context: .
       dockerfile: sentinel/api/Dockerfile
     image: defentrax-api:${SENTINEL_IMAGE_TAG:-0.3.0}
     pull_policy: build
-    container_name: sentinel-api
+    container_name: defentrax-api
     restart: unless-stopped
     env_file:
       - .env
@@ -111,54 +111,54 @@ services:
       retries: 10
       start_period: 20s
     networks:
-      - sentinel
+      - defentrax
 
   # Frontend: Next rewrites bake API_PROXY_TARGET at image build (not only runtime).
   # Must be the Compose service hostname — 127.0.0.1 inside the container ≠ the API.
-  sentinel-frontend:
+  defentrax-frontend:
     build:
       context: ./sentinel/frontend
       dockerfile: Dockerfile
       args:
         NEXT_PUBLIC_WS_URL: ${NEXT_PUBLIC_WS_URL:-ws://localhost:8080}
-        API_PROXY_TARGET: ${API_PROXY_TARGET:-http://sentinel-api:8080}
+        API_PROXY_TARGET: ${API_PROXY_TARGET:-http://defentrax-api:8080}
     image: defentrax-frontend:${SENTINEL_IMAGE_TAG:-0.3.0}
     pull_policy: build
-    container_name: sentinel-frontend
+    container_name: defentrax-frontend
     restart: unless-stopped
     environment:
-      API_PROXY_TARGET: ${API_PROXY_TARGET:-http://sentinel-api:8080}
-      API_INTERNAL_URL: ${API_INTERNAL_URL:-http://sentinel-api:8080}
+      API_PROXY_TARGET: ${API_PROXY_TARGET:-http://defentrax-api:8080}
+      API_INTERNAL_URL: ${API_INTERNAL_URL:-http://defentrax-api:8080}
       NEXT_PUBLIC_WS_URL: ${NEXT_PUBLIC_WS_URL:-ws://localhost:8080}
       PORT: "3000"
       HOSTNAME: "0.0.0.0"
     ports:
       - "${FRONTEND_HOST_PORT:-3000}:3000"
     depends_on:
-      sentinel-api:
+      defentrax-api:
         condition: service_healthy
     networks:
-      - sentinel
+      - defentrax
 
   # Optional: compose stack agent. Do NOT put enrollment tokens in .env.
   # Panel flow (server detail → Issue enrollment token):
   #   docker compose --profile agent run --rm \
-  #     -e SENTINEL_ENROLLMENT_TOKEN=senr_… -e SENTINEL_ENROLL_ONLY=1 sentinel-agent
+  #     -e SENTINEL_ENROLLMENT_TOKEN=senr_… -e SENTINEL_ENROLL_ONLY=1 defentrax-agent
   #   docker compose --profile agent up -d
   # Credentials persist in the agent_data volume; ongoing runs need only SENTINEL_API_URL.
   # Mount a host auth log via override, e.g.:
   #   volumes: ["./auth.log:/var/log/auth.log:ro"]
-  sentinel-agent:
+  defentrax-agent:
     profiles: ["agent"]
     build:
       context: .
       dockerfile: sentinel/agent/Dockerfile
     image: defentrax-agent:${SENTINEL_IMAGE_TAG:-0.3.0}
     pull_policy: build
-    container_name: sentinel-agent
+    container_name: defentrax-agent
     restart: unless-stopped
     environment:
-      SENTINEL_API_URL: http://sentinel-api:8080
+      SENTINEL_API_URL: http://defentrax-api:8080
       SENTINEL_AGENT_NAME: ${SENTINEL_AGENT_NAME:-compose-agent}
       SENTINEL_AGENT_CREDENTIAL_PATH: /var/lib/sentinel/credentials.json
       SENTINEL_AUTH_LOG_PATH: ${SENTINEL_AUTH_LOG_PATH:-/var/log/auth.log}
@@ -166,30 +166,36 @@ services:
     volumes:
       - agent_data:/var/lib/sentinel
     depends_on:
-      sentinel-api:
+      defentrax-api:
         condition: service_healthy
     networks:
-      - sentinel
+      - defentrax
 
   # Optional reverse proxy (http://localhost → frontend, /api → API, WS upgrade).
   reverse-proxy:
     profiles: ["proxy"]
     image: caddy:2.9.1-alpine
-    container_name: sentinel-proxy
+    container_name: defentrax-proxy
     restart: unless-stopped
     ports:
       - "${PROXY_HOST_PORT:-80}:80"
     volumes:
       - ./sentinel/deployments/docker-compose/Caddyfile:/etc/caddy/Caddyfile:ro
     depends_on:
-      sentinel-frontend:
+      defentrax-frontend:
         condition: service_started
-      sentinel-api:
+      defentrax-api:
         condition: service_healthy
     networks:
-      - sentinel
+      - defentrax
 
 volumes:
+  # External volume names keep legacy sentinel-*-data so existing installs
+  # reuse data without a fresh empty DB. Optional later:
+  #   docker volume create defentrax-postgres-data
+  #   docker run --rm -v sentinel-postgres-data:/from -v defentrax-postgres-data:/to alpine \
+  #     sh -c 'cd /from && cp -a . /to'
+  # then change `name:` below and recreate the stack (without -v).
   postgres_data:
     name: sentinel-postgres-data
   redis_data:
@@ -198,5 +204,5 @@ volumes:
     name: sentinel-agent-data
 
 networks:
-  sentinel:
-    name: sentinel-net
+  defentrax:
+    name: defentrax-net

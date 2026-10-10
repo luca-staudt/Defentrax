@@ -8,24 +8,24 @@ Short operator runbook. Cross-check [configuration.md](configuration.md) and [se
 |---------|--------|
 | `migrate` exits non-zero / `service migrate didn't complete successfully` | `docker compose logs migrate`; `POSTGRES_PASSWORD` vs existing volume; Postgres healthy |
 | `pull access denied for sentinel-*` / `defentrax-*` | Images are **local builds only** — use `docker compose up -d --build` (Compose sets `pull_policy: build`) |
-| API unhealthy | `docker compose logs sentinel-api`; `SESSION_SECRET` set; DB reachable |
+| API unhealthy | `docker compose logs defentrax-api`; `SESSION_SECRET` set; DB reachable |
 | `/readyz` fails | Postgres not ready or migrations incomplete |
 | Frontend blank / API errors | `CORS_ALLOWED_ORIGINS`; `NEXT_PUBLIC_WS_URL`; rebuild UI after env change |
-| Login Internal Server Error / `ECONNREFUSED` | Frontend image built with wrong `API_PROXY_TARGET` (must be `http://sentinel-api:8080` for Compose, not `127.0.0.1`). Rebuild: `docker compose build --no-cache sentinel-frontend && docker compose up -d sentinel-frontend` |
+| Login Internal Server Error / `ECONNREFUSED` | Frontend image built with wrong `API_PROXY_TARGET` (must be `http://defentrax-api:8080` for Compose, not `127.0.0.1`). Rebuild: `docker compose build --no-cache defentrax-frontend && docker compose up -d defentrax-frontend` |
 
 ```bash
 docker compose ps
 docker compose logs migrate
 curl -sS http://localhost:8080/healthz
 curl -sS http://localhost:8080/readyz
-docker compose logs --tail=200 sentinel-api
+docker compose logs --tail=200 defentrax-api
 ```
 
 ## Cannot log in / bootstrap admin
 
 - Bootstrap only works when the **users table is empty**.
 - Password must meet minimum length (bootstrap: ≥ 12 characters).
-- After setting or uncommenting `SENTINEL_BOOTSTRAP_ADMIN_*` in `.env`, recreate the API: `docker compose up -d --force-recreate --no-deps sentinel-api` (restart alone may not reload env from compose).
+- After setting or uncommenting `SENTINEL_BOOTSTRAP_ADMIN_*` in `.env`, recreate the API: `docker compose up -d --force-recreate --no-deps defentrax-api` (restart alone may not reload env from compose).
 - After first admin exists, unset bootstrap env vars and recreate the API again.
 - Rate limited? Wait for `LOGIN_RATE_LIMIT_*` window or check Redis.
 - Production with `COOKIE_SECURE=true` over plain HTTP will not keep the session — use HTTPS or local `COOKIE_SECURE=false` only in dev.

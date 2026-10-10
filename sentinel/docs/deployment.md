@@ -24,16 +24,26 @@ Alle App-Images: **multi-stage**, **non-root** (`uid 65532`), **HEALTHCHECK**.
 
 ## Volumes
 
-| Volume | Inhalt |
+| Volume (Compose-Key → Docker-Name) | Inhalt |
 |--------|--------|
-| `sentinel-postgres-data` | PostgreSQL-Datenverzeichnis (`/var/lib/postgresql/data`) |
-| `sentinel-redis-data` | Redis AOF (`/data`) |
-| `sentinel-agent-data` | Agent-Credentials (Profil `agent`) |
+| `postgres_data` → `sentinel-postgres-data` | PostgreSQL-Datenverzeichnis (`/var/lib/postgresql/data`) |
+| `redis_data` → `sentinel-redis-data` | Redis AOF (`/data`) |
+| `agent_data` → `sentinel-agent-data` | Agent-Credentials (Profil `agent`) |
+
+Die **externen** Volume-Namen bleiben vorerst `sentinel-*-data`, damit bestehende Installationen ihre Daten behalten. Container/Services heißen `defentrax-*`. Optional später umbenennen:
+
+```bash
+# Stack stoppen (Volumes behalten): docker compose down
+docker volume create defentrax-postgres-data
+docker run --rm -v sentinel-postgres-data:/from -v defentrax-postgres-data:/to alpine \
+  sh -c 'cd /from && cp -a . /to'
+# Dann in docker-compose.yml `name: defentrax-postgres-data` setzen und Stack neu starten.
+```
 
 Backup (Beispiel):
 
 ```bash
-docker compose exec -T postgres pg_dump -U sentinel sentinel > sentinel-$(date +%F).sql
+docker compose exec -T postgres pg_dump -U sentinel sentinel > defentrax-$(date +%F).sql
 ```
 
 ## Healthchecks
@@ -42,9 +52,9 @@ docker compose exec -T postgres pg_dump -U sentinel sentinel > sentinel-$(date +
 |---------|--------|
 | postgres | `pg_isready` |
 | redis | `redis-cli ping` |
-| sentinel-api | `GET /readyz` (Compose) / Image: `GET /healthz` |
-| sentinel-frontend | HTTP `/login` |
-| sentinel-agent | Prozess `pidof` |
+| defentrax-api | `GET /readyz` (Compose) / Image: `GET /healthz` |
+| defentrax-frontend | HTTP `/login` |
+| defentrax-agent | Prozess `pidof` |
 
 `migrate` ist ein One-Shot (`restart: "no"`); API startet erst nach erfolgreichem `migrate up`.
 
@@ -52,7 +62,7 @@ docker compose exec -T postgres pg_dump -U sentinel sentinel > sentinel-$(date +
 
 - Compose baut lokal und taggt `image: defentrax-*:${SENTINEL_IMAGE_TAG:-0.3.0}` mit `pull_policy: build`.
   Es gibt **keine** öffentlichen Docker-Hub-Images unter `sentinel-*` / `defentrax-*` — `docker compose up` ohne Build würde sonst `pull access denied` melden.
-- Service-/Container-Namen bleiben `sentinel-*` (DNS, z. B. `http://sentinel-api:8080`).
+- Project-/Service-/Container-Namen: `defentrax` / `defentrax-*` (DNS, z. B. `http://defentrax-api:8080`). Netzwerk: `defentrax-net`.
 - Basisimages sind versioniert (`postgres:16.6-alpine`, `redis:7.4.2-alpine`, `caddy:2.9.1-alpine`, …).
 - **Production:** konkrete SemVer-Tags oder Digests pinnen; `:latest` vermeiden; nach Rebuild Registry-Tag nicht überschreiben, sondern neuen Tag pushen.
 
@@ -77,7 +87,7 @@ Häufig: `POSTGRES_PASSWORD` in `.env` passt nicht zum bestehenden Volume `senti
 
 ## Netzwerk / Cookies
 
-- Browser → Frontend `:3000` (REST via Next-Rewrite an `sentinel-api`).
+- Browser → Frontend `:3000` (REST via Next-Rewrite an `defentrax-api`).
 - WebSocket direkt an API: `NEXT_PUBLIC_WS_URL` (Build-Arg + Runtime; bei Änderung Frontend neu bauen).
 - Lokales HTTP: `COOKIE_SECURE=false`. Hinter TLS Proxy: `COOKIE_SECURE=true` und passende `CORS_ALLOWED_ORIGINS`.
 
