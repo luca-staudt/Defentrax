@@ -23,6 +23,7 @@ type InterventionSettings struct {
 	AllowBlockIP      bool
 	AllowKillProcess  bool
 	AllowFirewallRule bool
+	DryRun            bool
 	ProtectedCIDRs    []string
 	UpdatedBy         *uuid.UUID
 	CreatedAt         time.Time
@@ -72,7 +73,7 @@ func ValidateInterventionType(t string) bool {
 func GetGlobalInterventionSettings(ctx context.Context, pool *pgxpool.Pool) (InterventionSettings, error) {
 	row := pool.QueryRow(ctx, `
 		SELECT id, scope, server_id, enabled, mode, allow_block_ip, allow_kill_process, allow_firewall_rule,
-		       COALESCE(protected_cidrs, '{}'), updated_by, created_at, updated_at
+		       dry_run, COALESCE(protected_cidrs, '{}'), updated_by, created_at, updated_at
 		FROM intervention_settings
 		WHERE scope = 'global'
 		LIMIT 1
@@ -84,6 +85,7 @@ func GetGlobalInterventionSettings(ctx context.Context, pool *pgxpool.Pool) (Int
 				Scope:          "global",
 				Enabled:        false,
 				Mode:           "observe",
+				DryRun:         true,
 				ProtectedCIDRs: []string{},
 			}, nil
 		}
@@ -95,7 +97,7 @@ func GetGlobalInterventionSettings(ctx context.Context, pool *pgxpool.Pool) (Int
 func GetServerInterventionSettings(ctx context.Context, pool *pgxpool.Pool, serverID uuid.UUID) (*InterventionSettings, error) {
 	row := pool.QueryRow(ctx, `
 		SELECT id, scope, server_id, enabled, mode, allow_block_ip, allow_kill_process, allow_firewall_rule,
-		       COALESCE(protected_cidrs, '{}'), updated_by, created_at, updated_at
+		       dry_run, COALESCE(protected_cidrs, '{}'), updated_by, created_at, updated_at
 		FROM intervention_settings
 		WHERE scope = 'server' AND server_id = $1
 		LIMIT 1
@@ -132,6 +134,7 @@ type InterventionSettingsUpdate struct {
 	AllowBlockIP      *bool
 	AllowKillProcess  *bool
 	AllowFirewallRule *bool
+	DryRun            *bool
 	ProtectedCIDRs    []string
 	UpdatedBy         *uuid.UUID
 }
@@ -146,20 +149,20 @@ func UpsertGlobalInterventionSettings(ctx context.Context, pool *pgxpool.Pool, u
 		row := pool.QueryRow(ctx, `
 			UPDATE intervention_settings SET
 				enabled = $2, mode = $3, allow_block_ip = $4, allow_kill_process = $5, allow_firewall_rule = $6,
-				protected_cidrs = $7, updated_by = $8, updated_at = now()
+				dry_run = $7, protected_cidrs = $8, updated_by = $9, updated_at = now()
 			WHERE id = $1
 			RETURNING id, scope, server_id, enabled, mode, allow_block_ip, allow_kill_process, allow_firewall_rule,
-			          COALESCE(protected_cidrs, '{}'), updated_by, created_at, updated_at
-		`, cur.ID, cur.Enabled, cur.Mode, cur.AllowBlockIP, cur.AllowKillProcess, cur.AllowFirewallRule, cur.ProtectedCIDRs, upd.UpdatedBy)
+			          dry_run, COALESCE(protected_cidrs, '{}'), updated_by, created_at, updated_at
+		`, cur.ID, cur.Enabled, cur.Mode, cur.AllowBlockIP, cur.AllowKillProcess, cur.AllowFirewallRule, cur.DryRun, cur.ProtectedCIDRs, upd.UpdatedBy)
 		return scanInterventionSettings(row)
 	}
 	row := pool.QueryRow(ctx, `
 		INSERT INTO intervention_settings (
-			scope, enabled, mode, allow_block_ip, allow_kill_process, allow_firewall_rule, protected_cidrs, updated_by
-		) VALUES ('global', $1, $2, $3, $4, $5, $6, $7)
+			scope, enabled, mode, allow_block_ip, allow_kill_process, allow_firewall_rule, dry_run, protected_cidrs, updated_by
+		) VALUES ('global', $1, $2, $3, $4, $5, $6, $7, $8)
 		RETURNING id, scope, server_id, enabled, mode, allow_block_ip, allow_kill_process, allow_firewall_rule,
-		          COALESCE(protected_cidrs, '{}'), updated_by, created_at, updated_at
-	`, cur.Enabled, cur.Mode, cur.AllowBlockIP, cur.AllowKillProcess, cur.AllowFirewallRule, cur.ProtectedCIDRs, upd.UpdatedBy)
+		          dry_run, COALESCE(protected_cidrs, '{}'), updated_by, created_at, updated_at
+	`, cur.Enabled, cur.Mode, cur.AllowBlockIP, cur.AllowKillProcess, cur.AllowFirewallRule, cur.DryRun, cur.ProtectedCIDRs, upd.UpdatedBy)
 	return scanInterventionSettings(row)
 }
 
@@ -173,6 +176,7 @@ func UpsertServerInterventionSettings(ctx context.Context, pool *pgxpool.Pool, s
 		ServerID:       &serverID,
 		Enabled:        false,
 		Mode:           "observe",
+		DryRun:         true,
 		ProtectedCIDRs: []string{},
 	}
 	if curPtr != nil {
@@ -183,20 +187,20 @@ func UpsertServerInterventionSettings(ctx context.Context, pool *pgxpool.Pool, s
 		row := pool.QueryRow(ctx, `
 			UPDATE intervention_settings SET
 				enabled = $2, mode = $3, allow_block_ip = $4, allow_kill_process = $5, allow_firewall_rule = $6,
-				protected_cidrs = $7, updated_by = $8, updated_at = now()
+				dry_run = $7, protected_cidrs = $8, updated_by = $9, updated_at = now()
 			WHERE id = $1
 			RETURNING id, scope, server_id, enabled, mode, allow_block_ip, allow_kill_process, allow_firewall_rule,
-			          COALESCE(protected_cidrs, '{}'), updated_by, created_at, updated_at
-		`, cur.ID, cur.Enabled, cur.Mode, cur.AllowBlockIP, cur.AllowKillProcess, cur.AllowFirewallRule, cur.ProtectedCIDRs, upd.UpdatedBy)
+			          dry_run, COALESCE(protected_cidrs, '{}'), updated_by, created_at, updated_at
+		`, cur.ID, cur.Enabled, cur.Mode, cur.AllowBlockIP, cur.AllowKillProcess, cur.AllowFirewallRule, cur.DryRun, cur.ProtectedCIDRs, upd.UpdatedBy)
 		return scanInterventionSettings(row)
 	}
 	row := pool.QueryRow(ctx, `
 		INSERT INTO intervention_settings (
-			scope, server_id, enabled, mode, allow_block_ip, allow_kill_process, allow_firewall_rule, protected_cidrs, updated_by
-		) VALUES ('server', $1, $2, $3, $4, $5, $6, $7, $8)
+			scope, server_id, enabled, mode, allow_block_ip, allow_kill_process, allow_firewall_rule, dry_run, protected_cidrs, updated_by
+		) VALUES ('server', $1, $2, $3, $4, $5, $6, $7, $8, $9)
 		RETURNING id, scope, server_id, enabled, mode, allow_block_ip, allow_kill_process, allow_firewall_rule,
-		          COALESCE(protected_cidrs, '{}'), updated_by, created_at, updated_at
-	`, serverID, cur.Enabled, cur.Mode, cur.AllowBlockIP, cur.AllowKillProcess, cur.AllowFirewallRule, cur.ProtectedCIDRs, upd.UpdatedBy)
+		          dry_run, COALESCE(protected_cidrs, '{}'), updated_by, created_at, updated_at
+	`, serverID, cur.Enabled, cur.Mode, cur.AllowBlockIP, cur.AllowKillProcess, cur.AllowFirewallRule, cur.DryRun, cur.ProtectedCIDRs, upd.UpdatedBy)
 	return scanInterventionSettings(row)
 }
 
@@ -220,6 +224,9 @@ func applyInterventionUpdate(cur *InterventionSettings, upd InterventionSettings
 	}
 	if upd.AllowFirewallRule != nil {
 		cur.AllowFirewallRule = *upd.AllowFirewallRule
+	}
+	if upd.DryRun != nil {
+		cur.DryRun = *upd.DryRun
 	}
 	if upd.ProtectedCIDRs != nil {
 		cur.ProtectedCIDRs = upd.ProtectedCIDRs
@@ -440,7 +447,7 @@ func scanInterventionSettings(row scannable) (InterventionSettings, error) {
 	var serverID *uuid.UUID
 	err := row.Scan(
 		&s.ID, &s.Scope, &serverID, &s.Enabled, &s.Mode, &s.AllowBlockIP, &s.AllowKillProcess, &s.AllowFirewallRule,
-		&s.ProtectedCIDRs, &s.UpdatedBy, &s.CreatedAt, &s.UpdatedAt,
+		&s.DryRun, &s.ProtectedCIDRs, &s.UpdatedBy, &s.CreatedAt, &s.UpdatedAt,
 	)
 	if err != nil {
 		return InterventionSettings{}, err

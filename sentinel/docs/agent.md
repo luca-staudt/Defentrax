@@ -23,7 +23,8 @@ go build -o sentinel-agent ./cmd/sentinel-agent
 | Variable | Required | Description |
 |----------|----------|-------------|
 | `SENTINEL_API_URL` | yes | Base URL, e.g. `https://sentinel.example.com` |
-| `SENTINEL_ENROLLMENT_TOKEN` | first run | One-time `senr_…` token from the API |
+| `SENTINEL_ENROLLMENT_TOKEN` | first run only | One-time `senr_…` token from the panel (do **not** keep in compose `.env`) |
+| `SENTINEL_ENROLL_ONLY` | no | `true` to exit after saving credentials (one-shot compose enroll) |
 | `SENTINEL_AGENT_CREDENTIAL_PATH` | no | Default `/var/lib/sentinel/agent/credentials.json` (mode `0600`) |
 | `SENTINEL_AGENT_NAME` | no | Display name / host label |
 | `SENTINEL_AGENT_VERSION` | no | Reported version (default `0.5.0-dev`) |
@@ -34,10 +35,32 @@ go build -o sentinel-agent ./cmd/sentinel-agent
 | `SENTINEL_DOCKER_SOCKET` | no | Docker Engine socket path (default `/var/run/docker.sock`) |
 | `SENTINEL_HEARTBEAT_INTERVAL` | no | Default `30s` |
 | `SENTINEL_COLLECT_INTERVAL` | no | Default `60s` |
+| `SENTINEL_INTERVENTION_DRY_RUN` | no | Optional override only. Prefer panel **Interventions → Dry-run** (`intervention.dry_run` on heartbeat). |
 
 Secrets are **never** written to logs; the agent redacts `senr_`, `sagt_`, and `sent_` prefixes.
 
-## Enrollment workflow
+## Enrollment workflow (panel-first)
+
+### Docker Compose (recommended)
+
+1. In the operator panel, open the server → **Connect stack agent** → **Enrollment for Compose agent**.
+2. Copy the one-shot command (token is embedded once; not stored in `.env`):
+
+   ```bash
+   docker compose --profile agent run --rm \
+     -e SENTINEL_ENROLLMENT_TOKEN=senr_… \
+     -e SENTINEL_AGENT_NAME=compose-agent \
+     -e SENTINEL_ENROLL_ONLY=1 \
+     sentinel-agent
+
+   docker compose --profile agent up -d
+   ```
+
+3. Credentials persist in the `agent_data` volume (`/var/lib/sentinel/credentials.json`). Ongoing runs only need `SENTINEL_API_URL`.
+
+If the agent starts before enroll, it waits for the credentials file instead of crash-looping.
+
+### Bare-metal / API
 
 1. **Admin** (RBAC `servers:write`): create a server and enrollment token.
 
@@ -51,7 +74,7 @@ Secrets are **never** written to logs; the agent redacts `senr_`, `sagt_`, and `
 
 2. **Agent** (first start): set `SENTINEL_ENROLLMENT_TOKEN` and `SENTINEL_API_URL`, then start the binary. It calls `POST /api/v1/agent/enroll`, receives `sagt_…`, and saves credentials with file mode `0600`.
 
-3. **Ongoing**: heartbeats (`POST /api/v1/agent/heartbeat`) and event upload (`POST /api/v1/agent/events`) use `Authorization: Bearer sagt_…`.
+3. **Ongoing**: heartbeats (`POST /api/v1/agent/heartbeat`) and event upload (`POST /api/v1/agent/events`) use `Authorization: Bearer sagt_…`. Intervention dry-run is panel-controlled (`dry_run` on the heartbeat `intervention` object).
 
 ## Permissions on the host
 

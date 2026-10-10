@@ -17,6 +17,7 @@ type Config struct {
 	TLSSkipVerify      bool
 	CredentialPath     string
 	EnrollmentToken    string
+	EnrollOnly         bool
 	AgentName          string
 	AgentVersion       string
 	HeartbeatEvery     time.Duration
@@ -26,7 +27,10 @@ type Config struct {
 	DockerEnabled      bool
 	DockerSocket       string
 	InterventionDryRun bool
-	InterventionEvery  time.Duration
+	// InterventionDryRunEnvSet is true when SENTINEL_INTERVENTION_DRY_RUN was explicitly set.
+	// When false, the agent prefers dry_run from heartbeat (panel policy).
+	InterventionDryRunEnvSet bool
+	InterventionEvery        time.Duration
 }
 
 // Default on-disk path for agent enrollment credentials (not a secret value).
@@ -64,10 +68,18 @@ func Load() (Config, error) {
 	if cfg.DockerSocket == "" {
 		cfg.DockerSocket = "/var/run/docker.sock"
 	}
+	if v := strings.TrimSpace(os.Getenv("SENTINEL_ENROLL_ONLY")); v == "1" || strings.EqualFold(v, "true") {
+		cfg.EnrollOnly = true
+	}
 	cfg.HeartbeatEvery = durationEnv("SENTINEL_HEARTBEAT_INTERVAL", 30*time.Second)
 	cfg.CollectEvery = durationEnv("SENTINEL_COLLECT_INTERVAL", 60*time.Second)
 	cfg.InterventionEvery = durationEnv("SENTINEL_INTERVENTION_INTERVAL", 20*time.Second)
-	if v := strings.TrimSpace(os.Getenv("SENTINEL_INTERVENTION_DRY_RUN")); v == "1" || strings.EqualFold(v, "true") {
+	if raw, ok := os.LookupEnv("SENTINEL_INTERVENTION_DRY_RUN"); ok {
+		cfg.InterventionDryRunEnvSet = true
+		v := strings.TrimSpace(raw)
+		cfg.InterventionDryRun = v == "1" || strings.EqualFold(v, "true")
+	} else {
+		// Safe default until the first heartbeat delivers panel policy.
 		cfg.InterventionDryRun = true
 	}
 
@@ -89,6 +101,17 @@ func durationEnv(key string, def time.Duration) time.Duration {
 		return time.Duration(sec) * time.Second
 	}
 	return def
+}
+
+// EffectiveInterventionDryRun prefers panel heartbeat dry_run unless the env override is set.
+func (c Config) EffectiveInterventionDryRun(heartbeatDryRun bool, heartbeatSeen bool) bool {
+	if c.InterventionDryRunEnvSet {
+		return c.InterventionDryRun
+	}
+	if heartbeatSeen {
+		return heartbeatDryRun
+	}
+	return c.InterventionDryRun
 }
 
 // String returns a log-safe summary (never includes tokens).

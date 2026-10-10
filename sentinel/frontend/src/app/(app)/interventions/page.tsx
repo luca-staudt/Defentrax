@@ -18,6 +18,7 @@ const DEFAULT_SETTINGS: InterventionSettings = {
   allow_block_ip: false,
   allow_kill_process: false,
   allow_firewall_rule: false,
+  dry_run: true,
   protected_cidrs: [],
 };
 
@@ -35,6 +36,7 @@ function normalizeSettings(raw: InterventionSettings | null | undefined): Interv
     allow_block_ip: Boolean(raw.allow_block_ip),
     allow_kill_process: Boolean(raw.allow_kill_process),
     allow_firewall_rule: Boolean(raw.allow_firewall_rule),
+    dry_run: raw.dry_run !== false,
     protected_cidrs: cidrs,
   };
 }
@@ -81,6 +83,7 @@ export default function InterventionsPage() {
 
   const [enabled, setEnabled] = useState<boolean | null>(null);
   const [mode, setMode] = useState<string | null>(null);
+  const [dryRun, setDryRun] = useState<boolean | null>(null);
   const [allowBlock, setAllowBlock] = useState<boolean | null>(null);
   const [allowKill, setAllowKill] = useState<boolean | null>(null);
   const [allowFw, setAllowFw] = useState<boolean | null>(null);
@@ -96,6 +99,7 @@ export default function InterventionsPage() {
 
   const formEnabled = enabled ?? settings.enabled;
   const formMode = mode ?? settings.mode;
+  const formDryRun = dryRun ?? settings.dry_run;
   const formBlock = allowBlock ?? settings.allow_block_ip;
   const formKill = allowKill ?? settings.allow_kill_process;
   const formFw = allowFw ?? settings.allow_firewall_rule;
@@ -112,6 +116,7 @@ export default function InterventionsPage() {
         body: JSON.stringify({
           enabled: formEnabled,
           mode: formMode,
+          dry_run: formDryRun,
           allow_block_ip: formBlock,
           allow_kill_process: formKill,
           allow_firewall_rule: formFw,
@@ -200,7 +205,14 @@ export default function InterventionsPage() {
                     <option value="suggest">{t("interv.mode.suggest")}</option>
                     <option value="act">{t("interv.mode.act")}</option>
                   </select>
-                  <p className="form-label">{t("interv.capabilities")}</p>
+                  <div className="form-check form-switch mb-2">
+                    <input className="form-check-input" type="checkbox" checked={formDryRun} onChange={(e) => setDryRun(e.target.checked)} id="interv-dry-run" />
+                    <label className="form-check-label" htmlFor="interv-dry-run">
+                      {t("interv.dryRun")}
+                    </label>
+                  </div>
+                  <Hint>{t("interv.dryRunHint")}</Hint>
+                  <p className="form-label mt-3">{t("interv.capabilities")}</p>
                   <div className="form-check mb-2">
                     <input className="form-check-input" type="checkbox" checked={formBlock} onChange={(e) => setAllowBlock(e.target.checked)} id="cap-block" />
                     <label className="form-check-label" htmlFor="cap-block">

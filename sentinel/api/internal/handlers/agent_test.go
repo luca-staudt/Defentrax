@@ -40,7 +40,7 @@ func resetDB(t *testing.T, dsn string) *pgxpool.Pool {
 	t.Helper()
 	dbDir := filepath.Join(repoRoot(t), "sentinel", "database")
 	// Allow enough downs for all goose migrations (Phase 10 adds 00006).
-	for i := 0; i < 12; i++ {
+	for i := 0; i < 20; i++ {
 		runMigrate(t, dbDir, dsn, "down")
 	}
 	runMigrate(t, dbDir, dsn, "up")

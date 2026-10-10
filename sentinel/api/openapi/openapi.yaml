@@ -1070,6 +1070,30 @@ paths:
                   intervention:
                     type: object
                     description: Effective intervention capabilities for this agent
+                    properties:
+                      enabled:
+                        type: boolean
+                      mode:
+                        type: string
+                        enum: [observe, suggest, act]
+                      source:
+                        type: string
+                        enum: [global, server]
+                      dry_run:
+                        type: boolean
+                        description: |
+                          Panel-controlled dry-run. Agents prefer this over
+                          `SENTINEL_INTERVENTION_DRY_RUN` unless that env var is explicitly set.
+                      can_poll_actions:
+                        type: boolean
+                      protected_cidrs:
+                        type: array
+                        items:
+                          type: string
+                      capabilities:
+                        type: object
+                        additionalProperties:
+                          type: boolean
         "401":
           $ref: "#/components/responses/Error"
 
@@ -2322,6 +2346,9 @@ paths:
                   type: boolean
                 allow_firewall_rule:
                   type: boolean
+                dry_run:
+                  type: boolean
+                  description: When true, agents simulate interventions without mutating the host (default true).
                 protected_cidrs:
                   type: array
                   items:

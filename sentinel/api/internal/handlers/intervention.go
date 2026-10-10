@@ -32,6 +32,7 @@ type interventionSettingsResponse struct {
 	AllowBlockIP      bool       `json:"allow_block_ip"`
 	AllowKillProcess  bool       `json:"allow_kill_process"`
 	AllowFirewallRule bool       `json:"allow_firewall_rule"`
+	DryRun            bool       `json:"dry_run"`
 	ProtectedCIDRs    []string   `json:"protected_cidrs"`
 	Source            string     `json:"source,omitempty"`
 	UpdatedAt         string     `json:"updated_at,omitempty"`
@@ -43,6 +44,7 @@ type putInterventionSettingsRequest struct {
 	AllowBlockIP      *bool    `json:"allow_block_ip"`
 	AllowKillProcess  *bool    `json:"allow_kill_process"`
 	AllowFirewallRule *bool    `json:"allow_firewall_rule"`
+	DryRun            *bool    `json:"dry_run"`
 	ProtectedCIDRs    []string `json:"protected_cidrs"`
 }
 
@@ -108,6 +110,7 @@ func (h *InterventionHandler) PutSettings(w http.ResponseWriter, r *http.Request
 		AllowBlockIP:      req.AllowBlockIP,
 		AllowKillProcess:  req.AllowKillProcess,
 		AllowFirewallRule: req.AllowFirewallRule,
+		DryRun:            req.DryRun,
 		ProtectedCIDRs:    req.ProtectedCIDRs,
 		UpdatedBy:         actor,
 	})
@@ -116,7 +119,7 @@ func (h *InterventionHandler) PutSettings(w http.ResponseWriter, r *http.Request
 		return
 	}
 	_ = store.Audit(r.Context(), h.Pool, actor, "user", "intervention.settings.update", "intervention_settings", &s.ID, map[string]any{
-		"enabled": s.Enabled, "mode": s.Mode,
+		"enabled": s.Enabled, "mode": s.Mode, "dry_run": s.DryRun,
 		"allow_block_ip": s.AllowBlockIP, "allow_kill_process": s.AllowKillProcess, "allow_firewall_rule": s.AllowFirewallRule,
 	}, parseClientIP(r), r.UserAgent())
 	writeJSON(w, http.StatusOK, toInterventionSettingsResponse(s, "global"))
@@ -152,6 +155,7 @@ func (h *InterventionHandler) PutServerSettings(w http.ResponseWriter, r *http.R
 		AllowBlockIP:      req.AllowBlockIP,
 		AllowKillProcess:  req.AllowKillProcess,
 		AllowFirewallRule: req.AllowFirewallRule,
+		DryRun:            req.DryRun,
 		ProtectedCIDRs:    req.ProtectedCIDRs,
 		UpdatedBy:         actor,
 	})
@@ -160,7 +164,7 @@ func (h *InterventionHandler) PutServerSettings(w http.ResponseWriter, r *http.R
 		return
 	}
 	_ = store.Audit(r.Context(), h.Pool, actor, "user", "intervention.server_settings.update", "server", &serverID, map[string]any{
-		"enabled": s.Enabled, "mode": s.Mode,
+		"enabled": s.Enabled, "mode": s.Mode, "dry_run": s.DryRun,
 	}, parseClientIP(r), r.UserAgent())
 	writeJSON(w, http.StatusOK, toInterventionSettingsResponse(s, "server"))
 }
@@ -309,6 +313,7 @@ func AgentInterventionCapabilities(ctxSettings store.InterventionSettings, sourc
 		"enabled": ctxSettings.Enabled && ctxSettings.Mode != "observe",
 		"mode":    ctxSettings.Mode,
 		"source":  source,
+		"dry_run": ctxSettings.DryRun,
 		"capabilities": map[string]bool{
 			"block_ip":      ctxSettings.Enabled && ctxSettings.Mode == "act" && ctxSettings.AllowBlockIP,
 			"kill_process":  ctxSettings.Enabled && ctxSettings.Mode == "act" && ctxSettings.AllowKillProcess,
@@ -407,6 +412,7 @@ func toInterventionSettingsResponse(s store.InterventionSettings, source string)
 		AllowBlockIP:      s.AllowBlockIP,
 		AllowKillProcess:  s.AllowKillProcess,
 		AllowFirewallRule: s.AllowFirewallRule,
+		DryRun:            s.DryRun,
 		ProtectedCIDRs:    s.ProtectedCIDRs,
 		Source:            source,
 	}

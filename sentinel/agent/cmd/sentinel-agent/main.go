@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
@@ -29,29 +30,14 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
-	creds, err := credentials.Load(cfg.CredentialPath)
+	creds, err := loadOrEnroll(ctx, cfg, log)
 	if err != nil {
-		if cfg.EnrollmentToken == "" {
-			log.Error("no credentials and SENTINEL_ENROLLMENT_TOKEN not set")
-			os.Exit(1)
-		}
-		client := agentapi.NewClient(cfg.APIBaseURL, cfg.TLSSkipVerify, "")
-		resp, err := client.Enroll(cfg.EnrollmentToken, cfg.AgentName, cfg.AgentVersion)
-		if err != nil {
-			log.Error("enrollment failed", "err", err)
-			os.Exit(1)
-		}
-		creds = credentials.StoredCredentials{
-			AgentID:     resp.AgentID,
-			ServerID:    resp.ServerID,
-			AgentToken:  resp.AgentToken,
-			TokenPrefix: resp.TokenPrefix,
-		}
-		if err := credentials.Save(cfg.CredentialPath, creds); err != nil {
-			log.Error("save credentials", "err", err)
-			os.Exit(1)
-		}
-		log.Info("enrolled", "agent_id", creds.AgentID, "token_prefix", creds.TokenPrefix)
+		log.Error("credentials", "err", err)
+		os.Exit(1)
+	}
+	if cfg.EnrollOnly {
+		log.Info("enroll-only complete; credentials saved", "agent_id", creds.AgentID, "path", cfg.CredentialPath)
+		return
 	}
 
 	client := agentapi.NewClient(cfg.APIBaseURL, cfg.TLSSkipVerify, creds.AgentToken)
@@ -81,6 +67,8 @@ func main() {
 	defer interventionTicker.Stop()
 
 	var lastCaps intervention.Capabilities
+	var heartbeatDryRun bool
+	var heartbeatSeen bool
 
 	sendHeartbeat := func() {
 		hb, err := client.Heartbeat(cfg.AgentVersion)
@@ -98,8 +86,14 @@ func main() {
 				FirewallRule:   hb.Intervention.Capabilities["firewall_rule"],
 				ProtectedCIDRs: hb.Intervention.ProtectedCIDRs,
 			}
+			heartbeatDryRun = hb.Intervention.DryRun
+			heartbeatSeen = true
 		}
-		log.Debug("heartbeat ok", "intervention_mode", lastCaps.Mode, "intervention_enabled", lastCaps.Enabled)
+		log.Debug("heartbeat ok",
+			"intervention_mode", lastCaps.Mode,
+			"intervention_enabled", lastCaps.Enabled,
+			"dry_run", cfg.EffectiveInterventionDryRun(heartbeatDryRun, heartbeatSeen),
+		)
 	}
 	pollInterventions := func() {
 		if !lastCaps.CanPollActions {
@@ -110,17 +104,18 @@ func main() {
 			log.Warn("poll interventions failed", "err", err)
 			return
 		}
+		dryRun := cfg.EffectiveInterventionDryRun(heartbeatDryRun, heartbeatSeen)
 		for _, a := range actions {
 			res := intervention.Execute(ctx, lastCaps, intervention.Action{
 				ID:         a.ID,
 				ActionType: a.ActionType,
 				Payload:    a.Payload,
-			}, cfg.InterventionDryRun)
+			}, dryRun)
 			if err := client.ReportInterventionResult(a.ID, res.Success, res.Result, res.Error); err != nil {
 				log.Warn("report intervention result failed", "err", err, "action_id", a.ID)
 				continue
 			}
-			log.Info("intervention processed", "action_id", a.ID, "type", a.ActionType, "success", res.Success, "dry_run", cfg.InterventionDryRun)
+			log.Info("intervention processed", "action_id", a.ID, "type", a.ActionType, "success", res.Success, "dry_run", dryRun)
 		}
 	}
 	ingest := func(events []event.CanonicalEvent, source string) {
@@ -157,6 +152,53 @@ func main() {
 			if dockerCollector != nil {
 				ingest(dockerCollector.Drain(), "docker")
 			}
+		}
+	}
+}
+
+func loadOrEnroll(ctx context.Context, cfg config.Config, log *slog.Logger) (credentials.StoredCredentials, error) {
+	creds, err := credentials.Load(cfg.CredentialPath)
+	if err == nil {
+		return creds, nil
+	}
+	if cfg.EnrollmentToken != "" {
+		client := agentapi.NewClient(cfg.APIBaseURL, cfg.TLSSkipVerify, "")
+		resp, err := client.Enroll(cfg.EnrollmentToken, cfg.AgentName, cfg.AgentVersion)
+		if err != nil {
+			return credentials.StoredCredentials{}, err
+		}
+		creds = credentials.StoredCredentials{
+			AgentID:     resp.AgentID,
+			ServerID:    resp.ServerID,
+			AgentToken:  resp.AgentToken,
+			TokenPrefix: resp.TokenPrefix,
+		}
+		if err := credentials.Save(cfg.CredentialPath, creds); err != nil {
+			return credentials.StoredCredentials{}, err
+		}
+		log.Info("enrolled", "agent_id", creds.AgentID, "token_prefix", creds.TokenPrefix)
+		return creds, nil
+	}
+
+	// Panel-first compose flow: wait for credentials written by a one-shot enroll into the volume.
+	log.Warn("no credentials yet; waiting for panel one-shot enroll into credential volume",
+		"path", cfg.CredentialPath,
+	)
+	ticker := time.NewTicker(5 * time.Second)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return credentials.StoredCredentials{}, ctx.Err()
+		case <-ticker.C:
+			creds, err := credentials.Load(cfg.CredentialPath)
+			if err == nil {
+				log.Info("credentials appeared on disk", "agent_id", creds.AgentID)
+				return creds, nil
+			}
+			log.Warn("still waiting for credentials (issue token in panel, then one-shot compose enroll)",
+				"path", cfg.CredentialPath,
+			)
 		}
 	}
 }

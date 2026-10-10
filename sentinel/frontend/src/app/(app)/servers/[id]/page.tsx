@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { FormEvent, useRef, useState } from "react";
+import { FormEvent, useMemo, useRef, useState } from "react";
 import { SilenceControl, writeTargetSilence } from "@/components/operator/silence-control";
 import { EmptyState } from "@/components/ui/empty-state";
 import { LoadingBlock } from "@/components/ui/loading-block";
@@ -41,6 +41,19 @@ type ServerDetail = {
   silent?: boolean;
 };
 
+function composeEnrollCommand(token: string, agentName: string): string {
+  const name = agentName.trim() || "compose-agent";
+  return [
+    "docker compose --profile agent run --rm \\",
+    `  -e SENTINEL_ENROLLMENT_TOKEN=${token} \\`,
+    `  -e SENTINEL_AGENT_NAME=${name} \\`,
+    "  -e SENTINEL_ENROLL_ONLY=1 \\",
+    "  sentinel-agent",
+    "",
+    "docker compose --profile agent up -d",
+  ].join("\n");
+}
+
 export default function ServerDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
@@ -49,14 +62,15 @@ export default function ServerDetailPage() {
   const canWrite = hasPermission(user, "servers", "write");
   const [silenceBusy, setSilenceBusy] = useState(false);
   const [silenceError, setSilenceError] = useState<string | null>(null);
-  const [label, setLabel] = useState("default-agent");
+  const [label, setLabel] = useState("compose-agent");
   const [ttl, setTtl] = useState(60);
   const [issuing, setIssuing] = useState(false);
   const [issueError, setIssueError] = useState<string | null>(null);
   const [issued, setIssued] = useState<EnrollmentToken | null>(null);
-  const [copied, setCopied] = useState(false);
+  const [copied, setCopied] = useState<"token" | "command" | null>(null);
   const [copyHint, setCopyHint] = useState<string | null>(null);
   const tokenRef = useRef<HTMLElement>(null);
+  const commandRef = useRef<HTMLPreElement>(null);
 
   const serverQuery = useQuery(id ? `server:${id}` : null, () => apiFetch<ServerDetail>(`/servers/${id}`), {
     refreshMs: 20000,
@@ -64,6 +78,11 @@ export default function ServerDetailPage() {
   const server = serverQuery.data ?? null;
   const loading = serverQuery.loading;
   const error = serverQuery.error;
+
+  const enrollCommand = useMemo(() => {
+    if (!issued?.token) return "";
+    return composeEnrollCommand(issued.token, label);
+  }, [issued?.token, label]);
 
   async function onIssue(e: FormEvent) {
     e.preventDefault();
@@ -94,8 +113,20 @@ export default function ServerDetailPage() {
     setCopyHint(null);
     const result = await copyText(issued.token, tokenRef.current);
     if (result.ok) {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      setCopied("token");
+      setTimeout(() => setCopied(null), 2000);
+      return;
+    }
+    setCopyHint(result.message);
+  }
+
+  async function copyCommand() {
+    if (!enrollCommand) return;
+    setCopyHint(null);
+    const result = await copyText(enrollCommand, commandRef.current);
+    if (result.ok) {
+      setCopied("command");
+      setTimeout(() => setCopied(null), 2000);
       return;
     }
     setCopyHint(result.message);
@@ -226,6 +257,11 @@ export default function ServerDetailPage() {
                 </div>
               ) : null}
               <p className="text-muted">{t("host.enrollHint")}</p>
+              <ol className="text-muted small ps-3 mb-3">
+                <li className="mb-1">{t("host.composeStep1")}</li>
+                <li className="mb-1">{t("host.composeStep2")}</li>
+                <li>{t("host.composeStep3")}</li>
+              </ol>
               <form onSubmit={onIssue}>
                 <label className="form-label" htmlFor="enroll-label">
                   {t("host.label")}
@@ -235,7 +271,7 @@ export default function ServerDetailPage() {
                   className="form-control mb-3"
                   value={label}
                   onChange={(e) => setLabel(e.target.value)}
-                  placeholder="main-agent"
+                  placeholder="compose-agent"
                 />
                 <label className="form-label" htmlFor="enroll-ttl">
                   {t("host.ttl")}
@@ -250,7 +286,7 @@ export default function ServerDetailPage() {
                   onChange={(e) => setTtl(Number(e.target.value) || 60)}
                 />
                 {issueError ? <div className="alert alert-danger">{issueError}</div> : null}
-                <button type="submit" className="btn btn-primary" disabled={issuing}>
+                <button type="submit" className="btn btn-primary" disabled={issuing || !canWrite}>
                   {issuing ? t("host.issuing") : t("host.issue")}
                 </button>
               </form>
@@ -258,19 +294,28 @@ export default function ServerDetailPage() {
               {issued?.token ? (
                 <div className="alert alert-success mt-4 mb-0">
                   <p className="fw-medium mb-2">{t("host.copyNow")}</p>
-                  <code ref={tokenRef} className="d-block user-select-all">
+                  <code ref={tokenRef} className="d-block user-select-all text-break">
                     {issued.token}
                   </code>
                   <p className="text-muted mt-2 mb-2">
                     {t("host.expires")} {formatAlertTime(issued.expires_at)} · {t("host.prefix")} {issued.token_prefix}
                   </p>
-                  <button type="button" className="btn btn-sm btn-light" onClick={() => void copyToken()}>
-                    {copied ? t("host.copied") : t("host.copy")}
-                  </button>
+                  <div className="d-flex flex-wrap gap-2 mb-3">
+                    <button type="button" className="btn btn-sm btn-light" onClick={() => void copyToken()}>
+                      {copied === "token" ? t("host.copied") : t("host.copy")}
+                    </button>
+                    <button type="button" className="btn btn-sm btn-primary" onClick={() => void copyCommand()}>
+                      {copied === "command" ? t("host.copiedCommand") : t("host.copyCommand")}
+                    </button>
+                  </div>
                   {copyHint ? <p className="text-warning mt-2 mb-0">{copyHint}</p> : null}
-                  <pre className="bg-dark text-white p-3 rounded mt-3 mb-0">
-{`# On the monitored host (Defentrax agent):
-export SENTINEL_API_URL=http://YOUR_DEFENTRAX_HOST:8080
+                  <p className="fw-medium mb-2">{t("host.composeSteps")}</p>
+                  <pre ref={commandRef} className="bg-dark text-white p-3 rounded mb-3 user-select-all text-break">
+                    {enrollCommand}
+                  </pre>
+                  <p className="text-muted small mb-2">{t("host.bareMetalHint")}</p>
+                  <pre className="bg-dark text-white p-3 rounded mb-0 text-break">
+                    {`export SENTINEL_API_URL=http://YOUR_DEFENTRAX_HOST:8080
 export SENTINEL_ENROLLMENT_TOKEN=${issued.token}
 export SENTINEL_AGENT_NAME=${label || "agent"}
 ./sentinel-agent`}

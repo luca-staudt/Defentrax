@@ -182,6 +182,7 @@ export type InterventionSettings = {
   allow_block_ip: boolean;
   allow_kill_process: boolean;
   allow_firewall_rule: boolean;
+  dry_run: boolean;
   protected_cidrs: string[];
   source?: string;
   updated_at?: string;

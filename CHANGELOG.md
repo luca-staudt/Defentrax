@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- Panel-first Compose agent enrollment: server detail shows a one-shot `docker compose run -e SENTINEL_ENROLLMENT_TOKEN=…` command; credentials persist in the `agent_data` volume (no permanent `.env` token)
+- `SENTINEL_ENROLL_ONLY` for one-shot enroll-then-exit; agent waits for credentials on disk instead of crash-looping when no token is set
+- Intervention `dry_run` setting (DB + panel switch); agents receive `intervention.dry_run` on heartbeat and prefer it over env
+
+### Changed
+
+- Compose `sentinel-agent` no longer reads `SENTINEL_ENROLLMENT_TOKEN` from `.env` for ongoing runs
+- `SENTINEL_INTERVENTION_DRY_RUN` is an optional override only when explicitly set
+
 ## [0.3.0] — 2026-10-08
 
 Third tagged **pre-release**. Operator-panel feature set on top of `v0.2.0`,

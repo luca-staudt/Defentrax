@@ -4,7 +4,7 @@
 #   docker compose up -d --build
 #
 # Optional profiles:
-#   --profile agent   include host agent (needs enrollment token)
+#   --profile agent   include host agent (enroll once via panel one-shot; credentials in volume)
 #   --profile proxy   include Caddy reverse proxy on :80
 #
 # Image tags: pin immutable versions/digests in production — do not use :latest.
@@ -128,7 +128,12 @@ services:
     networks:
       - sentinel
 
-  # Optional: run an agent against the compose API (enrollment token required).
+  # Optional: compose stack agent. Do NOT put enrollment tokens in .env.
+  # Panel flow (server detail → Issue enrollment token):
+  #   docker compose --profile agent run --rm \
+  #     -e SENTINEL_ENROLLMENT_TOKEN=senr_… -e SENTINEL_ENROLL_ONLY=1 sentinel-agent
+  #   docker compose --profile agent up -d
+  # Credentials persist in the agent_data volume; ongoing runs need only SENTINEL_API_URL.
   # Mount a host auth log via override, e.g.:
   #   volumes: ["./auth.log:/var/log/auth.log:ro"]
   sentinel-agent:
@@ -141,7 +146,6 @@ services:
     restart: unless-stopped
     environment:
       SENTINEL_API_URL: http://sentinel-api:8080
-      SENTINEL_ENROLLMENT_TOKEN: ${SENTINEL_ENROLLMENT_TOKEN:-}
       SENTINEL_AGENT_NAME: ${SENTINEL_AGENT_NAME:-compose-agent}
       SENTINEL_AGENT_CREDENTIAL_PATH: /var/lib/sentinel/credentials.json
       SENTINEL_AUTH_LOG_PATH: ${SENTINEL_AUTH_LOG_PATH:-/var/log/auth.log}

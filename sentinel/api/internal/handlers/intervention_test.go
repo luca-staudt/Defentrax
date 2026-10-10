@@ -44,3 +44,22 @@ func TestCapabilityAllowed(t *testing.T) {
 		t.Fatal("expected deny")
 	}
 }
+
+func TestAgentInterventionCapabilitiesDryRun(t *testing.T) {
+	s := store.InterventionSettings{
+		Enabled: true,
+		Mode:    "act",
+		DryRun:  true,
+	}
+	caps := AgentInterventionCapabilities(s, "global")
+	dry, ok := caps["dry_run"].(bool)
+	if !ok || !dry {
+		t.Fatalf("expected dry_run true, got %#v", caps["dry_run"])
+	}
+	s.DryRun = false
+	caps = AgentInterventionCapabilities(s, "global")
+	dry, ok = caps["dry_run"].(bool)
+	if !ok || dry {
+		t.Fatalf("expected dry_run false, got %#v", caps["dry_run"])
+	}
+}

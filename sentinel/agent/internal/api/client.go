@@ -72,6 +72,7 @@ type InterventionPolicy struct {
 	Enabled        bool            `json:"enabled"`
 	Mode           string          `json:"mode"`
 	Source         string          `json:"source"`
+	DryRun         bool            `json:"dry_run"`
 	Capabilities   map[string]bool `json:"capabilities"`
 	CanPollActions bool            `json:"can_poll_actions"`
 	ProtectedCIDRs []string        `json:"protected_cidrs"`
