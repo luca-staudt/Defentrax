@@ -3,11 +3,20 @@
 #   cp .env.example .env   # fill secrets (see comments)
 #   docker compose up -d --build
 #
+# Images are built locally (not published to Docker Hub). Services with a
+# `build:` section use pull_policy: build so Compose never tries
+# docker.io/library/defentrax-* (or legacy sentinel-*) pulls.
+#
+# If migrate fails the whole stack: docker compose logs migrate
+# Common cause: POSTGRES_PASSWORD changed while volume sentinel-postgres-data still has the old password.
+#
 # Optional profiles:
 #   --profile agent   include host agent (enroll once via panel one-shot; credentials in volume)
 #   --profile proxy   include Caddy reverse proxy on :80
 #
 # Image tags: pin immutable versions/digests in production — do not use :latest.
+# Compose project/network/service names remain `sentinel*` for DNS compatibility
+# (e.g. http://sentinel-api:8080). Local image tags use defentrax-* for branding.
 
 name: sentinel
 
@@ -51,7 +60,8 @@ services:
     build:
       context: .
       dockerfile: sentinel/database/Dockerfile
-    image: sentinel-migrate:${SENTINEL_IMAGE_TAG:-0.3.0}
+    image: defentrax-migrate:${SENTINEL_IMAGE_TAG:-0.3.0}
+    pull_policy: build
     container_name: sentinel-migrate
     restart: "no"
     environment:
@@ -66,7 +76,8 @@ services:
     build:
       context: .
       dockerfile: sentinel/api/Dockerfile
-    image: sentinel-api:${SENTINEL_IMAGE_TAG:-0.3.0}
+    image: defentrax-api:${SENTINEL_IMAGE_TAG:-0.3.0}
+    pull_policy: build
     container_name: sentinel-api
     restart: unless-stopped
     env_file:
@@ -111,7 +122,8 @@ services:
       args:
         NEXT_PUBLIC_WS_URL: ${NEXT_PUBLIC_WS_URL:-ws://localhost:8080}
         API_PROXY_TARGET: ${API_PROXY_TARGET:-http://sentinel-api:8080}
-    image: sentinel-frontend:${SENTINEL_IMAGE_TAG:-0.3.0}
+    image: defentrax-frontend:${SENTINEL_IMAGE_TAG:-0.3.0}
+    pull_policy: build
     container_name: sentinel-frontend
     restart: unless-stopped
     environment:
@@ -141,7 +153,8 @@ services:
     build:
       context: .
       dockerfile: sentinel/agent/Dockerfile
-    image: sentinel-agent:${SENTINEL_IMAGE_TAG:-0.3.0}
+    image: defentrax-agent:${SENTINEL_IMAGE_TAG:-0.3.0}
+    pull_policy: build
     container_name: sentinel-agent
     restart: unless-stopped
     environment:

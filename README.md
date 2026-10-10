@@ -99,6 +99,14 @@ openssl rand -base64 32   # → TOTP_ENCRYPTION_KEY=
 docker compose up -d --build
 ```
 
+App images (`defentrax-api`, `defentrax-frontend`, `defentrax-migrate`, …) are **built locally** — not pulled from Docker Hub. Always pass `--build` after a fresh clone.
+
+If startup stops with `service migrate didn't complete successfully`:
+
+```bash
+docker compose logs migrate
+```
+
 | Service | URL |
 |---------|-----|
 | UI | http://localhost:3000 |

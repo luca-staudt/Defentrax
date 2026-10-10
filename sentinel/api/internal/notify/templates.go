@@ -82,7 +82,7 @@ func RenderSlackJSON(ev AlertEvent) map[string]any {
 // RenderWebhookJSON is the generic outbound webhook body.
 func RenderWebhookJSON(ev AlertEvent) map[string]any {
 	return map[string]any{
-		"source":  "sentinel",
+		"source":  "defentrax",
 		"event":   ev.Trigger,
 		"alert":   ev,
 		"message": RenderText(ev),

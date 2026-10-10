@@ -25,7 +25,7 @@ func main() {
 		log.Error("config", "err", err)
 		os.Exit(1)
 	}
-	log.Info("starting sentinel agent", "config", cfg.String())
+	log.Info("starting Defentrax agent", "config", cfg.String())
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()

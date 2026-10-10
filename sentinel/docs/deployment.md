@@ -50,8 +50,10 @@ docker compose exec -T postgres pg_dump -U sentinel sentinel > sentinel-$(date +
 
 ## Image-Tags (immutable)
 
-- Compose setzt `image: sentinel-*:${SENTINEL_IMAGE_TAG:-0.3.0}`.
-- Basisimages sind versioniert (`postgres:16.6-alpine`, `redis:7.4.2-alpine`, `caddy:2.9.1-alpine`, `golang:1.22-alpine`, `node:20-alpine`, `alpine:3.20`).
+- Compose baut lokal und taggt `image: defentrax-*:${SENTINEL_IMAGE_TAG:-0.3.0}` mit `pull_policy: build`.
+  Es gibt **keine** öffentlichen Docker-Hub-Images unter `sentinel-*` / `defentrax-*` — `docker compose up` ohne Build würde sonst `pull access denied` melden.
+- Service-/Container-Namen bleiben `sentinel-*` (DNS, z. B. `http://sentinel-api:8080`).
+- Basisimages sind versioniert (`postgres:16.6-alpine`, `redis:7.4.2-alpine`, `caddy:2.9.1-alpine`, …).
 - **Production:** konkrete SemVer-Tags oder Digests pinnen; `:latest` vermeiden; nach Rebuild Registry-Tag nicht überschreiben, sondern neuen Tag pushen.
 
 Beispiel Registry-Push:
@@ -59,11 +61,19 @@ Beispiel Registry-Push:
 ```bash
 export SENTINEL_IMAGE_TAG=0.3.0
 docker compose build
-docker tag sentinel-api:0.3.0 registry.example.com/sentinel-api:0.3.0
-docker tag sentinel-frontend:0.3.0 registry.example.com/sentinel-frontend:0.3.0
-docker push registry.example.com/sentinel-api:0.3.0
-docker push registry.example.com/sentinel-frontend:0.3.0
+docker tag defentrax-api:0.3.0 registry.example.com/defentrax-api:0.3.0
+docker tag defentrax-frontend:0.3.0 registry.example.com/defentrax-frontend:0.3.0
+docker push registry.example.com/defentrax-api:0.3.0
+docker push registry.example.com/defentrax-frontend:0.3.0
 ```
+
+### Migrate schlägt fehl (`service migrate didn't complete successfully`)
+
+```bash
+docker compose logs migrate
+```
+
+Häufig: `POSTGRES_PASSWORD` in `.env` passt nicht zum bestehenden Volume `sentinel-postgres-data` (Passwort wurde geändert, Volume behalten). Dann entweder das alte Passwort wiederherstellen oder bewusst neu aufsetzen (`docker compose down -v` — **Datenverlust**).
 
 ## Netzwerk / Cookies
 

@@ -6,7 +6,8 @@ Short operator runbook. Cross-check [configuration.md](configuration.md) and [se
 
 | Symptom | Checks |
 |---------|--------|
-| `migrate` exits non-zero | `POSTGRES_PASSWORD` / `DATABASE_URL` mismatch; Postgres healthy; read migrate logs |
+| `migrate` exits non-zero / `service migrate didn't complete successfully` | `docker compose logs migrate`; `POSTGRES_PASSWORD` vs existing volume; Postgres healthy |
+| `pull access denied for sentinel-*` / `defentrax-*` | Images are **local builds only** — use `docker compose up -d --build` (Compose sets `pull_policy: build`) |
 | API unhealthy | `docker compose logs sentinel-api`; `SESSION_SECRET` set; DB reachable |
 | `/readyz` fails | Postgres not ready or migrations incomplete |
 | Frontend blank / API errors | `CORS_ALLOWED_ORIGINS`; `NEXT_PUBLIC_WS_URL`; rebuild UI after env change |
@@ -14,6 +15,7 @@ Short operator runbook. Cross-check [configuration.md](configuration.md) and [se
 
 ```bash
 docker compose ps
+docker compose logs migrate
 curl -sS http://localhost:8080/healthz
 curl -sS http://localhost:8080/readyz
 docker compose logs --tail=200 sentinel-api

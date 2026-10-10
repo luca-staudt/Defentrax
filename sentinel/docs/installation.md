@@ -55,8 +55,16 @@ Full variable reference: [configuration.md](configuration.md).
 
 ## 2. Start the stack
 
+App images are built **locally** (tags `defentrax-*:${SENTINEL_IMAGE_TAG}`). Always use `--build` on first deploy or after pulls — Compose uses `pull_policy: build` so it does not try Docker Hub for those tags.
+
 ```bash
 docker compose up -d --build
+```
+
+If `migrate` fails (`service migrate didn't complete successfully`), inspect:
+
+```bash
+docker compose logs migrate
 ```
 
 Services: `postgres`, `redis`, `migrate` (one-shot), `sentinel-api`, `sentinel-frontend`.

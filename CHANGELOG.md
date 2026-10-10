@@ -17,6 +17,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 - Compose `sentinel-agent` no longer reads `SENTINEL_ENROLLMENT_TOKEN` from `.env` for ongoing runs
 - `SENTINEL_INTERVENTION_DRY_RUN` is an optional override only when explicitly set
+- Compose local image tags renamed to `defentrax-*` with `pull_policy: build` (no Docker Hub pull; service DNS stays `sentinel-*`)
+- User-facing runtime strings: API/agent startup logs and webhook `source` use **Defentrax**
+- Migrate entrypoint prints last DB error + password/volume hints; docs note `docker compose logs migrate`
 
 ## [0.3.0] — 2026-10-08
 

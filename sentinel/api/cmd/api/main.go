@@ -38,7 +38,7 @@ func main() {
 	}
 
 	log := logging.New(cfg.LogLevel)
-	log.Info("sentinel api starting", "env", cfg.Env, "port", cfg.Port)
+	log.Info("Defentrax api starting", "env", cfg.Env, "port", cfg.Port)
 
 	ctx := context.Background()
 	var pool *pgxpool.Pool
@@ -196,7 +196,7 @@ func main() {
 		log.Error("shutdown failed", "error", err)
 		os.Exit(1)
 	}
-	log.Info("sentinel api stopped")
+	log.Info("Defentrax api stopped")
 }
 
 func rulesDir() string {

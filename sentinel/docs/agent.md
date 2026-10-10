@@ -22,7 +22,7 @@ go build -o sentinel-agent ./cmd/sentinel-agent
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `SENTINEL_API_URL` | yes | Base URL, e.g. `https://sentinel.example.com` |
+| `SENTINEL_API_URL` | yes | Base URL, e.g. `https://defentrax.example.com` |
 | `SENTINEL_ENROLLMENT_TOKEN` | first run only | One-time `senr_…` token from the panel (do **not** keep in compose `.env`) |
 | `SENTINEL_ENROLL_ONLY` | no | `true` to exit after saving credentials (one-shot compose enroll) |
 | `SENTINEL_AGENT_CREDENTIAL_PATH` | no | Default `/var/lib/sentinel/agent/credentials.json` (mode `0600`) |
