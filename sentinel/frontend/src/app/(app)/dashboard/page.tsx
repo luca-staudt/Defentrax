@@ -53,7 +53,7 @@ export default function DashboardPage() {
       {stats ? (
         <>
           {/* Five equal-width stats on lg+; wrap 2-up on sm/md; full-width on xs. */}
-          <div className="row g-4 mb-4">
+          <div className="row g-4 mb-4 dx-stats-row">
             <StatWidget
               label={t("dash.open")}
               value={stats.alerts_open}

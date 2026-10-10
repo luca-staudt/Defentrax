@@ -166,25 +166,25 @@ export default function ServerDetailPage() {
         }
       />
 
-      <div className="row">
-        <div className="col-md-4">
-          <div className="card card-animate">
+      <div className="row g-4 mb-4 dx-stats-row">
+        <div className="col-12 col-sm-6 col-lg">
+          <div className="card card-animate h-100">
             <div className="card-body">
               <p className="text-uppercase fw-medium text-muted mb-2">{t("host.agents")}</p>
               <h4 className="fs-22 fw-semibold ff-secondary mb-0">{server.agents.length}</h4>
             </div>
           </div>
         </div>
-        <div className="col-md-4">
-          <div className="card card-animate">
+        <div className="col-12 col-sm-6 col-lg">
+          <div className="card card-animate h-100">
             <div className="card-body">
               <p className="text-uppercase fw-medium text-muted mb-2">{t("host.environment")}</p>
               <h4 className="fs-16 fw-semibold mb-0">{server.environment || t("common.default")}</h4>
             </div>
           </div>
         </div>
-        <div className="col-md-4">
-          <div className="card card-animate">
+        <div className="col-12 col-sm-6 col-lg">
+          <div className="card card-animate h-100">
             <div className="card-body">
               <p className="text-uppercase fw-medium text-muted mb-2">{t("host.enrolled")}</p>
               <h4 className="fs-16 fw-semibold mb-0">{formatAlertTime(server.created_at)}</h4>
@@ -193,7 +193,7 @@ export default function ServerDetailPage() {
         </div>
       </div>
 
-      <div className="row">
+      <div className="row g-4">
         <div className="col-xl-7">
           {server.description ? (
             <div className="card">

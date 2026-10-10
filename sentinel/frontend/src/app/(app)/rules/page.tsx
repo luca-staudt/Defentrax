@@ -220,7 +220,7 @@ export default function RulesPage() {
         }
       />
 
-      <div className="row g-3">
+      <div className="row g-4 mb-4 dx-stats-row">
         <Stat label={t("rules.armed")} value={enabledCount} icon="ri-shield-check-line" tone="success" />
         <Stat label={t("rules.critical")} value={counts.critical} icon="ri-alarm-warning-line" tone="danger" />
         <Stat label={t("rules.high")} value={counts.high} icon="ri-error-warning-line" tone="warning" />
@@ -443,7 +443,7 @@ function Stat({
   tone: "primary" | "success" | "warning" | "danger";
 }) {
   return (
-    <div className="col-12 col-sm-6 col-xl-3">
+    <div className="col-12 col-sm-6 col-lg">
       <div className={`card card-animate dx-stat-card dx-stat-${tone} h-100`}>
         <div className="card-body">
           <div className="d-flex align-items-center">
