@@ -258,7 +258,7 @@ export default function TeamUsersPage() {
         }
       />
 
-      <div className="row g-3 mb-3">
+      <div className="row g-4 mb-4 dx-stats-row">
         <Stat
           label={t("people.operators")}
           value={users.length}
@@ -464,7 +464,7 @@ function Stat({
   progress?: number;
 }) {
   return (
-    <div className="col-12 col-sm-6 col-xl">
+    <div className="col-12 col-sm-6 col-lg">
       <div className={`card card-animate dx-stat-card dx-stat-${tone} h-100`}>
         <div className="card-body">
           <div className="d-flex align-items-start justify-content-between gap-2">

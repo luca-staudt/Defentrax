@@ -14,7 +14,7 @@ function StatCard({
   icon: string;
 }) {
   return (
-    <div className="col-xl-3 col-md-6">
+    <div className="col-12 col-sm-6 col-lg">
       <div className="card card-animate dx-stat-card dx-stat-primary h-100">
         <div className="card-body">
           <div className="d-flex align-items-center">
@@ -46,7 +46,7 @@ export function StatsGrid({ stats }: { stats: DashboardStats }) {
 
   return (
     <>
-      <div className="row">
+      <div className="row g-4 mb-4 dx-stats-row">
         <StatCard
           label="Monitored Servers"
           value={stats.servers_total}
@@ -72,7 +72,7 @@ export function StatsGrid({ stats }: { stats: DashboardStats }) {
           icon="ri-shield-check-line"
         />
       </div>
-      <div className="row">
+      <div className="row g-4">
         <div className="col-xl-8">
           <ThreatTimelineChart eventsTotal={stats.events_last_24h} alertsCount={stats.alerts_open} />
         </div>

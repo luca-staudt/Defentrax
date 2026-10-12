@@ -524,6 +524,14 @@ html[data-sidebar-size="sm-hover"] .app-menu.navbar-menu:hover .dx-sidebar-user 
   }
 }
 
+// Shared gutters for page-level stats rows (dashboard, rules, users, host detail, …).
+// Prefer pairing with Bootstrap `row g-4 mb-4` so left/right/top/bottom spacing stays even.
+.dx-stats-row {
+  --bs-gutter-x: 1.5rem;
+  --bs-gutter-y: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
 .dx-stat-card {
   border: 1px solid var(--#{$prefix}border-color);
   border-radius: 0.85rem;
