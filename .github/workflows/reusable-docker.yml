@@ -41,7 +41,7 @@ jobs:
 
       - name: Build API image
         if: contains(inputs.images, 'api')
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: sentinel/api/Dockerfile
@@ -53,7 +53,7 @@ jobs:
 
       - name: Build agent image
         if: contains(inputs.images, 'agent')
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: sentinel/agent/Dockerfile
@@ -65,7 +65,7 @@ jobs:
 
       - name: Build frontend image
         if: contains(inputs.images, 'frontend')
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: sentinel/frontend
           file: sentinel/frontend/Dockerfile
@@ -77,7 +77,7 @@ jobs:
 
       - name: Build migrate image
         if: contains(inputs.images, 'migrate')
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: sentinel/database/Dockerfile
