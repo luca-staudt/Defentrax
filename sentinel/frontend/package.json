@@ -27,7 +27,7 @@
     "@types/react-dom": "^19",
     "@types/reactstrap": "^8.7.1",
     "eslint": "^9",
-    "eslint-config-next": "15.5.27",
+    "eslint-config-next": "16.4.0",
     "typescript": "^5"
   },
   "overrides": {
