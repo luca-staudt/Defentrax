@@ -15,7 +15,7 @@
     "next": "15.5.27",
     "react": "19.1.0",
     "react-apexcharts": "^2.1.1",
-    "react-dom": "19.1.0",
+    "react-dom": "19.3.0",
     "reactstrap": "^9.2.3",
     "sass": "^1.89.0",
     "simplebar-react": "^3.3.1"
