@@ -58,7 +58,7 @@ jobs:
 
       - name: Upload image SBOM
         if: ${{ inputs.image-ref != '' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: sentinel-api-image-sbom
           path: sentinel-api-image-sbom.spdx.json
