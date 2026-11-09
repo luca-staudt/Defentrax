@@ -13,7 +13,7 @@ replace github.com/luca-staudt/Defentrax/sentinel/plugins => ../plugins
 require (
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/websocket v1.5.3
-	github.com/jackc/pgx/v5 v5.9.2
+	github.com/jackc/pgx/v5 v5.12.0
 	github.com/luca-staudt/Defentrax/sentinel/detection v0.0.0
 	github.com/luca-staudt/Defentrax/sentinel/pkg/event v0.0.0
 	github.com/luca-staudt/Defentrax/sentinel/pkg/version v0.0.0
@@ -29,7 +29,7 @@ require (
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect
-	github.com/jackc/puddle/v2 v2.2.2 // indirect
+	github.com/jackc/puddle/v2 v2.2.3 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/rogpeppe/go-internal v1.16.0 // indirect
 	golang.org/x/sync v0.22.0 // indirect
